@@ -1,0 +1,792 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="计算机网络," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="大数据平台常常需要提供web端管理界面，比如Hadoop内嵌的基于jetty的监控页面、Kylin内嵌的基于tomcat的管理界面。虽说这些Web应用面向企业内部，QPS远远比不上淘宝这种面向C端的网站，但对于大数据平台开发工程师来说，基本的Web开发能力是必不可少的。出于开发效率和个人发展方向的考虑，我之前开发Web系统更多是基于一定的模板，配置都拷贝粘贴而来，不求甚解。然而随着开发的深入，尤其">
+<meta property="og:type" content="article">
+<meta property="og:title" content="curl模拟REST请求">
+<meta property="og:url" content="https://link3280.github.io/2017/07/22/curl模拟REST请求/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="大数据平台常常需要提供web端管理界面，比如Hadoop内嵌的基于jetty的监控页面、Kylin内嵌的基于tomcat的管理界面。虽说这些Web应用面向企业内部，QPS远远比不上淘宝这种面向C端的网站，但对于大数据平台开发工程师来说，基本的Web开发能力是必不可少的。出于开发效率和个人发展方向的考虑，我之前开发Web系统更多是基于一定的模板，配置都拷贝粘贴而来，不求甚解。然而随着开发的深入，尤其">
+<meta property="og:image" content="https://link3280.github.io/img/curl-http-get.png">
+<meta property="og:image" content="https://link3280.github.io/img/curl-http-get-with-header.png">
+<meta property="og:image" content="https://link3280.github.io/img/curl-http-head.png">
+<meta property="og:image" content="https://link3280.github.io/img/curl-http-options.png">
+<meta property="og:updated_time" content="2017-07-22T16:40:30.438Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="curl模拟REST请求">
+<meta name="twitter:description" content="大数据平台常常需要提供web端管理界面，比如Hadoop内嵌的基于jetty的监控页面、Kylin内嵌的基于tomcat的管理界面。虽说这些Web应用面向企业内部，QPS远远比不上淘宝这种面向C端的网站，但对于大数据平台开发工程师来说，基本的Web开发能力是必不可少的。出于开发效率和个人发展方向的考虑，我之前开发Web系统更多是基于一定的模板，配置都拷贝粘贴而来，不求甚解。然而随着开发的深入，尤其">
+<meta name="twitter:image" content="https://link3280.github.io/img/curl-http-get.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/07/22/curl模拟REST请求/"/>
+
+
+
+
+
+  <title>curl模拟REST请求 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了呢</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/07/22/curl模拟REST请求/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">curl模拟REST请求</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-07-22T20:10:55+08:00">
+                2017-07-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/计算机基础/" itemprop="url" rel="index">
+                    <span itemprop="name">计算机基础</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            <!--noindex-->
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/07/22/curl模拟REST请求/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/07/22/curl模拟REST请求/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+              <!--/noindex-->
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>大数据平台常常需要提供web端管理界面，比如Hadoop内嵌的基于jetty的监控页面、Kylin内嵌的基于tomcat的管理界面。虽说这些Web应用面向企业内部，QPS远远比不上淘宝这种面向C端的网站，但对于大数据平台开发工程师来说，基本的Web开发能力是必不可少的。出于开发效率和个人发展方向的考虑，我之前开发Web系统更多是基于一定的模板，配置都拷贝粘贴而来，不求甚解。然而随着开发的深入，尤其是面向产品运营人员的智能报表系统的研发，我发现之前的知识储备完全不够用。因此，接下来一段时间我会暂时放下大数据组件的学习而专注于Web技术。  </p>
+<a id="more"></a>
+<p>这次我就讲讲如何使用curl来调试REST接口（当然curl的功能远不止于此）。</p>
+<h2 id="正文"><a href="#正文" class="headerlink" title="正文"></a>正文</h2><p>根据官方文档，curl是一个用于与服务器通信的工具，可以支持多种协议（包括DICT, FILE, FTP, FTPS, GOPHER, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, POP3, POP3S, RTMP, RTSP, SCP, SFTP, SMB, SMBS, SMTP, SMTPS, TELNET and TFTP）。Curl被设计为不需要用户交互式操作，所有参数通过一次执行完成（反例之一是python shell，需要多次输入命令）。在Web开发方面经常用于模拟浏览器请求，比如REST接口的HTTP GET/POST/HEAD/PUT/DELETE/OPTIONS。</p>
+<p>命令格式：<br><code>curl [OPTIONS] [URL...]</code></p>
+<h3 id="HTTP-GET"><a href="#HTTP-GET" class="headerlink" title="HTTP GET"></a>HTTP GET</h3><p><code>$curl -G [url]</code></p>
+<p><img src="/img/curl-http-get.png" alt="curl http get" title="curl http get"></p>
+<p><code>-G</code>选项是可选的，HTTP协议默认的请求类型就是GET。</p>
+<p>默认情况下，curl并不会自动重定向，加上<code>-L</code>选项可以启用它。</p>
+<p>如果希望打印头部内容可加上<code>-i(--header)</code>选项：</p>
+<p><img src="/img/curl-http-get-with-header.png" alt="curl http get with header" title="curl http get with header"></p>
+<p>Curl默认将返回结果打印到标准输出，可以用<code>-o [file]</code>或者shell重定向(&gt;)命令可以将结果写到文件中。</p>
+<h3 id="HTTP-POST"><a href="#HTTP-POST" class="headerlink" title="HTTP POST"></a>HTTP POST</h3><p><code>$curl -d [post_body] [url]</code></p>
+<p><code>-d</code>指定HTTP POST的请求体内容，启用该参数后curl会以HTTP POST的方式发送数据到指定URL，默认的contentType是<code>application/x-www-form-urlencoded</code>。鉴于现在Web接口多以application/json形式交互，可以加上<code>-H Content-Type:application/json</code> 参数来覆盖默认的HTTP头部属性，这个头部在经过重定向之后依然有效。</p>
+<h3 id="HTTP-HEAD"><a href="#HTTP-HEAD" class="headerlink" title="HTTP HEAD"></a>HTTP HEAD</h3><p><code>$curl -I [url]</code></p>
+<p>HEAD请求可以使用<code>-I</code>选项，此时服务器只返回HTTP头部信息。</p>
+<p><img src="/img/curl-http-head.png" alt="curl http head" title="curl http head"></p>
+<h3 id="HTTP-PUT"><a href="#HTTP-PUT" class="headerlink" title="HTTP PUT"></a>HTTP PUT</h3><p>HTTP PUT经常用于上传资源，对应的curl命令是<code>$curl -T [file]</code><br>eg. 上传图片到图片服务器 <code>curl -T &quot;img[1-1000].png&quot; http://www.picserver.com/upload</code></p>
+<h3 id="HTTP-DELETE"><a href="#HTTP-DELETE" class="headerlink" title="HTTP DELETE"></a>HTTP DELETE</h3><p><code>$curl -X DELETE -d [request_body] [url]</code>  </p>
+<p><code>-X</code>选项用于改写HTTP的谓词。一般情况下大多数谓词都不需要通过该参数显式指定，例如<code>-d</code>对应的谓词是POST，<code>-T</code>对应的谓词是PUT，不过DELETE是个例外。</p>
+<h3 id="HTTP-OPTIONS"><a href="#HTTP-OPTIONS" class="headerlink" title="HTTP OPTIONS"></a>HTTP OPTIONS</h3><p><code>$curl -X OPTIONS -v [url]</code></p>
+<p><img src="/img/curl-http-options.png" alt="curl http options" title="curl http options"></p>
+<p><code>-v</code>选项用于打印详细信息，对于OPTIONS请求一定要加上，否则请求会失败。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/计算机网络/" rel="tag"># 计算机网络</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/06/15/翻译-Hive权限控制官方文档/" rel="next" title="[翻译]Hive权限控制官方文档">
+                <i class="fa fa-chevron-left"></i> [翻译]Hive权限控制官方文档
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/08/06/多数据源Spark实时任务更新MySQL导致死锁/" rel="prev" title="并发replace into导致MySQL死锁">
+                并发replace into导致MySQL死锁 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="hypercomments_widget"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">27</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">11</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">27</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">1.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#HTTP-GET"><span class="nav-number">1.1.</span> <span class="nav-text">HTTP GET</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HTTP-POST"><span class="nav-number">1.2.</span> <span class="nav-text">HTTP POST</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HTTP-HEAD"><span class="nav-number">1.3.</span> <span class="nav-text">HTTP HEAD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HTTP-PUT"><span class="nav-number">1.4.</span> <span class="nav-text">HTTP PUT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HTTP-DELETE"><span class="nav-number">1.5.</span> <span class="nav-text">HTTP DELETE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HTTP-OPTIONS"><span class="nav-number">1.6.</span> <span class="nav-text">HTTP OPTIONS</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+		<script type="text/javascript">
+		_hcwp = window._hcwp || [];
+
+		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
+
+		
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/07/22/curl模拟REST请求/"});
+		
+
+		(function() {
+		if("HC_LOAD_INIT" in window)return;
+		HC_LOAD_INIT = true;
+		var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
+		var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
+		hcc.src = ("https:" == document.location.protocol ? "https" : "http")+"://w.hypercomments.com/widget/hc/94362/"+lang+"/widget.js";
+		var s = document.getElementsByTagName("script")[0];
+		s.parentNode.insertBefore(hcc, s.nextSibling);
+		})();
+		</script>
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

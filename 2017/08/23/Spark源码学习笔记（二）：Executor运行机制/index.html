@@ -1,0 +1,872 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Spark," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="Executor是执行用户代码的“一线工人”（worker），理解executor的运行机制对编写高效优雅的Spark Application尤为重要。从org.apache.spark.executor包入手，逐步解析Spark Application的运行机制应该是个不错的选择。  
+吸取了broadcast包1.6版本和2.x版本差异较大的教训，我决定直接跳到今年7月发布的Spark 2.2">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spark源码学习笔记（二）：Executor运行机制">
+<meta property="og:url" content="https://link3280.github.io/2017/08/23/Spark源码学习笔记（二）：Executor运行机制/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="Executor是执行用户代码的“一线工人”（worker），理解executor的运行机制对编写高效优雅的Spark Application尤为重要。从org.apache.spark.executor包入手，逐步解析Spark Application的运行机制应该是个不错的选择。  
+吸取了broadcast包1.6版本和2.x版本差异较大的教训，我决定直接跳到今年7月发布的Spark 2.2">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/executor-driver.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/numRunningTasks.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/launchTask.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/killTask.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/killAllTasks.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/stop.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/launchTask.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/createClassLoader.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/addReplClassLoaderIfNeeded.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/updateDependencies.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/reportHeartBeat.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/startDriverHeartbeater.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/getThreadId.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/isFinished.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/kill.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/setTaskFinishedAndClearInterruptStatus.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/taskRunner.run.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_executor/taskReaper.run.png">
+<meta property="og:updated_time" content="2017-08-27T02:52:10.440Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spark源码学习笔记（二）：Executor运行机制">
+<meta name="twitter:description" content="Executor是执行用户代码的“一线工人”（worker），理解executor的运行机制对编写高效优雅的Spark Application尤为重要。从org.apache.spark.executor包入手，逐步解析Spark Application的运行机制应该是个不错的选择。  
+吸取了broadcast包1.6版本和2.x版本差异较大的教训，我决定直接跳到今年7月发布的Spark 2.2">
+<meta name="twitter:image" content="https://link3280.github.io/img/spark_executor/executor-driver.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/08/23/Spark源码学习笔记（二）：Executor运行机制/"/>
+
+
+
+
+
+  <title>Spark源码学习笔记（二）：Executor运行机制 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了呢</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/23/Spark源码学习笔记（二）：Executor运行机制/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Spark源码学习笔记（二）：Executor运行机制</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-08-23T20:39:08+08:00">
+                2017-08-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            <!--noindex-->
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/08/23/Spark源码学习笔记（二）：Executor运行机制/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/23/Spark源码学习笔记（二）：Executor运行机制/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+              <!--/noindex-->
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Executor是执行用户代码的“一线工人”（worker），理解executor的运行机制对编写高效优雅的Spark Application尤为重要。从<code>org.apache.spark.executor</code>包入手，逐步解析Spark Application的运行机制应该是个不错的选择。  </p>
+<p>吸取了broadcast包1.6版本和2.x版本差异较大的教训，我决定直接跳到今年7月发布的Spark 2.2.0版本，之后的所有笔记也会基于2.2.0版本。</p>
+<a id="more"></a>
+<h1 id="Executor与Driver间的通信"><a href="#Executor与Driver间的通信" class="headerlink" title="Executor与Driver间的通信"></a>Executor与Driver间的通信</h1><p><img src="/img/spark_executor/executor-driver.png" alt="executor-driver通讯" title="executor-driver通信"><br>ExecutorBackend为executor后台服务，它与Driver通信，管理了executor从初始化注册、运行任务到停止释放资源的整个生命周期，并向Driver报告executor和在上面执行的task的状态。除了心跳则直接向Driver报告，executor所有与Driver的通信都通过ExecutorBackend完成。</p>
+<h1 id="Executor"><a href="#Executor" class="headerlink" title="Executor"></a>Executor</h1><p>Executor是一个JVM实例，持有可以同时运行多个task attempt的工作线程池，并负责task的监控和管理。</p>
+<h2 id="Executor-Variable"><a href="#Executor-Variable" class="headerlink" title="Executor Variable"></a>Executor Variable</h2><ul>
+<li><code>currentFiles</code>: Executor当前工作目录的文件。</li>
+<li><code>currentJars</code>: Executor当前classpath的jar。</li>
+<li><code>EMPTY_BYTE_BUFFER</code>: 空的byte数组，用于更新executor状态而不需要发送实际数据的情况。</li>
+<li><code>conf</code>: SparkConf实例，保存了用户设置与系统默认的Spark配置。</li>
+<li><code>threadPool</code>: 工作线程池，线程是UninterruptibleThread类型，以防被外部中断。</li>
+<li><code>executorSource</code>: 监控指标源，用于统计executor的执行情况指标。</li>
+<li><code>taskReaperPool</code>: task清理器线程池，用于cancel或者kill task。</li>
+<li><code>taskReaperForTask</code>: taskId-&gt;taskReaper的HashMap，它是同步的，以确保不会为某个task重复创建taskReaper。</li>
+<li><code>userClassPathFirst</code>: SparkConf中的”spark.executor.userClassPathFirst”配置项，用于决定executor先加载系统classpath还是用户classpath，默认false。</li>
+<li><code>taskReaperEnabled</code>: SparkConf中的”spark.task.reaper.enabled”，用于决定是否启用taskReaper特性，默认false。</li>
+<li><code>urlClassLoader</code>: 通过url加载class的ClassLoader。</li>
+<li><code>replClassLoader</code>: REPL使用的ClassLoader，会在运行时加载用户新定义的类。</li>
+<li><code>maxDirectResultSize</code>: SparkConf中的”spark.task.maxDirectResultSize”，直接发送计算结果的数据量阈值，超过这个阈值用BlockManager来发送，默认512M。</li>
+<li><code>maxResultSize</code>: executor允许的最大结果集，超过这个数量的结果集将不能返回给Driver，默认1G。</li>
+<li><code>runningTasks</code>: taskId-&gt;taskRunner的ConcurrentHashMap，维护taskId到taskRunner的映射。</li>
+<li><code>heartbeater</code>: 维持与Driver间心跳的线程池。</li>
+<li><code>heartbeaterReceiverRef</code>: Driver的心跳接收器引用，这个变量应该在开始executor心跳之前初始化。</li>
+<li><code>HEARTBEAT_MAX_FAILURES</code>: SparkConf中的”spark.executor.heartbeat.maxFailures”，最大允许的心跳连续失败次数。</li>
+<li><code>heartbeatFailutres</code>: 心跳的连续失败次数，它应该被heartThread访问，每次成功的心跳将它清零。</li>
+</ul>
+<h2 id="Executor-Method"><a href="#Executor-Method" class="headerlink" title="Executor Method"></a>Executor Method</h2><ul>
+<li><code>numRunningTasks</code>:<br><img src="/img/spark_executor/numRunningTasks.png" alt="numRunningTasks"><br>返回正在运行的task数目。</li>
+<li><code>launchTask</code>:<br><img src="/img/spark_executor/launchTask.png" alt="launchTask"><br>将taskDescription交给一个taskRunner，将后者注册到runningTasks并放入threadPool执行。</li>
+<li><code>killTask</code>:<br><img src="/img/spark_executor/killTask.png" alt="killTask"><br>根据taskId杀死task，interruptThread参数决定了是否要中断正在执行的线程. 这个函数在taskReaperEnabled为true的情况下会使用taskReaper来杀死task，否则直接从runningTasks中获取对应的taskRunner并杀死它。</li>
+<li><code>killAllTasks</code>:<br><img src="/img/spark_executor/killAllTasks.png" alt="killAllTasks"><br>杀死该executor正在运行的所有task，该方法由executorBackend调用以杀死所有task，而不是直接关停JVM。</li>
+<li><code>stop</code>:<br><img src="/img/spark_executor/stop.png" alt="stop"><br>关停executor。</li>
+<li><code>computeTotalGcTime</code>:<br><img src="/img/spark_executor/launchTask.png" alt="computeTotalGcTime"><br>返回executor的总GC时间。</li>
+<li><code>createClassLoader</code>:<br><img src="/img/spark_executor/createClassLoader.png" alt="createClassLoader"><br>创建task执行时的ClassLoader，并加载用户定义类。</li>
+<li><code>addReplClassLoaderIfNeeded</code>:<br><img src="/img/spark_executor/addReplClassLoaderIfNeeded.png" alt="addReplClassLoaderIfNeeded"><br>为REPL创建另一个ClassLoader，在用户使用REPL时，这个ClassLoader会实时读取用户定义的新类。</li>
+<li><code>updateDependencies</code>:<br><img src="/img/spark_executor/updateDependencies.png" alt="updateDependencies"><br>当SparkContext受到新的文件或者jar时调用，从Driver下载缺少的包，并加载到ClassLoader， 通常是当SparkContext.addJar被调用的情况。</li>
+<li><code>reportHeartBeat</code>:<br><img src="/img/spark_executor/reportHeartBeat.png" alt="reportHeartBeat"><br>向Driver报告活跃task的状态，Executor会将各个task的metrics作汇总，计算更新数据量，并通过Driver RPC服务heartbeatReceiverRef报告给Driver。</li>
+<li><code>startDriverHeartbeater</code>:<br><img src="/img/spark_executor/startDriverHeartbeater.png" alt="startDriverHeartbeater"><br>启动一个任务用于报告executor心跳和部分metrics，交给heartbeater调度。</li>
+</ul>
+<h1 id="Executor-TaskRunner"><a href="#Executor-TaskRunner" class="headerlink" title="Executor.TaskRunner"></a>Executor.TaskRunner</h1><p>TaskRunner是一个线程类，用于实际运行task，它持有ExecBackend对象可以直接向Driver报告task执行状态。</p>
+<h2 id="Executor-TaskRunner-Variable"><a href="#Executor-TaskRunner-Variable" class="headerlink" title="Executor.TaskRunner Variable"></a>Executor.TaskRunner Variable</h2><ul>
+<li><code>executorBackend</code>: ExecutorBackend类型，executor的后台服务类，用于向Driver报告更新task状态。</li>
+<li><code>taskDescription</code>: TaskDescription类型，任务描述。</li>
+<li><code>taskId</code>: 任务id，从taskDescription中获取taskId。</li>
+<li><code>taskName</code>: 任务名，从taskDescription获取中taskName。</li>
+<li><code>reasonIfKilled</code>: 任务被杀死的原因，该变量volatitle，只在运行时有用。</li>
+<li><code>threadId</code>: taskRunner的线程id，同样是volatitle，只在运行时有用。</li>
+<li><code>finished</code>: 该taskRunner是否已经完成。</li>
+<li><code>startGCTime</code>: task启动时JVM的GC时间。</li>
+<li><code>task</code>: 从Driver发送过来的要执行的task。</li>
+</ul>
+<h2 id="Executor-TaskRunner-Method"><a href="#Executor-TaskRunner-Method" class="headerlink" title="Executor.TaskRunner Method"></a>Executor.TaskRunner Method</h2><ul>
+<li><code>getThreadId</code>:<br><img src="/img/spark_executor/getThreadId.png" alt="getThreadId"><br>返回threadId。</li>
+<li><code>isFinished</code>:<br><img src="/img/spark_executor/isFinished.png" alt="isFinished"><br>返回finished。</li>
+<li><code>kill</code>:<br><img src="/img/spark_executor/kill.png" alt="kill"><br>通过task的kill方法杀死task。这种kill方法属于“尽最大努力”的操作，它只是把<code>task</code>的标识为killed，实际上是否起作用决定于上层的Spark代码是否还会读取这个标示位。所以更保险的方法是使用下文讲到的TaskReaper。</li>
+<li><code>setTaskFinishedAndClearInterruptStatus</code>:<br><img src="/img/spark_executor/setTaskFinishedAndClearInterruptStatus.png" alt="setTaskFinishedAndClearInterruptStatus"><br>将finished标识位置为true，并清理线程的中断状态。</li>
+<li><p><code>run</code>:<br><img src="/img/spark_executor/taskRunner.run.png" alt="run"><br>TaskRunner的核心方法，是<code>task.run</code>的封装，负责了<code>task</code>的上下文管理和统计信息。步骤如下：<br>1.初始化<code>taskRunner</code>状态（<code>threadId</code>、<code>threadName</code>、反序列化消耗的时间、<code>task</code>开始时间、cpu时间等），设置ClassLoader和序列化器。<br>2.初始化<code>task</code>状态，更新<code>task</code>依赖，反序列化<code>task</code>对象。<br>3.执行<code>task</code>，调用<code>task.run</code>，每次视为<code>task</code>的一个attempt。执行完释放资源，包括<code>blockManager</code>上的锁以及在<code>taskMemoryManager</code>上为该task attempt分配的内存。如果用户代码有报错，taskRunner会将其打印到错误日志。该步骤如果没有异常则转步骤4，否则跳到步骤5。<br>4.计算task metrics统计信息，并将计算结果序列化后返回给Driver，更新<code>task</code>的状态为成功。<br>5.异常处理，根据异常模式匹配分为几种情况：</p>
+<ul>
+<li><code>FetchFailedException</code>: 顾名思义，该异常表示有某些block无法从其他机器上获取。这种情况下Spark会将该task中断并标记为Failed。</li>
+<li><code>TaskKilledException</code>: 检测到task已经被杀死，将该task中断并标记为Killed。这种情况在用户通过YARN等集群管理器杀死任务时很常见。</li>
+<li><code>InterruptedException</code>: Executor本身被中断，将该task中断并标记为Killed。这种情况可能发生在抢占式的资源调度池，任务占用了本不属于自己的资源，而这些资源由于新的任务进入资源池而被收回。</li>
+<li><code>CommitDeniedException</code>: 无法提交task运行结果。这种异常还没见过。</li>
+<li><code>Throwable</code>: 不属于上面任何情况的异常，这时<code>taskRunner</code>会判断是否属于fatal，若是则将<code>task</code>的metrics和异常信息序列化后报告给Driver，然后通过<code>uncaughtExceptionHandler</code>来停止该executor。但如果恰好这时executor处于shut down中，该异常不会报告给Driver，因为有可能和用户设置的shutdown钩子冲突。  </li>
+</ul>
+<p>6.从<code>runningTasks</code>映射中删除该task。</p>
+</li>
+</ul>
+<h1 id="Executor-TaskReaper"><a href="#Executor-TaskReaper" class="headerlink" title="Executor.TaskReaper"></a>Executor.TaskReaper</h1><p>直译为任务收割器，实现了Runnable接口，负责杀死或者取消任务。这是从Spark 2.1.1和Spark 2.2.0开始引入的特性，用于修复任务的杀死和取消机制的不可靠问题。因为task的杀死和取消机制是被动的，<code>task.kill</code>方法只是将killed标识置为true，但是具体什么时候task才停止决定于task是否interruptable以及task的运行是否会再次读取killed标识并作出反应。因此，有可能用户从监控页面看到task已经被杀死，而其实还有僵尸task一直占用该executor。TaskReaper针对上述问题提供了主动杀死task的方法：它会一直监视已经标记为killed的task，直到该task退出。另外，TaskReaper也提供超时机制，若task超过约定时间没有退出，则直接杀死JVM以释放资源。  </p>
+<h2 id="Executor-TaskReaper-Varibale"><a href="#Executor-TaskReaper-Varibale" class="headerlink" title="Executor.TaskReaper Varibale"></a>Executor.TaskReaper Varibale</h2><ul>
+<li><code>taskRunner</code>: 正在执行该需要杀死的task的TaskRunner实例。</li>
+<li><code>interruptThread</code>: 是否中断线程。</li>
+<li><code>reason</code>: 杀死任务的原因。</li>
+<li><code>taskId</code>: 要杀死的taskId。</li>
+<li><code>killPollingIntervalMs</code>: taskReaper轮询的时间间隔，可以通过<code>spark.task.reaper.pollingInterval</code>来设置，默认10s。</li>
+<li><code>killTimeoutMs</code>: task退出的超时时长，可以通过<code>spark.task.reaper.killTimeout</code>来设置，默认-1，即不设置超时。</li>
+<li><code>takeThreadDump</code>: 是否需要对task进行threadDump，可以通过<code>spark.task.reaper.threadDump</code>配置，默认为true。</li>
+</ul>
+<h2 id="Executor-TaskReaper-Method"><a href="#Executor-TaskReaper-Method" class="headerlink" title="Executor.TaskReaper Method"></a>Executor.TaskReaper Method</h2><ul>
+<li><code>run</code>:<br><img src="/img/spark_executor/taskReaper.run.png" alt="run"><br>不断轮询检测task状态，直到task退出。步骤如下：</li>
+</ul>
+<ol>
+<li>调用taskRunner.kill常规方法来杀死task。</li>
+<li>轮询检测taskRunner状态。若未完成则等待(wait)一个轮询周期，意味着在这期间任何其他对takRunner的调用都会被阻塞；若已经完成，则如果需要的话进行threadDump。</li>
+<li>同步更新taskReaperForTask映射，将该taskId对应的Entry移除。</li>
+</ol>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>Executor类只负责核心的与task运行紧密相关的操作，其他服务类的模块比如Block管理、内存管理都封装在SparkEnv中，会在用到时通过全局变量SparkEnv获取，符合高内聚低耦合的设计原则，因此可以兼容多种集群模式。Executor并未直接与其他进程通信，相关的操作是由ExecutorBackend类在后台通过RPC服务完成的。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/08/19/Spark源码学习笔记（一）：Boardcast机制/" rel="next" title="Spark源码学习笔记（一）：Broadcast机制">
+                <i class="fa fa-chevron-left"></i> Spark源码学习笔记（一）：Broadcast机制
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/09/10/Kylin实战（二）：创建Hive视图/" rel="prev" title="Kylin实战（二）：引入Hive视图层">
+                Kylin实战（二）：引入Hive视图层 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="hypercomments_widget"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">27</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">11</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">27</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Executor与Driver间的通信"><span class="nav-number">1.</span> <span class="nav-text">Executor与Driver间的通信</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Executor"><span class="nav-number">2.</span> <span class="nav-text">Executor</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Executor-Variable"><span class="nav-number">2.1.</span> <span class="nav-text">Executor Variable</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Executor-Method"><span class="nav-number">2.2.</span> <span class="nav-text">Executor Method</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Executor-TaskRunner"><span class="nav-number">3.</span> <span class="nav-text">Executor.TaskRunner</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Executor-TaskRunner-Variable"><span class="nav-number">3.1.</span> <span class="nav-text">Executor.TaskRunner Variable</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Executor-TaskRunner-Method"><span class="nav-number">3.2.</span> <span class="nav-text">Executor.TaskRunner Method</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Executor-TaskReaper"><span class="nav-number">4.</span> <span class="nav-text">Executor.TaskReaper</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Executor-TaskReaper-Varibale"><span class="nav-number">4.1.</span> <span class="nav-text">Executor.TaskReaper Varibale</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Executor-TaskReaper-Method"><span class="nav-number">4.2.</span> <span class="nav-text">Executor.TaskReaper Method</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+		<script type="text/javascript">
+		_hcwp = window._hcwp || [];
+
+		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
+
+		
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/08/23/Spark源码学习笔记（二）：Executor运行机制/"});
+		
+
+		(function() {
+		if("HC_LOAD_INIT" in window)return;
+		HC_LOAD_INIT = true;
+		var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
+		var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
+		hcc.src = ("https:" == document.location.protocol ? "https" : "http")+"://w.hypercomments.com/widget/hc/94362/"+lang+"/widget.js";
+		var s = document.getElementsByTagName("script")[0];
+		s.parentNode.insertBefore(hcc, s.nextSibling);
+		})();
+		</script>
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
