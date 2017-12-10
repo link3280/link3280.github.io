@@ -90,18 +90,18 @@
 
 
 
-<meta name="description" content="提起索引大家通常想到的就是MySQL等关系型数据库管理系统的索引，但索引的定义远远不止这么窄：HBase键值形式的一级索引，ES等搜索引擎的倒排索引，甚至数组的下标都可以被称为index。
+<meta name="description" content="提起索引大家通常想到的就是MySQL等关系型数据库管理系统的索引，但索引的定义远远不止这么窄：HBase键值形式的聚集索引，ES等搜索引擎的倒排索引，甚至数组的下标都可以被称为index。
 那么索引该怎么定义呢？我从各个权威网站并没有找到很好的描述：Wikipedia并没有为computer science的index做一个概述，而是细分成lookup table、database index、s">
 <meta property="og:type" content="article">
 <meta property="og:title" content="浅谈索引的本质">
 <meta property="og:url" content="https://link3280.github.io/2017/05/14/浅谈索引的本质/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="提起索引大家通常想到的就是MySQL等关系型数据库管理系统的索引，但索引的定义远远不止这么窄：HBase键值形式的一级索引，ES等搜索引擎的倒排索引，甚至数组的下标都可以被称为index。
+<meta property="og:description" content="提起索引大家通常想到的就是MySQL等关系型数据库管理系统的索引，但索引的定义远远不止这么窄：HBase键值形式的聚集索引，ES等搜索引擎的倒排索引，甚至数组的下标都可以被称为index。
 那么索引该怎么定义呢？我从各个权威网站并没有找到很好的描述：Wikipedia并没有为computer science的index做一个概述，而是细分成lookup table、database index、s">
-<meta property="og:updated_time" content="2017-05-14T11:45:01.546Z">
+<meta property="og:updated_time" content="2017-12-10T08:16:28.682Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="浅谈索引的本质">
-<meta name="twitter:description" content="提起索引大家通常想到的就是MySQL等关系型数据库管理系统的索引，但索引的定义远远不止这么窄：HBase键值形式的一级索引，ES等搜索引擎的倒排索引，甚至数组的下标都可以被称为index。
+<meta name="twitter:description" content="提起索引大家通常想到的就是MySQL等关系型数据库管理系统的索引，但索引的定义远远不止这么窄：HBase键值形式的聚集索引，ES等搜索引擎的倒排索引，甚至数组的下标都可以被称为index。
 那么索引该怎么定义呢？我从各个权威网站并没有找到很好的描述：Wikipedia并没有为computer science的index做一个概述，而是细分成lookup table、database index、s">
 
 
@@ -373,17 +373,17 @@
       
 
       
-        <p>提起索引大家通常想到的就是MySQL等关系型数据库管理系统的索引，但索引的定义远远不止这么窄：HBase键值形式的一级索引，ES等搜索引擎的倒排索引，甚至数组的下标都可以被称为index。</p>
+        <p>提起索引大家通常想到的就是MySQL等关系型数据库管理系统的索引，但索引的定义远远不止这么窄：HBase键值形式的聚集索引，ES等搜索引擎的倒排索引，甚至数组的下标都可以被称为index。</p>
 <p>那么索引该怎么定义呢？我从各个权威网站并没有找到很好的描述：<a href="https://en.wikipedia.org/wiki/Index" target="_blank" rel="external">Wikipedia</a>并没有为computer science的index做一个概述，而是细分成lookup table、database index、search engine index等进行说明；<a href="http://baike.baidu.com/link?url=rOh-1Ml9ONFCfCEexk_2pISh-q1bzZ2kMeWHtkxbSywWBm62wyqZGLJWHxAonhkwBXtfOvHLAOnG85HD8LBBey-xtFOi7fk2TYUprsmtpJi" target="_blank" rel="external">百度百科</a>只针对数据库领域进行说明：在关系数据库中，索引是一种单独的、物理的对数据库表中一列或多列的值进行排序的一种存储结构，它是某个表中一列或若干列值的集合和相应的指向表中物理标识这些值的数据页的逻辑指针清单；较为满意的一个答案是<a href="http://www.thefreedictionary.com/index" target="_blank" rel="external">THE FRRE DICTIONARY</a>上：Something that serves to guide, point out, or otherwise facilitate reference（用于引导、指出或其他帮助引用的事物），不过不够详细具体。</p>
 <p><strong>以我的理解，索引的本质是基于对象的一个或多个属性按照某种数据结构（树、哈希、有序链表等）进行组织，以加速查找的一种技术。其中有两个关键点，一是基于一个或多个属性，二是数据结构。</strong></p>
 <a id="more"></a>
-<p>首先，每个索引都是基于一个属性的组合来建立的，组合中的属性可以为单个或者多个。建立好对应索引后，这个属性组合就是数据的入口。例如，HBase将rowkey作为核心的数据入口，任何不符合rowkey的查找条件都不能直接使用该索引。又例如ElasticSearch等搜索引擎的核心倒排索引，其实是将原本以文档id作为入口的数据，转换为以词为入口，因此全文检索的时候可以直接利用词来快速定位文档。除了这些比较高级的应用，其实我们平时接触的操作系统也有不少索引的应用，最为常见的文件系统就用了基于文件名的树型索引。</p>
+<p>首先，每个索引都是基于一个属性的组合来建立的，组合中的属性可以为单个或者多个。建立好对应索引后，这个属性组合就是数据的入口。例如，HBase将rowkey作为核心的数据入口，任何不符合rowkey的查找条件都不能直接使用该索引。又例如ElasticSearch等搜索引擎的核心倒排索引，其实是将原本以文档id作为入口的数据，转换为以词为入口，因此全文检索的时候可以直接利用词来快速定位文档。除了这些比较高级的应用，其实我们平时接触的操作系统也有不少索引的应用，最为常见的文件系统就用了基于文件名的B+Tree索引。</p>
 <p>由于遍历的时间复杂度是O(n)，那么索引后的查找复杂度必定是小于O(n)才有意义。常用的索引主要有两种：复杂度为O(1)的哈希索引和复杂度为O(log n)的树索引。哈希索引原理是根据属性组合直接通过哈希函数计算出结果数据的地址，一般来说更快（包括建索引的效率和查询效率），具体性能依赖于数据集和哈希函数的匹配程度；树索引原理是基于属性组合建立树再根据二分查找定位数据，虽然建索引和查找速度都慢一些，但优势是可以支持范围查询和font-n属性匹配的查询。其中font-n属性的查询意思是，属性组合中的前1到前n个属性组成的子组合的查找。例如属性组合是A-B-C，那么树索引可以支持A、A-B、A-B-C三个属性组合的查找。</p>
 <p>这两种索引并不冲突，比如HBase就优雅地结合了两种索引。众所周知HBase是KeyValue型数据库，不知道准确rowkey的时候只能通过scan来查询数据，而这个scan正是利用了树索引的二分查找。<strong>很多人没有意识到，经过排序的数据实际上是一棵隐式的树。</strong>这棵树以查询的粒度来确定节点。比如在字符串查找中，查询的粒度是字符，则索引树的每一层代表字符串的一位字符。HBase的rowkey是经过排序的，而且rowkey的组织方式完全由用户决定，接近于字符串查找。所以HBase的数据查询分为两种情况：</p>
 <ol>
 <li>知道rowkey -&gt; O(1)的哈希查找</li>
-<li>不知道rowkey，知道rowkey中前n个字段 -&gt; O(log n)的树查找 + O(1)的哈希查找</li>
-<li>不知道rowkey，不知道rowkey中前n个字段 -&gt; O(n)的全表扫描</li>
+<li>不知道rowkey，知道rowkey中前n个字段 -&gt; O(log n)的树查找（确定startkey和endkey） + 局部线性扫描</li>
+<li>不知道rowkey，不知道rowkey中前n个字段 -&gt; O(n)的全表线性扫描</li>
 </ol>
 <p>可以看出，HBase的rowkey组织方式尤为重要，它直接决定了查询用的是什么索引。</p>
 <p>以上就是我对索引的理解。</p>
@@ -506,7 +506,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">27</span>
+                <span class="site-state-item-count">28</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>

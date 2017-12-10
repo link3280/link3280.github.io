@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Breaking Bad,美剧," />
+  <meta name="keywords" content="Kylin," />
 
 
 
@@ -90,16 +90,19 @@
 
 
 
-<meta name="description" content="补完《绝命毒师》第五季，结局在意料之中却依然给观众留下很大的震撼和反思。警笛声渐近，众叛亲离的老白终于在被捕前死在了制毒实验室。没有大桶的美金，没有愿意和他讲话的亲人，甚至连出生入死的同伙小粉都背弃他。但比起成为一个“为什么好人却得了癌症”的虚弱得只能躺在病床吸光家庭经济和等待学校社区救济的高中化学教师，这样的结果没有令老白后悔，因为他至少真正地lived once。">
+<meta name="description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
+这个方案的问题在于太过死板，如果用户突然又想以20为区间">
 <meta property="og:type" content="article">
-<meta property="og:title" content="再见，老白">
-<meta property="og:url" content="https://link3280.github.io/2017/11/11/再见，老白/index.html">
+<meta property="og:title" content="Kylin实战（七）：实现维度分桶">
+<meta property="og:url" content="https://link3280.github.io/2017/12/10/Kylin实战（七）：实现维度分桶/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="补完《绝命毒师》第五季，结局在意料之中却依然给观众留下很大的震撼和反思。警笛声渐近，众叛亲离的老白终于在被捕前死在了制毒实验室。没有大桶的美金，没有愿意和他讲话的亲人，甚至连出生入死的同伙小粉都背弃他。但比起成为一个“为什么好人却得了癌症”的虚弱得只能躺在病床吸光家庭经济和等待学校社区救济的高中化学教师，这样的结果没有令老白后悔，因为他至少真正地lived once。">
-<meta property="og:updated_time" content="2017-11-11T11:42:14.411Z">
+<meta property="og:description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
+这个方案的问题在于太过死板，如果用户突然又想以20为区间">
+<meta property="og:updated_time" content="2017-12-10T13:19:55.859Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="再见，老白">
-<meta name="twitter:description" content="补完《绝命毒师》第五季，结局在意料之中却依然给观众留下很大的震撼和反思。警笛声渐近，众叛亲离的老白终于在被捕前死在了制毒实验室。没有大桶的美金，没有愿意和他讲话的亲人，甚至连出生入死的同伙小粉都背弃他。但比起成为一个“为什么好人却得了癌症”的虚弱得只能躺在病床吸光家庭经济和等待学校社区救济的高中化学教师，这样的结果没有令老白后悔，因为他至少真正地lived once。">
+<meta name="twitter:title" content="Kylin实战（七）：实现维度分桶">
+<meta name="twitter:description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
+这个方案的问题在于太过死板，如果用户突然又想以20为区间">
 
 
 
@@ -127,13 +130,13 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2017/11/11/再见，老白/"/>
+  <link rel="canonical" href="https://link3280.github.io/2017/12/10/Kylin实战（七）：实现维度分桶/"/>
 
 
 
 
 
-  <title>再见，老白 | 时间与精神的小屋</title>
+  <title>Kylin实战（七）：实现维度分桶 | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -272,7 +275,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/11/11/再见，老白/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/12/10/Kylin实战（七）：实现维度分桶/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -289,7 +292,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">再见，老白</h2>
+          <h2 class="post-title" itemprop="name headline">Kylin实战（七）：实现维度分桶</h2>
         
 
         <div class="post-meta">
@@ -301,8 +304,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-11-11T16:00:02+08:00">
-                2017-11-11
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-12-10T16:05:51+08:00">
+                2017-12-10
               </time>
             
 
@@ -324,8 +327,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/杂谈/" itemprop="url" rel="index">
-                    <span itemprop="name">杂谈</span>
+                  <a href="/categories/Kylin/" itemprop="url" rel="index">
+                    <span itemprop="name">Kylin</span>
                   </a>
                 </span>
 
@@ -343,8 +346,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/11/11/再见，老白/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/11/11/再见，老白/" itemprop="commentsCount"></span>
+                <a href="/2017/12/10/Kylin实战（七）：实现维度分桶/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/12/10/Kylin实战（七）：实现维度分桶/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -370,17 +373,27 @@
       
 
       
-        <p>补完《绝命毒师》第五季，结局在意料之中却依然给观众留下很大的震撼和反思。警笛声渐近，众叛亲离的老白终于在被捕前死在了制毒实验室。没有大桶的美金，没有愿意和他讲话的亲人，甚至连出生入死的同伙小粉都背弃他。但比起成为一个“为什么好人却得了癌症”的虚弱得只能躺在病床吸光家庭经济和等待学校社区救济的高中化学教师，这样的结果没有令老白后悔，因为他至少真正地lived once。</p>
+        <p>数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。</p>
+<p>这个方案的问题在于太过死板，如果用户突然又想以20为区间分桶，修改成本就很高。所以我研究了两种out of the box的解决方案，可以在查询的级别上实现分桶，不需要修改Kylin模型。</p>
 <a id="more"></a>
-<p>老白人生的前五十年，像是大话西游里紫霞所说的，“那个人好像一条狗”。因为情感问题低价抛出股份，错过成为上市化学制品公司最大股东后，老白的人生就一直黯淡无光。空有化学专业知识却只能当一名高中老师还被学生欺负，工资不高需要给剥削员工的洗车场打工补贴家用，和一个从来没有为他考虑的女人结婚，生下的孩子也有患残疾。这和当初在大学创业时简直是天差地别，那时他和女友在教室里有说有笑地谈论着学术，老白很帅，女友很漂亮，是前途无量羡煞旁人的一对年轻情侣。然而随着一个错误决定一切都急转直下，公司和女友现在都是别人的，而老白只能默默忍受这一切。</p>
-<p>如果不是查出肺癌，或许老白会一直懦弱地过完平凡的一生。突如其来的肺癌给了老白勇气跳出这糟糕的生活，去做一名制毒师。老白的初衷是为了给家庭留下一笔遗产，但他逐渐发现自己实在太擅长制毒，这唤醒了他心底的做一番事业的梦想，于是一发不可收拾。为了成就自己的商业帝国，老白可以勇敢到独身一人带着炸药前往毒枭的老巢谈生意，也可以狠心到为保住自己的性命杀掉视自己为偶像的制毒师，还可以虚伪到编造一个又一个故事来试图瞒住亲人。其实有段时间我真的很狠老白，因为Gus作为老板已经对他推心置腹，但是他还是为了当时不成大器的小粉对Gus恩将仇报。直到第五季老白对他老婆坦白时，我才真正理解了他。</p>
-<blockquote>
-<p>I did it for me. I liked it. I was good at it. And I was… really… I was alive.</p>
-</blockquote>
-<p>其实当时老白已经有意无意地背叛了所有人，他再也没有亲人和朋友的支持了。他做了这么多坏事，是为了在生命最后的时光证明自己活着。</p>
-<p>老白的确不能说是一个好人，但是却是很真实的贴近生活的一个人。他和我们一样没有超能力，不断跟现实妥协来维持不如意的生活，但却做出了我们有想过但永远不敢做的事情，这就是为什么他坏事做尽依然有这么多观众喜欢他。我们都想为自己用力地活一次，但规律的生活就像手铐脚铐一样束缚着我们，它提醒我们一旦挣脱它，我们目前的所有都会化为灰烬。细想一下，老白不就正代表了近来常被媒体消费的焦虑的中产阶级，他们有能力有野心想做点什么，但是背着房贷养着小孩，只能成为生活的奴隶。</p>
-<p>老白死了，在复仇了破坏他和亲人最后关系的强盗之后，中枪的他倒在制毒室地上，温柔地看着这个世界。但是他还活着，因为我们永远不会忘记他。</p>
-<p>再见，老白。</p>
+<p>按照Kylin常规的查询类型，一个查询只能对数据进行一次过滤，即获得一个桶的统计数据，即：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">SELECT level, SUM(payment) FROM tbl_payment WHERE level BETWEEN 0 AND 10 GROUP BY level`;</div></pre></td></tr></table></figure></p>
+<p>如果需要在一个查询结果里面展示多个桶的数据，有以下两种常见的方法。</p>
+<h2 id="静态分桶"><a href="#静态分桶" class="headerlink" title="静态分桶"></a>静态分桶</h2><p>静态分桶是通过嵌套查询将每个桶的子查询结果拼接到一起，比如:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">SELECT &quot;0-10&quot;, SUM(payment) FROM tbl_payment WHERE level BETWEEN 0 AND 10</div><div class="line">UNION</div><div class="line">SELECT &quot;10-20&quot;, SUM(payment) FROM tbl_payment WHERE level BETWEEN 10 AND 20</div></pre></td></tr></table></figure></p>
+<p>静态分桶固然可以达到分桶效果，然而也有不足之处：</p>
+<ol>
+<li>分桶区间是静态的，需要预先知道分桶维度的值区间，否则可能漏掉不在任意一个桶内的数据，最常见的的情况是漏掉分桶维度为空的记录。</li>
+<li>每个桶对应一个子查询，在桶数量多的情况下可能存在效率上的问题。</li>
+</ol>
+<h2 id="动态分桶"><a href="#动态分桶" class="headerlink" title="动态分桶"></a>动态分桶</h2><p>动态分桶是基于未分桶的查询结果集上进行的二次计算。听起来有点绕，不过看SQL就一眼明了：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">SELECT FLOOR(level / 10), SUM(payment) FROM tbl_payment GROUP BY FLOOR(level / 10);</div></pre></td></tr></table></figure></p>
+<p>动态分桶的SQL更加巧妙可以动态计算桶区间，然而也有两个限制：</p>
+<ol>
+<li><p>动态分桶是在Coprocessor之外，也就是将HBase查询结果收集到Kylin server之后再进行计算的。实际上HBase查询的是:<br><code>SELECT level, SUM(payment) FROM tbl_payment GROUP BY level;</code><br>这样会导致计算结果的条数受到Limit语句的限制，可能会舍弃一部分结果数据，而为了保护Kylin server和region不受慢查询拖累，通常我们都会带上Limit语句。如此一来，动态分桶可能只是的部分数据的统计结果，区分的界限是查询不分桶时结果集大小是否超过Limit限制。</p>
+</li>
+<li><p>由于分桶是通过除法实现的，所以不支持String类型或Date类型的维度分桶。虽然这两种需求不常见，但如果出现了只能通过静态分桶实现。</p>
+</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>虽然静态分桶和动态分桶可以满足分桶的需求，但是毕竟属于查询级别的操作，从效率上和可维护性上不及原生支持。最好的解决方案是Kylin官方提供SQL分桶函数，比如”bucket(level, 10)”，并在Coprocessor的级别上支持这个函数。如果能顺便支持String类型和Date类型的分桶，那就更好了。</p>
+<p>本文是原创文章，转载请注明：<a href="http://www.whitewood.com/2017/12/10/Kylin实战（七）：实现维度分桶/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（七）：实现维度分桶</a></p>
 
       
     </div>
@@ -410,9 +423,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Breaking-Bad/" rel="tag"># Breaking Bad</a>
-          
-            <a href="/tags/美剧/" rel="tag"># 美剧</a>
+            <a href="/tags/Kylin/" rel="tag"># Kylin</a>
           
         </div>
       
@@ -425,8 +436,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/11/04/Kylin实战（六）：上传Kylin MR依赖/" rel="next" title="Kylin实战(六): 上传Kylin MR依赖">
-                <i class="fa fa-chevron-left"></i> Kylin实战(六): 上传Kylin MR依赖
+              <a href="/2017/11/11/再见，老白/" rel="next" title="再见，老白">
+                <i class="fa fa-chevron-left"></i> 再见，老白
               </a>
             
           </div>
@@ -434,10 +445,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2017/12/10/Kylin实战（七）：实现维度分桶/" rel="prev" title="Kylin实战（七）：实现维度分桶">
-                Kylin实战（七）：实现维度分桶 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -486,8 +493,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <section class="site-overview sidebar-panel sidebar-panel-active">
+      <section class="site-overview sidebar-panel">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
           <img class="site-author-image" itemprop="image"
                src="/img/me.png"
@@ -560,6 +576,22 @@
 
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#静态分桶"><span class="nav-number">1.</span> <span class="nav-text">静态分桶</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#动态分桶"><span class="nav-number">2.</span> <span class="nav-text">动态分桶</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
@@ -690,7 +722,7 @@
 		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/11/11/再见，老白/"});
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/12/10/Kylin实战（七）：实现维度分桶/"});
 		
 
 		(function() {

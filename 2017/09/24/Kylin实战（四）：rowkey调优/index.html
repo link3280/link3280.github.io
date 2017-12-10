@@ -96,7 +96,7 @@
 <meta property="og:url" content="https://link3280.github.io/2017/09/24/Kylin实战（四）：rowkey调优/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="普遍情况下，Kylin以HBase作为存储引擎，因此HBase的查询效率对于Kylin的查询响应时间尤为关键，而rowkey作为HBase最重要的设计自然是优化的重中之重。合适的rowkey设计不仅可以节省cube存储空间和降低膨胀率，而且能减小查询扫描的范围并提高聚合计算速度从而加速查询。为此，Kylin在”Advanced Setting”页面提供了rowkey的配置供用户调整，具体可以分为维">
-<meta property="og:updated_time" content="2017-09-25T14:46:27.731Z">
+<meta property="og:updated_time" content="2017-12-10T08:08:21.722Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（四）：rowkey调优">
 <meta name="twitter:description" content="普遍情况下，Kylin以HBase作为存储引擎，因此HBase的查询效率对于Kylin的查询响应时间尤为关键，而rowkey作为HBase最重要的设计自然是优化的重中之重。合适的rowkey设计不仅可以节省cube存储空间和降低膨胀率，而且能减小查询扫描的范围并提高聚合计算速度从而加速查询。为此，Kylin在”Advanced Setting”页面提供了rowkey的配置供用户调整，具体可以分为维">
@@ -386,8 +386,8 @@
 </li>
 </ol>
 <h1 id="维度的顺序"><a href="#维度的顺序" class="headerlink" title="维度的顺序"></a>维度的顺序</h1><p>HBase是以rowkey顺序存储行的，这意味着在rowkey中越靠前的维度，相近的值越为集中（需要查询更少的HFile），从而越容易检索。因此，在查询条件中出现频率越高的维度应该越靠前。  </p>
-<p>另一方面，rowkey相当于HBase的一级索引，对于索引来说区分度是个重要的指标，我们不希望走完索引后发现还有大量的行需要遍历，这反应到索引列上就是基数越大越好。因此，基数大的列放在rowkey靠前的位置也是个推荐的做法。这样做还有一个不可忽视的好处是减小计算成本：cube构建阶段或查询没有命中物化的cuboid时，Kylin需要选择一个父cuboid来进行聚合得出子cuboid。而父cuboid的选择算法是选出cuboid id最小的一个，这意味着排在rowkey较后的维度列会优先被选中做上卷操作。如果基数小的维度在后，那么上卷的计算量会相应地减小。</p>
-<p>当这两个优化方向出现冲突时，比如A维度基数大但查询几率小，B维度基数小但查询几率大，这时就要结合HBase的物理存储来分析了。关键是看HFile会在第几个维度上出现区分度，在该维度以后的维度顺序并不太重要，因为根据它们去检索数据时都需要扫描全部的HFile，所以只需要考虑基于维度基数的规则二。否则应该更倾向于用基于查询频率的规则一，因为查询的效率比离线cube build的效率更为重要，而查询没有命中cuboid的情况也属于少数。</p>
+<p>另一方面，rowkey是于HBase的聚集索引，对于索引来说区分度是个重要的指标，我们不希望走完索引后发现还有大量的行需要遍历，这反应到索引列上就是基数越大越好。因此，基数大的列放在rowkey靠前的位置也是个推荐的做法。这样做还有一个不可忽视的好处是减小计算成本：cube构建阶段或查询没有命中物化的cuboid时，Kylin需要选择一个父cuboid来进行聚合得出子cuboid。而父cuboid的选择算法是选出cuboid id最小的一个，这意味着排在rowkey较后的维度列会优先被选中做上卷操作。如果基数小的维度在后，那么上卷的计算量会相应地减小。</p>
+<p>当这两个优化方向出现冲突时，比如A维度基数大但查询几率小，B维度基数小但查询几率大，这时就要结合HBase的物理存储来分析了。我的经验是看region会在第几个维度上出现区分度，在该维度以后的维度顺序并不太重要，因为根据它们去检索数据时都需要扫描全部的region，所以只需要考虑基于维度基数的规则二。否则应该更倾向于用基于查询频率的规则一，因为查询的效率比离线cube build的效率更为重要，而查询没有命中cuboid的情况也属于少数。</p>
 <h1 id="分片维度"><a href="#分片维度" class="headerlink" title="分片维度"></a>分片维度</h1><p>Cube支持在构建阶段进行分片以提高效率，可以并只可以将一个维度设为分片(shard by)维度（注意分片维度和cube的partition维度不同，前者作用于构建阶段，后者是用于分割时间段以支持增量构建）。Cube build第二步需要将中间表的数据重新分布到HDFS各个节点上，默认的partition方式是随机，如果指定了分片维度，则改为使用分片维度进行partition。重新分布数据的意义在于防止中间表文件大小相差太大造成数据倾斜，因此分片维度应该是高基数列以保证分片的粒度足够小，可以较为均匀地分布到各个节点上，这能大大加速之后的MapReduce任务。</p>
 <h1 id="写在最后的话"><a href="#写在最后的话" class="headerlink" title="写在最后的话"></a>写在最后的话</h1><p>Rowkey设计向来是HBase应用最为重要的一点。Kylin作为对于HBase依赖较大的系统，在框架内提供了从rowkey编码、字段顺序和输入数据分布三大方向的配置项，基本满足了常见的HBase调优需求。  然后因为在rowkey中出现的字段是由cube设计决定，rowkey的字段必须和cube设计的维度一致，导致指标其实是没有办法作为rowkey的一部分的（除非将指标列同时设为维度，但在2.0以上版本不支持这样做）。一般来说指标出现在rowkey的确不符合OLAP的理念，但是如果有需求是根据指标做过滤，Kylin目前的rowkey设计是满足不了的。这个问题在涉及原始指标的过滤时会被放大，比如计算月销售量大于100的员工的销售额总和，对应的SQL为<code>SELECT SUM(sales_amount) FROM tbl_sales WHERE sales_amount &gt; 100</code>，其实是需要扫描所有base cuboid来满足的。所以如果可以让用户选择某些指标放入rowkey，并在聚合组设置中禁止加入指标列（相当于只用于过滤不用于聚合），或许是个不错的方法。</p>
 <h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>[1]Apache Kylin核心团队.Kylin权威指南[M].机械工业出版社, 2017.<br>[2]<a href="http://kylin.apache.org/docs21/howto/howto_optimize_cubes.html" target="_blank" rel="external">Kylin Documentation: howto_optimize_cubes</a>, Apache.<br>[3]<a href="https://zhuanlan.zhihu.com/p/28461266" target="_blank" rel="external">Kyligence知乎专栏: Apache Kylin 优化利器KyBot: Rowkey一键优化</a>, Zhihu.</p>
@@ -519,7 +519,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">27</span>
+                <span class="site-state-item-count">28</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
