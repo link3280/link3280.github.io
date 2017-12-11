@@ -98,7 +98,7 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
 这个方案的问题在于太过死板，如果用户突然又想以20为区间">
-<meta property="og:updated_time" content="2017-12-10T13:19:55.859Z">
+<meta property="og:updated_time" content="2017-12-11T14:55:50.776Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（七）：实现维度分桶">
 <meta name="twitter:description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
@@ -378,13 +378,13 @@
 <a id="more"></a>
 <p>按照Kylin常规的查询类型，一个查询只能对数据进行一次过滤，即获得一个桶的统计数据，即：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">SELECT level, SUM(payment) FROM tbl_payment WHERE level BETWEEN 0 AND 10 GROUP BY level`;</div></pre></td></tr></table></figure></p>
 <p>如果需要在一个查询结果里面展示多个桶的数据，有以下两种常见的方法。</p>
-<h2 id="静态分桶"><a href="#静态分桶" class="headerlink" title="静态分桶"></a>静态分桶</h2><p>静态分桶是通过嵌套查询将每个桶的子查询结果拼接到一起，比如:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">SELECT &quot;0-10&quot;, SUM(payment) FROM tbl_payment WHERE level BETWEEN 0 AND 10</div><div class="line">UNION</div><div class="line">SELECT &quot;10-20&quot;, SUM(payment) FROM tbl_payment WHERE level BETWEEN 10 AND 20</div></pre></td></tr></table></figure></p>
-<p>静态分桶固然可以达到分桶效果，然而也有不足之处：</p>
+<h2 id="静态分桶"><a href="#静态分桶" class="headerlink" title="静态分桶"></a>静态分桶</h2><p>静态分桶是通过嵌套查询将每个桶的子查询结果拼接到一起，比如:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">SELECT &quot;0-10&quot; AS level_buck, SUM(payment) FROM tbl_payment WHERE level BETWEEN 0 AND 10</div><div class="line">UNION</div><div class="line">SELECT &quot;10-20&quot; AS level_buck, SUM(payment) FROM tbl_payment WHERE level BETWEEN 10 AND 20</div></pre></td></tr></table></figure></p>
+<p>静态分桶是最为基础的分桶方式，然而也有不足之处：</p>
 <ol>
 <li>分桶区间是静态的，需要预先知道分桶维度的值区间，否则可能漏掉不在任意一个桶内的数据，最常见的的情况是漏掉分桶维度为空的记录。</li>
-<li>每个桶对应一个子查询，在桶数量多的情况下可能存在效率上的问题。</li>
+<li>每个桶对应一个子查询，每个查询是顺序执行的，所以在桶数量多的情况下会存在效率问题。</li>
 </ol>
-<h2 id="动态分桶"><a href="#动态分桶" class="headerlink" title="动态分桶"></a>动态分桶</h2><p>动态分桶是基于未分桶的查询结果集上进行的二次计算。听起来有点绕，不过看SQL就一眼明了：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">SELECT FLOOR(level / 10), SUM(payment) FROM tbl_payment GROUP BY FLOOR(level / 10);</div></pre></td></tr></table></figure></p>
+<h2 id="动态分桶"><a href="#动态分桶" class="headerlink" title="动态分桶"></a>动态分桶</h2><p>动态分桶是基于未分桶的查询结果集上进行的二次计算。听起来有点绕，不过看SQL就很明了：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">SELECT FLOOR(level / 10), SUM(payment) FROM tbl_payment GROUP BY FLOOR(level / 10);</div></pre></td></tr></table></figure></p>
 <p>动态分桶的SQL更加巧妙可以动态计算桶区间，然而也有两个限制：</p>
 <ol>
 <li><p>动态分桶是在Coprocessor之外，也就是将HBase查询结果收集到Kylin server之后再进行计算的。实际上HBase查询的是:<br><code>SELECT level, SUM(payment) FROM tbl_payment GROUP BY level;</code><br>这样会导致计算结果的条数受到Limit语句的限制，可能会舍弃一部分结果数据，而为了保护Kylin server和region不受慢查询拖累，通常我们都会带上Limit语句。如此一来，动态分桶可能只是的部分数据的统计结果，区分的界限是查询不分桶时结果集大小是否超过Limit限制。</p>
