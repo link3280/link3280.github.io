@@ -98,11 +98,14 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
 这个方案的问题在于太过死板，如果用户突然又想以20为区间">
-<meta property="og:updated_time" content="2017-12-11T14:55:50.776Z">
+<meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/static_bucket.jpg">
+<meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/dynamic_bucket.jpg">
+<meta property="og:updated_time" content="2017-12-16T08:25:50.659Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（七）：实现维度分桶">
 <meta name="twitter:description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
 这个方案的问题在于太过死板，如果用户突然又想以20为区间">
+<meta name="twitter:image" content="https://link3280.github.io/img/kylin-in-action/static_bucket.jpg">
 
 
 
@@ -377,23 +380,29 @@
 <p>这个方案的问题在于太过死板，如果用户突然又想以20为区间分桶，修改成本就很高。所以我研究了两种out of the box的解决方案，可以在查询的级别上实现分桶，不需要修改Kylin模型。</p>
 <a id="more"></a>
 <p>按照Kylin常规的查询类型，一个查询只能对数据进行一次过滤，即获得一个桶的统计数据，即：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">SELECT level, SUM(payment) FROM tbl_payment WHERE level BETWEEN 0 AND 10 GROUP BY level`;</div></pre></td></tr></table></figure></p>
-<p>如果需要在一个查询结果里面展示多个桶的数据，有以下两种常见的方法。</p>
+<p>如果需要在一个查询结果里面展示多个桶的数据，有静态分桶和动态分桶的两种方法。</p>
 <h2 id="静态分桶"><a href="#静态分桶" class="headerlink" title="静态分桶"></a>静态分桶</h2><p>静态分桶是通过嵌套查询将每个桶的子查询结果拼接到一起，比如:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">SELECT &quot;0-10&quot; AS level_buck, SUM(payment) FROM tbl_payment WHERE level BETWEEN 0 AND 10</div><div class="line">UNION</div><div class="line">SELECT &quot;10-20&quot; AS level_buck, SUM(payment) FROM tbl_payment WHERE level BETWEEN 10 AND 20</div></pre></td></tr></table></figure></p>
-<p>静态分桶是最为基础的分桶方式，然而也有不足之处：</p>
+<p>静态分桶是最为基础的分桶方式，优点是分桶自由度较大，桶区间由用户自定义，可以支持字符串类型和日期类型维度的分桶，桶结果的计算在HBase Coprocessor内完成，不会受到limit语句限制。</p>
+<p>Kylin日志的查询分析如下：<br><img src="/img/kylin-in-action/static_bucket.jpg" alt="静态分桶查询分析" title="静态分桶查询分析"></p>
+<p>可以看到<code>need storage aggregation</code>，意味着Coprocessor执行完scan后需要将记录聚合为一个桶结果再返回给Kylin。其中这里limit下推被禁用是因为我实际查询时将桶的区间设为[0, 1000000)，如果区间是如上的[0, 10)谓词下推还是会顺利执行的。</p>
+<p>然而静态分桶也有两个主要的不足之处：</p>
 <ol>
 <li>分桶区间是静态的，需要预先知道分桶维度的值区间，否则可能漏掉不在任意一个桶内的数据，最常见的的情况是漏掉分桶维度为空的记录。</li>
-<li>每个桶对应一个子查询，每个查询是顺序执行的，所以在桶数量多的情况下会存在效率问题。</li>
+<li>每个桶对应一个子查询，而每个子查询对应一次Coprocessor的scan，查询时长随桶数线性增长。桶数超过300后的查询时长可能会变得不可接受，除此之外生成的SQL也变得冗长难以维护。</li>
 </ol>
 <h2 id="动态分桶"><a href="#动态分桶" class="headerlink" title="动态分桶"></a>动态分桶</h2><p>动态分桶是基于未分桶的查询结果集上进行的二次计算。听起来有点绕，不过看SQL就很明了：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">SELECT FLOOR(level / 10), SUM(payment) FROM tbl_payment GROUP BY FLOOR(level / 10);</div></pre></td></tr></table></figure></p>
-<p>动态分桶的SQL更加巧妙可以动态计算桶区间，然而也有两个限制：</p>
+<p>动态分桶的SQL更加巧妙可以动态计算桶区间，而且由于只需要一次HBase scan效率会高于静态分桶，特别是桶数大于50的情况下。</p>
+<p>Kylin日志的查询分析如下：<br><img src="/img/kylin-in-action/dynamic_bucket.jpg" alt="动态分桶查询分析" title="动态分桶查询分析"></p>
+<p>显然，该查询不需要Coprocessor端的聚合，所以实际上HBase查询的是:<br><code>SELECT level, SUM(payment) FROM tbl_payment GROUP BY level LIMIT 50000;</code><br>该查询返回的结果会在Kylin Server端进行GROUP BY FLOOR(level / 10)的二次聚合得出最终结果。</p>
+<p>然而动态分桶也有两个缺陷：</p>
 <ol>
-<li><p>动态分桶是在Coprocessor之外，也就是将HBase查询结果收集到Kylin server之后再进行计算的。实际上HBase查询的是:<br><code>SELECT level, SUM(payment) FROM tbl_payment GROUP BY level;</code><br>这样会导致计算结果的条数受到Limit语句的限制，可能会舍弃一部分结果数据，而为了保护Kylin server和region不受慢查询拖累，通常我们都会带上Limit语句。如此一来，动态分桶可能只是的部分数据的统计结果，区分的界限是查询不分桶时结果集大小是否超过Limit限制。</p>
+<li><p>动态分桶是在Coprocessor之外，也就是将HBase查询结果收集到Kylin Server之后再进行计算的。<br>这样会导致计算结果的条数受到limit语句的限制，HBase可能只会返回部分结果数据，而为了保护Kylin Server和region不受慢查询拖累，通常我们都会带上limit语句。如此一来，动态分桶可能只是的部分数据的统计结果，区分的界限是查询不分桶时结果集大小是否超过limit限制。</p>
 </li>
 <li><p>由于分桶是通过除法实现的，所以不支持String类型或Date类型的维度分桶。虽然这两种需求不常见，但如果出现了只能通过静态分桶实现。</p>
 </li>
 </ol>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>虽然静态分桶和动态分桶可以满足分桶的需求，但是毕竟属于查询级别的操作，从效率上和可维护性上不及原生支持。最好的解决方案是Kylin官方提供SQL分桶函数，比如”bucket(level, 10)”，并在Coprocessor的级别上支持这个函数。如果能顺便支持String类型和Date类型的分桶，那就更好了。</p>
-<p>本文是原创文章，转载请注明：<a href="http://www.whitewood.com/2017/12/10/Kylin实战（七）：实现维度分桶/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（七）：实现维度分桶</a></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>静态分桶和动态分桶的本质区别在于分桶操作是发生在HBase Coprocessor还是Kylin Server。虽然目前两种分桶可以满足绝大多数分桶的需求，但是毕竟属于查询级别的操作，从效率上和可维护性上不及原生支持。最好的解决方案是Kylin官方提供SQL分桶函数，比如”bucket(level, 10)”，并在Coprocessor的级别上支持这个函数。如果能顺便支持String类型和Date类型的分桶，那就更好了。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.com/2017/12/10/Kylin实战（七）：实现维度分桶/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（七）：实现维度分桶</a></em></font>
 
       
     </div>
