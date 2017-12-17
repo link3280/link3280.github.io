@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Hive," />
+  <meta name="keywords" content="Spark," />
 
 
 
@@ -90,16 +90,22 @@
 
 
 
-<meta name="description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
+<meta name="description" content="读源码是大数据开发工程师的自我修养之一，趁最近项目进度比较快，我决定抽时间来系统学习一下代码质量广受好评的Spark源码。虽然工作中使用的是Apache 发行版的1.6.1，所以读源码时还是保持一致。好项目都是高内聚低耦合，这就方便逐个组件剖析。先从core包开始，这次要讲的是org.apache.spark.broadcast。
+在Spark应用启动时，Driver需要将序列化之后的task发至">
 <meta property="og:type" content="article">
-<meta property="og:title" content="[翻译]Hive权限控制官方文档">
-<meta property="og:url" content="https://link3280.github.io/2017/06/15/翻译-Hive权限控制官方文档/index.html">
+<meta property="og:title" content="Spark源码学习笔记（一）：Broadcast机制">
+<meta property="og:url" content="https://link3280.github.io/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
-<meta property="og:updated_time" content="2017-12-17T05:17:57.435Z">
+<meta property="og:description" content="读源码是大数据开发工程师的自我修养之一，趁最近项目进度比较快，我决定抽时间来系统学习一下代码质量广受好评的Spark源码。虽然工作中使用的是Apache 发行版的1.6.1，所以读源码时还是保持一致。好项目都是高内聚低耦合，这就方便逐个组件剖析。先从core包开始，这次要讲的是org.apache.spark.broadcast。
+在Spark应用启动时，Driver需要将序列化之后的task发至">
+<meta property="og:image" content="https://link3280.github.io/img/sparkcontext-broadcast-executors.png">
+<meta property="og:image" content="https://link3280.github.io/img/spark_boardcast_package.png">
+<meta property="og:updated_time" content="2017-12-17T05:15:52.621Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="[翻译]Hive权限控制官方文档">
-<meta name="twitter:description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
+<meta name="twitter:title" content="Spark源码学习笔记（一）：Broadcast机制">
+<meta name="twitter:description" content="读源码是大数据开发工程师的自我修养之一，趁最近项目进度比较快，我决定抽时间来系统学习一下代码质量广受好评的Spark源码。虽然工作中使用的是Apache 发行版的1.6.1，所以读源码时还是保持一致。好项目都是高内聚低耦合，这就方便逐个组件剖析。先从core包开始，这次要讲的是org.apache.spark.broadcast。
+在Spark应用启动时，Driver需要将序列化之后的task发至">
+<meta name="twitter:image" content="https://link3280.github.io/img/sparkcontext-broadcast-executors.png">
 
 
 
@@ -127,13 +133,13 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2017/06/15/翻译-Hive权限控制官方文档/"/>
+  <link rel="canonical" href="https://link3280.github.io/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/"/>
 
 
 
 
 
-  <title>[翻译]Hive权限控制官方文档 | 时间与精神的小屋</title>
+  <title>Spark源码学习笔记（一）：Broadcast机制 | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -272,7 +278,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/06/15/翻译-Hive权限控制官方文档/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -289,7 +295,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">[翻译]Hive权限控制官方文档</h2>
+          <h2 class="post-title" itemprop="name headline">Spark源码学习笔记（一）：Broadcast机制</h2>
         
 
         <div class="post-meta">
@@ -301,8 +307,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-06-15T22:43:32+08:00">
-                2017-06-15
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-08-19T20:55:16+08:00">
+                2017-08-19
               </time>
             
 
@@ -324,8 +330,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Hive/" itemprop="url" rel="index">
-                    <span itemprop="name">Hive</span>
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
                   </a>
                 </span>
 
@@ -343,8 +349,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/06/15/翻译-Hive权限控制官方文档/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/06/15/翻译-Hive权限控制官方文档/" itemprop="commentsCount"></span>
+                <a href="/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/19/Spark源码学习笔记（一）：Broadcast机制/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -370,17 +376,26 @@
       
 
       
-        <p>翻译自：<a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization" target="_blank" rel="external">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization</a></p>
+        <p>读源码是大数据开发工程师的自我修养之一，趁最近项目进度比较快，我决定抽时间来系统学习一下代码质量广受好评的Spark源码。虽然工作中使用的是Apache 发行版的1.6.1，所以读源码时还是保持一致。好项目都是高内聚低耦合，这就方便逐个组件剖析。先从core包开始，这次要讲的是<code>org.apache.spark.broadcast</code>。</p>
+<p>在Spark应用启动时，Driver需要将序列化之后的task发至executor上。官方建议task的大小应该在20KB以下，以保证Application可以快速启动。如果task要使用比较大的变量，比如一个维度表，这时就会用到Spark的broadcast机制。</p>
 <a id="more"></a>
-<h1 id="使用案例"><a href="#使用案例" class="headerlink" title="使用案例"></a>使用案例</h1><ol>
-<li>Hive作为表存储层。这是在使用Apache Pig，MapReduce和其他MMP数据库(Cloudera Impala，Facebook Presto，Spark SQL等)时很常见。这种情况下，Hive提供了表抽象和存储上的元数据(尤其是对于HDFS)。这些用户可以直接访问HDFS和metastore服务器(它为Hive元数据提供了访问接口)。HDFS的访问是通过HDFS访问控制授权的，而元数据的访问需要通过Hive配置来授权。</li>
-<li>Hive作为SQL引擎。这是Hive最常见的情况。下面是对于SQL用户和BI工具来说的”Hive界面”，可以分为两个子文件夹：<br>a. Hive命令行用户。这些用户拥有直接访问HDFS和Hive metastore的权限，这跟案例1很相似。注意，不久后Hive CLI会正式被弃用以支持Beeline。<br>b. ODBC/JDBC和其他HiveServer2 API的用户(Beeline CLI就是一个例子)。这些用户可以通过HiveServer2访问所有数据和元数据，但不能直接访问HDFS或者metastore。</li>
-</ol>
-<h1 id="权限模型概况"><a href="#权限模型概况" class="headerlink" title="权限模型概况"></a>权限模型概况</h1><h2 id="基于存储的Metastore-Server权限控制"><a href="#基于存储的Metastore-Server权限控制" class="headerlink" title="基于存储的Metastore Server权限控制"></a>基于存储的Metastore Server权限控制</h2><p>在案例1和案例2a中，用户可以不经Hive配置控制直接访问数据。而在真正访问表的存储文件时，HDFS访问权限作为其中一个权限数据源，会对用户操作进行访问校验。通过启用基于存储的Metastore Server权限控制，你可以将它作为唯一数据源，保证数据一致性和元数据授权策略。为了要控制对库/表/分区等元对象的访问， 该权限模型会检查你是否在文件系统上对应的目录有相应的权限。在确保查询以终端用户方式运行的情况下，你也可以通过HiveServer2(在下文的案例2b)来保护访问接口。(在HiveServer2 配置中的hive.server2.enable.doAs 选项应该为true，这也是默认值)。<br>注意，使用HDFS ACL(在Hadoop 2.4以上版本可用)你可以很灵活地控制文件系统的权限，同时为基于存储的权限控制提供更多的灵活性。这项功能在Hive 0.14可用(HIVE-7583)。</p>
-<h2 id="基于SQL标准的HiveServer2权限控制"><a href="#基于SQL标准的HiveServer2权限控制" class="headerlink" title="基于SQL标准的HiveServer2权限控制"></a>基于SQL标准的HiveServer2权限控制</h2><p>虽然基于存储的权限控制可以提供数据库/表/分区级别的权限控制，但更细粒度的权限控制，比如列和视图就没办法做到了，因为文件系统的权限控制是到文件级别的，要求精确权限控制的前提是，有一个能够提供用户有权限(有需要)访问的列和行的数据服务器。但对于文件系统来说，整个文件都是为用户服务的。HiveServer2满足了这个需求，因为它的API有行和列的概念(通过使用SQL)，能够仅提供你的查询需要的行和列。<br>基于SQL标准的权限控制(在Hive 0.13.0引入，HIVE-5837)可以用于实现精确权限控制。它基于SQL标准使用大家熟悉的grant/revoke语句来控制访问。这需要通过HiveServer2配置来启用。<br>注意该权限模型不能用于案例2a(Hive命令行)，这是因为用户可以直接访问HDFS，并能理所当然地绕过基于SQL标准的权限校验，甚至将它关闭。这种情况下关闭它可以避免给用户安全访问的错觉。</p>
-<h2 id="默认的Hive授权-遗留模式"><a href="#默认的Hive授权-遗留模式" class="headerlink" title="默认的Hive授权(遗留模式)"></a>默认的Hive授权(遗留模式)</h2><p>Hive默认的授权模型是Hive早期版本曾使用过的。然后这个模型缺乏完整的访问控制模式，留下了许多安全隐患。比如，需要将权限授予一个未定义的用户，或者任何用户都可以授权自己访问数据表或数据库的权限。这个模型与基于SQL标准的授权模型相似，也提供了基于grant/revoke语句的访问控制。然而，该访问控制与基于SQL标准的授权模型不同，并且它们也不兼容。该模型对于Hive命令行用户同样适用。不过，由于在上述基于SQL标准授权模型的讨论中提到的原因，该模型用在Hive命令行并不安全。</p>
-<h1 id="满足多种案例的授权需求"><a href="#满足多种案例的授权需求" class="headerlink" title="满足多种案例的授权需求"></a>满足多种案例的授权需求</h1><p>使用基于存储的授权模型是满足以上所有案例的简单方式。如果你需要对SQL用户进行精准的访问控制，你也可以同时在HiveServer2启用基于SQL标准的授权模型。也就是说，你可以对metastore API调用启用基于存储的授权模型，同时对HiveServer2启用基于SQL标准的授权模型。</p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/06/15/[翻译]Hive权限控制官方文档/" target="_blank" rel="external">时间与精神的小屋 - [翻译]Hive权限控制官方文档</a></em></font>
+<p>Broadcast机制允许用户在每个executor上缓存一份只读变量，以避免将变量与task代码一起传输。从物理上看，Boardcast的目标是将变量分发到所有工作节点的BlockManager上。</p>
+<p><img src="/img/sparkcontext-broadcast-executors.png" alt="图来自mastering-apache-spark-2" title="spark broadcast structure"></p>
+<p>深入源码，首先看下<code>org.apache.spark.broadcast</code>的内容：</p>
+<p><img src="/img/spark_boardcast_package.png" alt="spark broadcast" title="spark broadcast package"></p>
+<p>显然主要有三种对象Manager、Factory和Broadcast，Manager负责Broadcast的全局管理，Factory负责创建或取消Broadcast，Broadcast为实际的一次广播操作。Factory和Broadcast都有http和torrent两种实现方式。</p>
+<h1 id="BroadcastManager"><a href="#BroadcastManager" class="headerlink" title="BroadcastManager"></a>BroadcastManager</h1><p>BroadcastManager是BroadcastFactory的封装，负责了BroadcastFactory从初始化到关停的整个生命周期。初始化阶段，它从配置中读取<code>spark.broadcast.factory</code>属性，这个属性决定了实际使用的broadcast是http还是torrent，默认为<code>org.apache.spark.broadcast.TorrentBroadcastFactory</code>；在运行期间，它会调用BroadcastFactory的<code>newBroadcast</code>方法和<code>unbroadcast</code>方法来控制变量的广播，每次广播有递增的唯一ID；最后它还负责了BroadcastFactory的关闭。</p>
+<h1 id="BroadcastFactory"><a href="#BroadcastFactory" class="headerlink" title="BroadcastFactory"></a>BroadcastFactory</h1><p>BroadcastFactory是一个trait，核心的两个方法是<code>newBroadcast</code>和<code>unbroadcast</code>，前者用于广播一个新的变量，后者用于删除一个已有的变量。<code>HttpBroadcastFactory</code>和<code>TorrentBroadcastFactory</code>只是通过简单调用Broadcast类的函数来实现这些方法.</p>
+<h1 id="Broadcast"><a href="#Broadcast" class="headerlink" title="Broadcast"></a>Broadcast</h1><p>Broadcast同样是一个trait，核心方法是<code>persist</code>、<code>unpersist</code>以及<code>value</code>，分别用于缓存一个变量、从缓存删除一个变量和获取变量的值。同时它还维护了一个volatile变量<code>_isValid</code>以判断当前该变量是否可操作，对变量的操作会先访问这个值。如果一个线程操作一个变量时发现它已经被删除，便会抛出一个SparkException。</p>
+<h2 id="HttpBroadcast"><a href="#HttpBroadcast" class="headerlink" title="HttpBroadcast"></a>HttpBroadcast</h2><p>HttpBroadcast会在Driver创建一个HttpServer（底层为Jetty），并将变量写到本地临时目录以防Driver进程崩溃。Executor在接收到task后向Driver请求该变量，接收到变量之后将其反序列化并存储在该节点的BlockManager中。由于每个节点的广播变量只需要本地使用，所以这些block不需要通知BlockManagerMaster。  </p>
+<p>当Application需要删除该广播变量时，HttpBroadcast会调用<code>unpersist</code>方法，通过Application的BlockManagerMaster通知所有节点的BlockManager删除对应id的广播变量。这个操作可以设置是否删除Driver的广播变量，以避免Driver后续还需要使用该变量。  </p>
+<p>此外，HttpBroadcast还会启动一个MetaDataCleaner定时清除过期的广播变量。过期的时长可以通过<code>spark.cleaner.ttl.HTTP_BROADCAST</code>来设置，默认为-1表示不清理。</p>
+<h2 id="TorrentBroadcast"><a href="#TorrentBroadcast" class="headerlink" title="TorrentBroadcast"></a>TorrentBroadcast</h2><p>TorrentBroadcast采用比特流传输协议来分发广播变量，这意味着整个过程是P2P的，executor除了作为客户端请求变量，在获得变量之后它也会成为server帮助分发，这大大减小了分发的速度对Driver节点带宽的依赖。</p>
+<p>首先Driver会将变量序列化并分成一个个block，存储在Driver的BlockManager。每个executor开始工作时，首先向本地的BlockManager请求该变量。如果不存在，则向Driver或其他executor请求。一旦获得了变量，则放到BlockManager上并向BlockManagerMaster报告，以便后续节点获取。</p>
+<p>删除广播变量的实现与HttpBroadcast相似，都是通过BlockManagerMaster删除各个节点BlockManager上的相应变量。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>Spark变量广播分为HttpBroadcast和TorrentBroadcast。HttpBroadcast较早前用于Standalone集群模式，全部变量由Driver分发，所以有单点问题。TorrentBroadcast是更为高效的广播机制，分发能力随着接收节点增加呈指数级别增长，在大型集群中的分发效率远高于HttpTorrent。在最新版本2.2，HttpBroadcast完全被TorrentBroadcast取代。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/" target="_blank" rel="external">时间与精神的小屋 - Spark源码学习笔记（一）：Broadcast机制</a></em></font>
+
       
     </div>
 
@@ -409,7 +424,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Hive/" rel="tag"># Hive</a>
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
           
         </div>
       
@@ -422,8 +437,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/05/14/浅谈索引的本质/" rel="next" title="浅谈索引的本质">
-                <i class="fa fa-chevron-left"></i> 浅谈索引的本质
+              <a href="/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/" rel="next" title="Kylin实战（一）：用Hive UDTF平铺内嵌类型字段">
+                <i class="fa fa-chevron-left"></i> Kylin实战（一）：用Hive UDTF平铺内嵌类型字段
               </a>
             
           </div>
@@ -432,8 +447,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2017/07/22/curl模拟REST请求/" rel="prev" title="curl模拟REST请求">
-                curl模拟REST请求 <i class="fa fa-chevron-right"></i>
+              <a href="/2017/08/23/Spark源码学习笔记（二）：Executor运行机制/" rel="prev" title="Spark源码学习笔记（二）：Executor运行机制">
+                Spark源码学习笔记（二）：Executor运行机制 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -576,7 +591,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#使用案例"><span class="nav-number">1.</span> <span class="nav-text">使用案例</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#权限模型概况"><span class="nav-number">2.</span> <span class="nav-text">权限模型概况</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#基于存储的Metastore-Server权限控制"><span class="nav-number">2.1.</span> <span class="nav-text">基于存储的Metastore Server权限控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#基于SQL标准的HiveServer2权限控制"><span class="nav-number">2.2.</span> <span class="nav-text">基于SQL标准的HiveServer2权限控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#默认的Hive授权-遗留模式"><span class="nav-number">2.3.</span> <span class="nav-text">默认的Hive授权(遗留模式)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#满足多种案例的授权需求"><span class="nav-number">3.</span> <span class="nav-text">满足多种案例的授权需求</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#BroadcastManager"><span class="nav-number">1.</span> <span class="nav-text">BroadcastManager</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#BroadcastFactory"><span class="nav-number">2.</span> <span class="nav-text">BroadcastFactory</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Broadcast"><span class="nav-number">3.</span> <span class="nav-text">Broadcast</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#HttpBroadcast"><span class="nav-number">3.1.</span> <span class="nav-text">HttpBroadcast</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TorrentBroadcast"><span class="nav-number">3.2.</span> <span class="nav-text">TorrentBroadcast</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">3.3.</span> <span class="nav-text">小结</span></a></li></ol></li></ol></div>
             
 
           </div>
@@ -712,7 +727,7 @@
 		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/06/15/翻译-Hive权限控制官方文档/"});
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/08/19/Spark源码学习笔记（一）：Broadcast机制/"});
 		
 
 		(function() {
