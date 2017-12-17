@@ -93,11 +93,11 @@
 <meta name="description" content="众所周知，Apache Kylin 是基于星型模型设计的，并不支持雪花模型（更新：在最近发布的2.0版本中增加了对雪花模型的支持）。然而在大多数情况下，Kylin的存储引擎是Hive。不同于普通RDMS，Hive支持复杂数据类型，包括Array，Map和Struct。复杂数据类型的字段又可以称为内嵌对象(nested object)， 某种程度上属于雪花模型。如果导入带有复杂数据类型字段的Hive">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Kylin实战（一）：用Hive UDTF平铺内嵌类型字段">
-<meta property="og:url" content="https://link3280.github.io/2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/index.html">
+<meta property="og:url" content="https://link3280.github.io/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="众所周知，Apache Kylin 是基于星型模型设计的，并不支持雪花模型（更新：在最近发布的2.0版本中增加了对雪花模型的支持）。然而在大多数情况下，Kylin的存储引擎是Hive。不同于普通RDMS，Hive支持复杂数据类型，包括Array，Map和Struct。复杂数据类型的字段又可以称为内嵌对象(nested object)， 某种程度上属于雪花模型。如果导入带有复杂数据类型字段的Hive">
 <meta property="og:image" content="https://link3280.github.io/img/kylin_error.png">
-<meta property="og:updated_time" content="2017-12-17T05:13:58.525Z">
+<meta property="og:updated_time" content="2017-12-17T05:45:51.654Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（一）：用Hive UDTF平铺内嵌类型字段">
 <meta name="twitter:description" content="众所周知，Apache Kylin 是基于星型模型设计的，并不支持雪花模型（更新：在最近发布的2.0版本中增加了对雪花模型的支持）。然而在大多数情况下，Kylin的存储引擎是Hive。不同于普通RDMS，Hive支持复杂数据类型，包括Array，Map和Struct。复杂数据类型的字段又可以称为内嵌对象(nested object)， 某种程度上属于雪花模型。如果导入带有复杂数据类型字段的Hive">
@@ -129,7 +129,7 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/"/>
+  <link rel="canonical" href="https://link3280.github.io/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/"/>
 
 
 
@@ -274,7 +274,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -345,8 +345,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/" itemprop="commentsCount"></span>
+                <a href="/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -446,7 +446,7 @@ public class FlattenMap extends GenericUDTF{
 <p>将它注册到Hive的permenant function中：<br><code>CREATE FUNCTION flattenMa AS &#39;me.whitewood.bigdata.hive.udtf.FlattenMap&#39; using jar &#39;hdfs://masters/user/hive/udf/Kylin-UDTF-1.0-SNAPSHOT.jar&#39;;</code></p>
 <p>之后就可以在SQL中使用自定义的UDTF：<br><code>SELECT flattenMap(taskMap) FROM tbl_task LIMIT 10;</code></p>
 <p>参考文献：<br>1.<a href="https://www.bbsmax.com/A/Gkz1PbZdR6/" target="_blank" rel="external">【Kylin实战】Hive复杂数据类型与视图</a></p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（一）：用Hive UDTF平铺内嵌类型字段</a></em></font>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/08/12/Kylin实战（一）：用Hive%20UDTF平铺内嵌类型字段/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（一）：用Hive UDTF平铺内嵌类型字段</a></em></font>
 
       
     </div>
@@ -756,7 +756,7 @@ public class FlattenMap extends GenericUDTF{
 		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/"});
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/"});
 		
 
 		(function() {

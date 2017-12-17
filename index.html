@@ -1174,7 +1174,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/09/10/Kylin实战（二）：创建Hive视图/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/09/10/Kylin实战（二）：引入Hive视图层/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -1193,7 +1193,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2017/09/10/Kylin实战（二）：创建Hive视图/" itemprop="url">Kylin实战（二）：引入Hive视图层</a></h2>
+                <a class="post-title-link" href="/2017/09/10/Kylin实战（二）：引入Hive视图层/" itemprop="url">Kylin实战（二）：引入Hive视图层</a></h2>
         
 
         <div class="post-meta">
@@ -1247,8 +1247,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/09/10/Kylin实战（二）：创建Hive视图/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/09/10/Kylin实战（二）：创建Hive视图/" itemprop="commentsCount"></span>
+                <a href="/2017/09/10/Kylin实战（二）：引入Hive视图层/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/09/10/Kylin实战（二）：引入Hive视图层/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -1279,7 +1279,7 @@
 <p>目前业界更流行的做法是通过Hive逻辑视图来处理。因为视图不需要物化，可以节省计算资源和存储空间，更重要的是减少环节降低了数据的延迟。试想本来每天凌晨1点就开始离线ETL任务，数据仓库的数据3点入库完毕可以进行cube build。如果预留1小时给中间表的计算环节，那么cube build要4点才可以开始，Kylin的下游任务全部都要顺延一个小时，这个成本是很高的。相比之下视图只会给cube build增加一点overhead，完全可以接受。</p>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2017/09/10/Kylin实战（二）：创建Hive视图/#more" rel="contents">
+            <a class="btn" href="/2017/09/10/Kylin实战（二）：引入Hive视图层/#more" rel="contents">
               阅读全文 &raquo;
             </a>
           </div>
@@ -1627,7 +1627,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -1646,7 +1646,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/" itemprop="url">Kylin实战（一）：用Hive UDTF平铺内嵌类型字段</a></h2>
+                <a class="post-title-link" href="/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/" itemprop="url">Kylin实战（一）：用Hive UDTF平铺内嵌类型字段</a></h2>
         
 
         <div class="post-meta">
@@ -1700,8 +1700,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/" itemprop="commentsCount"></span>
+                <a href="/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -1731,7 +1731,7 @@
           <p>众所周知，Apache Kylin 是基于星型模型设计的，并不支持雪花模型（更新：在最近发布的2.0版本中增加了对雪花模型的支持）。然而在大多数情况下，Kylin的存储引擎是Hive。不同于普通RDMS，Hive支持复杂数据类型，包括Array，Map和Struct。复杂数据类型的字段又可以称为内嵌对象(nested object)， 某种程度上属于雪花模型。如果导入带有复杂数据类型字段的Hive表，Kylin会在校验表元信息的时候报错。  </p>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2017/08/12/Kylin实战（一）：用Hive-UDTF平铺内嵌类型字段/#more" rel="contents">
+            <a class="btn" href="/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/#more" rel="contents">
               阅读全文 &raquo;
             </a>
           </div>
