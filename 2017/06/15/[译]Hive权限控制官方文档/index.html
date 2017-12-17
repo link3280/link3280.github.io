@@ -92,13 +92,13 @@
 
 <meta name="description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
 <meta property="og:type" content="article">
-<meta property="og:title" content="[翻译]Hive权限控制官方文档">
-<meta property="og:url" content="https://link3280.github.io/2017/06/15/[翻译]Hive权限控制官方文档/index.html">
+<meta property="og:title" content="[译]Hive权限控制官方文档">
+<meta property="og:url" content="https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
-<meta property="og:updated_time" content="2017-12-17T05:17:57.435Z">
+<meta property="og:updated_time" content="2017-12-17T05:51:39.461Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="[翻译]Hive权限控制官方文档">
+<meta name="twitter:title" content="[译]Hive权限控制官方文档">
 <meta name="twitter:description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
 
 
@@ -127,13 +127,13 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2017/06/15/[翻译]Hive权限控制官方文档/"/>
+  <link rel="canonical" href="https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/"/>
 
 
 
 
 
-  <title>[翻译]Hive权限控制官方文档 | 时间与精神的小屋</title>
+  <title>[译]Hive权限控制官方文档 | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -272,7 +272,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/06/15/[翻译]Hive权限控制官方文档/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -289,7 +289,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">[翻译]Hive权限控制官方文档</h2>
+          <h2 class="post-title" itemprop="name headline">[译]Hive权限控制官方文档</h2>
         
 
         <div class="post-meta">
@@ -343,8 +343,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/06/15/[翻译]Hive权限控制官方文档/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/06/15/[翻译]Hive权限控制官方文档/" itemprop="commentsCount"></span>
+                <a href="/2017/06/15/[译]Hive权限控制官方文档/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/06/15/[译]Hive权限控制官方文档/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -380,7 +380,7 @@
 <h2 id="基于SQL标准的HiveServer2权限控制"><a href="#基于SQL标准的HiveServer2权限控制" class="headerlink" title="基于SQL标准的HiveServer2权限控制"></a>基于SQL标准的HiveServer2权限控制</h2><p>虽然基于存储的权限控制可以提供数据库/表/分区级别的权限控制，但更细粒度的权限控制，比如列和视图就没办法做到了，因为文件系统的权限控制是到文件级别的，要求精确权限控制的前提是，有一个能够提供用户有权限(有需要)访问的列和行的数据服务器。但对于文件系统来说，整个文件都是为用户服务的。HiveServer2满足了这个需求，因为它的API有行和列的概念(通过使用SQL)，能够仅提供你的查询需要的行和列。<br>基于SQL标准的权限控制(在Hive 0.13.0引入，HIVE-5837)可以用于实现精确权限控制。它基于SQL标准使用大家熟悉的grant/revoke语句来控制访问。这需要通过HiveServer2配置来启用。<br>注意该权限模型不能用于案例2a(Hive命令行)，这是因为用户可以直接访问HDFS，并能理所当然地绕过基于SQL标准的权限校验，甚至将它关闭。这种情况下关闭它可以避免给用户安全访问的错觉。</p>
 <h2 id="默认的Hive授权-遗留模式"><a href="#默认的Hive授权-遗留模式" class="headerlink" title="默认的Hive授权(遗留模式)"></a>默认的Hive授权(遗留模式)</h2><p>Hive默认的授权模型是Hive早期版本曾使用过的。然后这个模型缺乏完整的访问控制模式，留下了许多安全隐患。比如，需要将权限授予一个未定义的用户，或者任何用户都可以授权自己访问数据表或数据库的权限。这个模型与基于SQL标准的授权模型相似，也提供了基于grant/revoke语句的访问控制。然而，该访问控制与基于SQL标准的授权模型不同，并且它们也不兼容。该模型对于Hive命令行用户同样适用。不过，由于在上述基于SQL标准授权模型的讨论中提到的原因，该模型用在Hive命令行并不安全。</p>
 <h1 id="满足多种案例的授权需求"><a href="#满足多种案例的授权需求" class="headerlink" title="满足多种案例的授权需求"></a>满足多种案例的授权需求</h1><p>使用基于存储的授权模型是满足以上所有案例的简单方式。如果你需要对SQL用户进行精准的访问控制，你也可以同时在HiveServer2启用基于SQL标准的授权模型。也就是说，你可以对metastore API调用启用基于存储的授权模型，同时对HiveServer2启用基于SQL标准的授权模型。</p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/06/15/[翻译]Hive权限控制官方文档/" target="_blank" rel="external">时间与精神的小屋 - [翻译]Hive权限控制官方文档</a></em></font>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/06/15/[译]Hive权限控制官方文档/" target="_blank" rel="external">时间与精神的小屋 - [译]Hive权限控制官方文档</a></em></font>
       
     </div>
 
@@ -712,7 +712,7 @@
 		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/06/15/[翻译]Hive权限控制官方文档/"});
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/06/15/[译]Hive权限控制官方文档/"});
 		
 
 		(function() {
