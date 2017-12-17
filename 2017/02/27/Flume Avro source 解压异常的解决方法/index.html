@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="大数据,Flume,Bugfix," />
+  <meta name="keywords" content="Flume,大数据,Bugfix," />
 
 
 
@@ -97,7 +97,7 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="最近接入一个新的日志，需要导入历史数据。数据分析师跟我说的时候我爽快地答应了，不就是ETL么，没想到在调用flume接口上卡了一个星期，今天查flume源码终于才搞定。虽然周末都花费在debug上，不过第一次算是解决了一个jira上的issuse(尽管已经关闭)，还是很开心的啦。">
 <meta property="og:image" content="https://link3280.github.io/img/flume_avro_error_stacktrace.png">
-<meta property="og:updated_time" content="2017-03-24T14:40:43.643Z">
+<meta property="og:updated_time" content="2017-12-17T05:37:26.342Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flume Avro source 解压异常的解决方法">
 <meta name="twitter:description" content="最近接入一个新的日志，需要导入历史数据。数据分析师跟我说的时候我爽快地答应了，不就是ETL么，没想到在调用flume接口上卡了一个星期，今天查flume源码终于才搞定。虽然周末都花费在debug上，不过第一次算是解决了一个jira上的issuse(尽管已经关闭)，还是很开心的啦。">
@@ -392,6 +392,7 @@
 <p>看来必须查源码才可以解决了。一开始我在flume-ng-core中找AvroSource相关的类，包括ZlibUtil、ZlibDecoder等实现，最大的收获只是-3的返回码对应了DATA_ERROR。后来我转念一想，其实问题不在于source，而在于avro客户端。这么一来思路就清晰了很多，我直奔flume-sdk，找到了 org.apache.flume.api.RpcClientConfigurationConstants，这不就是RpcClient的配置参数么？仔细一看，终于被我找到配置的方法：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">  <span class="comment">/**</span></div><div class="line">   * The following are const for the NettyAvro Client。  To enable compression</div><div class="line">   * and set a compression level</div><div class="line">   */</div><div class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String CONFIG_COMPRESSION_TYPE = <span class="string">"compression-type"</span>;</div><div class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String CONFIG_COMPRESSION_LEVEL = <span class="string">"compression-level"</span>;</div><div class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> DEFAULT_COMPRESSION_LEVEL = <span class="number">6</span>;</div><div class="line">`</div></pre></td></tr></table></figure></p>
 <p>再看工厂类RpcClientFactory，getInstance()方法是可以设置properties的，于是我将客户端初始化代码改成如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">Properties props = <span class="keyword">new</span> Properties();</div><div class="line">props.put(<span class="string">"hosts"</span>,<span class="string">"h1"</span>);</div><div class="line">props.put(<span class="string">"hosts.h1"</span>,socket);</div><div class="line">props.put(<span class="string">"compression-type"</span>,<span class="string">"deflate"</span>);</div><div class="line">props.put(<span class="string">"compression-level"</span>,<span class="string">"6"</span>);</div><div class="line">RpcClient client = RpcClientFactory.getInstance(props);</div></pre></td></tr></table></figure></p>
 <p>测试发送，成功！</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/02/27/Flume%20Avro%20source%20解压异常的解决方法/" target="_blank" rel="external">时间与精神的小屋 - Flume Avro source 解压异常的解决方法</a></em></font>
 
       
     </div>
@@ -421,9 +422,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/大数据/" rel="tag"># 大数据</a>
-          
             <a href="/tags/Flume/" rel="tag"># Flume</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
           
             <a href="/tags/Bugfix/" rel="tag"># Bugfix</a>
           

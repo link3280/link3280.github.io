@@ -98,7 +98,7 @@
 <meta property="og:description" content="在Spark三种常见的资源调度器，YARN、Mesos和Standalone中，最受欢迎的莫过于YARN。YARN与Hadoop原生集成，可以支持不同计算框架在Hadoop集群上的调度，这使得Spark on YARN无需改变配置就可以与MapReduce共享同一个资源池，避免了资源浪费，节省了开发成本。">
 <meta property="og:image" content="https://link3280.github.io/img/spark-yarn-client.png">
 <meta property="og:image" content="https://link3280.github.io/img/spark-yarn-cluster.png">
-<meta property="og:updated_time" content="2017-03-24T14:40:38.476Z">
+<meta property="og:updated_time" content="2017-12-17T05:25:52.769Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Spark on YARN两种部署方式的不同">
 <meta name="twitter:description" content="在Spark三种常见的资源调度器，YARN、Mesos和Standalone中，最受欢迎的莫过于YARN。YARN与Hadoop原生集成，可以支持不同计算框架在Hadoop集群上的调度，这使得Spark on YARN无需改变配置就可以与MapReduce共享同一个资源池，避免了资源浪费，节省了开发成本。">
@@ -382,7 +382,8 @@
 <h2 id="YARN-cluster模式"><a href="#YARN-cluster模式" class="headerlink" title="YARN-cluster模式"></a>YARN-cluster模式</h2><p>Spark Application的Driver在AM内运行，也就是说AM不仅负责资源协商，也负责作业执行的调度。因为client提交Application之后就没有后续的任务了，进程自然退出，Application的运行日志可以在Spark AM的WebUI看到。如果要结束Spark Application，需要使用Hadoop yarn.sh的 application -kill [ApplicationID] 命令。</p>
 <p><img src="/img/spark-yarn-cluster.png" alt="Spark YARN-cluster-mode" title="Spark YARN-cluster-mode"></p>
 <p>综上所述，yarn-client和yarn-cluster的不同在于Spark Driver在client运行还是在AM运行。yarn-client更适合调试或者需要交互的任务（比如Spark-shell），因为Driver标准IO是在client本地。而yarn-cluster更适用于生产任务，因为资源统一由YARN分配，不依赖于某台机器。  </p>
-<p>参考资料：<br><a href="http://blog.cloudera.com/blog/2014/05/apache-spark-resource-management-and-yarn-app-models/" target="_blank" rel="external">Apache Spark Resource Management and YARN App Models</a><br><a href="http://dongxicheng.org/framework-on-yarn/apache-spark-comparing-three-deploying-ways/" target="_blank" rel="external">Apache Spark探秘：三种分布式部署方式比较</a></p>
+<p>参考资料：<br>1.<a href="http://blog.cloudera.com/blog/2014/05/apache-spark-resource-management-and-yarn-app-models/" target="_blank" rel="external">Apache Spark Resource Management and YARN App Models</a><br>2.<a href="http://dongxicheng.org/framework-on-yarn/apache-spark-comparing-three-deploying-ways/" target="_blank" rel="external">Apache Spark探秘：三种分布式部署方式比较</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/03/11/Spark on YARN两种部署方式的不同/" target="_blank" rel="external">时间与精神的小屋 - Spark on YARN两种部署方式的不同</a></em></font>
 
       
     </div>

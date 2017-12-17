@@ -96,7 +96,7 @@
 <meta property="og:url" content="https://link3280.github.io/2017/02/18/[译]Spark调优教程中文版/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="最近用到Spark比较多，于是打算深入学习下Spark的调优。我谷歌下发现网上调优的经验还是比较散乱，所以决定将官方文档翻译下，为国内开源社区贡献一点力量。另外不得不吐槽翻译真是个体力活，90%的时间都花费在IO上了。">
-<meta property="og:updated_time" content="2017-03-24T14:40:33.657Z">
+<meta property="og:updated_time" content="2017-12-17T05:27:23.657Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="[译]Spark调优教程中文版">
 <meta name="twitter:description" content="最近用到Spark比较多，于是打算深入学习下Spark的调优。我谷歌下发现网上调优的经验还是比较散乱，所以决定将官方文档翻译下，为国内开源社区贡献一点力量。另外不得不吐槽翻译真是个体力活，90%的时间都花费在IO上了。">
@@ -438,6 +438,7 @@
 <p>Spark倾向于以最好的数据本地性调度任务，但并不总能做到。在所有空闲的executor上都没有未处理数据的情况下，Spark将本地性要求放低。有两个方法：a)等待某个在工作的CPU空闲下来，可以在同一节点启动新的任务。b)马上在远端的节点启动新任务，但是需要将数据传输过去。  </p>
 <p>Spark典型的处理是等一会，希望有CPU资源释放。一旦等待超时，它开始将数据移动到远端的空闲CPU。不同级别间的等待时长可以分别设置或者同一设置。详情见<a href="http://spark.apache.org/docs/latest/configuration.html#scheduling" target="_blank" rel="external">配置页面</a>的 spark.locality 参数。如果任务执行时间长或数据的本地性差，你应该调高这些时长，不过默认值同样也可以工作。</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这是一个简短的教程，指出了调优Spark时你应该知道的主要的关注点–最重要的是，数据序列化和内存调优。对于大多数程序来说，切换到Kryo序列化和将数据序列化存储会解决大部分常见的性能问题。欢迎在<a href="https://spark.apache.org/community.html" target="_blank" rel="external">Spark邮件列表</a>提出关于其他调优经验的问题。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/02/18/[译]Spark调优教程中文版/" target="_blank" rel="external">时间与精神的小屋 - [译]Spark调优教程中文版</a></em></font>
 
       
     </div>

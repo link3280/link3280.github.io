@@ -100,7 +100,7 @@
 在Spark应用启动时，Driver需要将序列化之后的task发至">
 <meta property="og:image" content="https://link3280.github.io/img/sparkcontext-broadcast-executors.png">
 <meta property="og:image" content="https://link3280.github.io/img/spark_boardcast_package.png">
-<meta property="og:updated_time" content="2017-08-26T04:14:23.388Z">
+<meta property="og:updated_time" content="2017-12-17T05:15:52.621Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Spark源码学习笔记（一）：Broadcast机制">
 <meta name="twitter:description" content="读源码是大数据开发工程师的自我修养之一，趁最近项目进度比较快，我决定抽时间来系统学习一下代码质量广受好评的Spark源码。虽然工作中使用的是Apache 发行版的1.6.1，所以读源码时还是保持一致。好项目都是高内聚低耦合，这就方便逐个组件剖析。先从core包开始，这次要讲的是org.apache.spark.broadcast。
@@ -394,6 +394,7 @@
 <p>首先Driver会将变量序列化并分成一个个block，存储在Driver的BlockManager。每个executor开始工作时，首先向本地的BlockManager请求该变量。如果不存在，则向Driver或其他executor请求。一旦获得了变量，则放到BlockManager上并向BlockManagerMaster报告，以便后续节点获取。</p>
 <p>删除广播变量的实现与HttpBroadcast相似，都是通过BlockManagerMaster删除各个节点BlockManager上的相应变量。</p>
 <h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>Spark变量广播分为HttpBroadcast和TorrentBroadcast。HttpBroadcast较早前用于Standalone集群模式，全部变量由Driver分发，所以有单点问题。TorrentBroadcast是更为高效的广播机制，分发能力随着接收节点增加呈指数级别增长，在大型集群中的分发效率远高于HttpTorrent。在最新版本2.2，HttpBroadcast完全被TorrentBroadcast取代。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/" target="_blank" rel="external">时间与精神的小屋 - Spark源码学习笔记（一）：Broadcast机制</a></em></font>
 
       
     </div>

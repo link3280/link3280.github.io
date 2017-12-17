@@ -98,7 +98,7 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="上节用Hive UDTF平铺内嵌类型字段介绍了接入Kylin前如何处理Hive中的复杂字段，不过每次在cube build前进行一次数据处理，存到中间表，再接入该中间表，这样的流程不仅低效繁琐而且耦合性强不易维护。
 目前业界更流行的做法是通过Hive逻辑视图来处理。因为视图不需要物化，可以节省计算资源和存储空间，更重要的是减少环节降低了数据的延迟。试想本来每天凌晨1点就开始离线ETL任务，数据仓库">
-<meta property="og:updated_time" content="2017-09-24T01:50:59.606Z">
+<meta property="og:updated_time" content="2017-12-17T05:09:45.117Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（二）：引入Hive视图层">
 <meta name="twitter:description" content="上节用Hive UDTF平铺内嵌类型字段介绍了接入Kylin前如何处理Hive中的复杂字段，不过每次在cube build前进行一次数据处理，存到中间表，再接入该中间表，这样的流程不仅低效繁琐而且耦合性强不易维护。
@@ -386,6 +386,7 @@
 <p>以每天增量cube build作例子，如果基表按天分区，需要在cube build之前将新分区先添加好。</p>
 <h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>Hive逻辑视图的管理操作只涉及元数据，很轻量级，可以用于应对原始数据过滤条件变化等Kylin不擅长的需求改变。在Kylin和Hive仓库之间引入Hive视图层负责ETL操作可以给整个数据处理流程增加很大的灵活性。</p>
 <h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p><a href="http://blog.csdn.net/jiangshouzhuang/article/details/54097629" target="_blank" rel="external">1.Apache Kylin高级部分之使用Hive视图</a><br><a href="https://cwiki.apache.org//confluence/display/Hive/PartitionedViews" target="_blank" rel="external">2.PartitionedViews</a><br><a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+LateralView" target="_blank" rel="external">3.LanguageManual LateralView</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/09/10/Kylin实战（二）：引入Hive视图层/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（二）：引入Hive视图层</a></em></font>
 
       
     </div>

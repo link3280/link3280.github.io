@@ -116,7 +116,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/spark_executor/setTaskFinishedAndClearInterruptStatus.png">
 <meta property="og:image" content="https://link3280.github.io/img/spark_executor/taskRunner.run.png">
 <meta property="og:image" content="https://link3280.github.io/img/spark_executor/taskReaper.run.png">
-<meta property="og:updated_time" content="2017-08-27T02:52:10.440Z">
+<meta property="og:updated_time" content="2017-12-17T05:15:24.268Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Spark源码学习笔记（二）：Executor运行机制">
 <meta name="twitter:description" content="Executor是执行用户代码的“一线工人”（worker），理解executor的运行机制对编写高效优雅的Spark Application尤为重要。从org.apache.spark.executor包入手，逐步解析Spark Application的运行机制应该是个不错的选择。  
@@ -478,6 +478,7 @@
 <li>同步更新taskReaperForTask映射，将该taskId对应的Entry移除。</li>
 </ol>
 <h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>Executor类只负责核心的与task运行紧密相关的操作，其他服务类的模块比如Block管理、内存管理都封装在SparkEnv中，会在用到时通过全局变量SparkEnv获取，符合高内聚低耦合的设计原则，因此可以兼容多种集群模式。Executor并未直接与其他进程通信，相关的操作是由ExecutorBackend类在后台通过RPC服务完成的。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/08/23/Spark源码学习笔记（二）：Executor运行机制/" target="_blank" rel="external">时间与精神的小屋 - Spark源码学习笔记（二）：Executor运行机制</a></em></font>
 
       
     </div>

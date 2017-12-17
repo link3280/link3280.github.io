@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="MapReduce,Hive,HBase," />
+  <meta name="keywords" content="Hive,MapReduce,HBase," />
 
 
 
@@ -99,7 +99,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/reduce_join.png">
 <meta property="og:image" content="https://link3280.github.io/img/map_join.png">
 <meta property="og:image" content="https://link3280.github.io/img/hbase_map_join.png">
-<meta property="og:updated_time" content="2017-04-23T13:20:46.927Z">
+<meta property="og:updated_time" content="2017-12-17T05:20:23.797Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="谈谈分布式计算中的join">
 <meta name="twitter:description" content="Join操作是数据处理中必不可少的一部分，传统关系型数据库经历多年对高效率join的研究和技术沉淀，已经非常成熟。然而在分布式环境下，数据存在不同程度的异构并缺乏索引等机制，使得传统的join优化技术难以应用。更重要的join是一个全局操作，一台物理机器需要大量网络IO获取join计算需要的记录，而网络却正是分布式计算最为珍贵的资源。以上种种原因导致分布式join与传统关系型join有着较大的差别">
@@ -394,8 +394,8 @@
 <pre><code>hive.optimize.bucketmapjoin = true
 </code></pre><p>来命令hive执行bucket map join了。  </p>
 <p>这种方式其实本质上和普通的map join是一样的，只不过Hive利用了元数据优化了数据的存储分布，使得每个map的数据都是属于同一个join key，并使得拉数据变为批量操作，减少了网络IO。</p>
-<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>[1]NickDimiduck, Amandeep Khurana. HBase实战[M]. 谢磊, 译. 北京: 人民邮电出版社, 2013.<br>[2]张俊林. 大数据日知录: 架构与算法[M]. 北京: 电子工业出版社, 2014.<br>[3]<a href="http://www.cnblogs.com/ggjucheng/archive/2013/01/03/2842821.html" target="_blank" rel="external">Hive join详解</a>, cnblogs.<br>[4]Edward Capriolo, Dean Warmpler, Jason Ruberglen. Hive编程指南[M]. 曹坤, 译. 北京: 人民邮电出版社, 2013.</p>
-
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>1.NickDimiduck, Amandeep Khurana. HBase实战[M]. 谢磊, 译. 北京: 人民邮电出版社, 2013.<br>2.张俊林. 大数据日知录: 架构与算法[M]. 北京: 电子工业出版社, 2014.<br>3.<a href="http://www.cnblogs.com/ggjucheng/archive/2013/01/03/2842821.html" target="_blank" rel="external">Hive join详解</a>, cnblogs.<br>4.Edward Capriolo, Dean Warmpler, Jason Ruberglen. Hive编程指南[M]. 曹坤, 译. 北京: 人民邮电出版社, 2013.</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/04/23/谈谈分布式计算中的join/" target="_blank" rel="external">时间与精神的小屋 - 谈谈分布式计算中的join</a></em></font>
       
     </div>
 
@@ -424,9 +424,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
-          
             <a href="/tags/Hive/" rel="tag"># Hive</a>
+          
+            <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
           
             <a href="/tags/HBase/" rel="tag"># HBase</a>
           

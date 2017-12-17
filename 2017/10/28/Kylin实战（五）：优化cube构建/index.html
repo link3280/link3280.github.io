@@ -92,13 +92,13 @@
 
 <meta name="description" content="翻译自 http://kylin.apache.org/docs21/howto/howto_optimize_build.html，非常实用的一篇文档，在调试cube build过程中帮了我大忙。可惜目前并没有中文版，于是我便花费些时间翻译了这篇文章，现已提交PR。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Kylin实战（五）：优化cube build">
+<meta property="og:title" content="Kylin实战（五）：优化cube构建">
 <meta property="og:url" content="https://link3280.github.io/2017/10/28/Kylin实战（五）：优化cube构建/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="翻译自 http://kylin.apache.org/docs21/howto/howto_optimize_build.html，非常实用的一篇文档，在调试cube build过程中帮了我大忙。可惜目前并没有中文版，于是我便花费些时间翻译了这篇文章，现已提交PR。">
-<meta property="og:updated_time" content="2017-10-28T06:29:22.956Z">
+<meta property="og:updated_time" content="2017-12-17T05:42:29.494Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Kylin实战（五）：优化cube build">
+<meta name="twitter:title" content="Kylin实战（五）：优化cube构建">
 <meta name="twitter:description" content="翻译自 http://kylin.apache.org/docs21/howto/howto_optimize_build.html，非常实用的一篇文档，在调试cube build过程中帮了我大忙。可惜目前并没有中文版，于是我便花费些时间翻译了这篇文章，现已提交PR。">
 
 
@@ -133,7 +133,7 @@
 
 
 
-  <title>Kylin实战（五）：优化cube build | 时间与精神的小屋</title>
+  <title>Kylin实战（五）：优化cube构建 | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -289,7 +289,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">Kylin实战（五）：优化cube build</h2>
+          <h2 class="post-title" itemprop="name headline">Kylin实战（五）：优化cube构建</h2>
         
 
         <div class="post-meta">
@@ -422,6 +422,7 @@
 <h2 id="将HFile导入HBase表"><a href="#将HFile导入HBase表" class="headerlink" title="将HFile导入HBase表"></a>将HFile导入HBase表</h2><p>这一步使用HBase API来讲HFile导入region server，这是轻量级并快速的一步。</p>
 <h2 id="更新cube信息"><a href="#更新cube信息" class="headerlink" title="更新cube信息"></a>更新cube信息</h2><p>在导入数据到HBase后，Kylin在元数据中将对应的cube segment标记为ready。</p>
 <h2 id="清理资源"><a href="#清理资源" class="headerlink" title="清理资源"></a>清理资源</h2><p>将中间宽表从Hive删除。这一步不会阻塞任何操作，因为在前一步segment已经被标记为ready。如果这一步发生错误，不用担心，垃圾回收工作可以晚些再通过Kylin的<a href="howto_cleanup_storage.html">StorageCleanupJob</a>完成。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/10/28/Kylin实战（五）：优化cube构建/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（五）：优化cube构建</a></em></font>
 
       
     </div>

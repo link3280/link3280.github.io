@@ -98,7 +98,7 @@
 <meta property="og:description" content="Kylin核心思想是通过预计算空间换时间，是典型的Multidimensional OLAP应用。MLOAP有着结构紧凑，查询响应快的优点，但同时也有着臭名昭著的维度爆炸问题。如果将所有维度组合都预计算并存储下来，组合的数量将是2^N。通常一个宽表有上百的维度是很正常的，但查询组合往往不超过20维，其中巨大的浪费是显而易见的。">
 <meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/使用聚合组前.png">
 <meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/使用聚合组后.png">
-<meta property="og:updated_time" content="2017-09-24T01:48:52.820Z">
+<meta property="og:updated_time" content="2017-12-17T05:10:38.220Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（三）：cube聚合组优化">
 <meta name="twitter:description" content="Kylin核心思想是通过预计算空间换时间，是典型的Multidimensional OLAP应用。MLOAP有着结构紧凑，查询响应快的优点，但同时也有着臭名昭著的维度爆炸问题。如果将所有维度组合都预计算并存储下来，组合的数量将是2^N。通常一个宽表有上百的维度是很正常的，但查询组合往往不超过20维，其中巨大的浪费是显而易见的。">
@@ -392,6 +392,7 @@
 <p>通过聚合组剪枝和组内剪枝，剩余的cuboid基本符合预设的查询模式，也就是必需的。</p>
 <h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>聚合组是Kylin处理维度爆炸问题的最重要也是最有效的方法，同时不在聚合组内的查询模式可以通过HBase原始数据的上卷满足，在查询速度和可用性间做了很好的平衡，大大方便了cube的建模。从Kylin查询用户的角度来说，在最早的版本，遇到未命中cuboid的查询时Kylin会同步调用Hive进行计算或直接报错，用户体验比较差，所以通常倾向于浪费一定的计算和存储资源来满足用户查询的conner case，用户查询也要尽可能小心不要超出cube的范围。而现在的版本，cuboid对用户来说是不可见的，少见的查询条件返回时间长一点是可以接受的。</p>
 <h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>1.<a href="http://kylin.apache.org/blog/2016/02/18/new-aggregation-group/" target="_blank" rel="external">Kylin官方博客 new-aggregation-group</a><br>2.Apache Kylin权威指南<br>3.<a href="https://mp.weixin.qq.com/s?src=3&amp;timestamp=1505726642&amp;ver=1&amp;signature=7mUfBzoD2ula0Bb69Sr*DbfukoITZOgfvKJad*STU78Uatfb0IdNDqafBDDF2pKIo5bIhXONGAT53Md8A9mT08OgD8cBZwg-6Ep3w54uJAyYwZ-6*I9AtzMyo8OaU3fvO1GOUX0tEFNbAqQHj080o0gxtn1n4uWfQjjVupFhqEE=" target="_blank" rel="external">Apache Kylin 高级设置：聚合组（Aggregation Group）原理解析</a><br>4.<a href="https://en.wikipedia.org/wiki/Online_analytical_processing" target="_blank" rel="external">Wikipedia OLAP</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/09/18/Kylin实战（三）：cube聚合组优化/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（三）：cube聚合组优化</a></em></font>
 
       
     </div>

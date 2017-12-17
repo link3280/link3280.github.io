@@ -93,10 +93,10 @@
 <meta name="description" content="之前曾解决过Spark任务的不同Executor同时更新MySQL导致死锁的问题，最近该同事遇到了这个问题的升级版：业务有两个不同的数据源分别用于实时计算和更新MySQL同一张表的不同列，目前这个是分别启动了两个Spark Streaming任务，但是更新MySQL不时 出现死锁的问题，只能通过不断try/catch重试来暂时解决。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="并发replace into导致MySQL死锁">
-<meta property="og:url" content="https://link3280.github.io/2017/08/06/多数据源Spark实时任务更新MySQL导致死锁/index.html">
+<meta property="og:url" content="https://link3280.github.io/2017/08/06/并发replace into导致MySQL死锁/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="之前曾解决过Spark任务的不同Executor同时更新MySQL导致死锁的问题，最近该同事遇到了这个问题的升级版：业务有两个不同的数据源分别用于实时计算和更新MySQL同一张表的不同列，目前这个是分别启动了两个Spark Streaming任务，但是更新MySQL不时 出现死锁的问题，只能通过不断try/catch重试来暂时解决。">
-<meta property="og:updated_time" content="2017-08-12T05:33:13.434Z">
+<meta property="og:updated_time" content="2017-12-17T05:41:05.766Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="并发replace into导致MySQL死锁">
 <meta name="twitter:description" content="之前曾解决过Spark任务的不同Executor同时更新MySQL导致死锁的问题，最近该同事遇到了这个问题的升级版：业务有两个不同的数据源分别用于实时计算和更新MySQL同一张表的不同列，目前这个是分别启动了两个Spark Streaming任务，但是更新MySQL不时 出现死锁的问题，只能通过不断try/catch重试来暂时解决。">
@@ -127,7 +127,7 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2017/08/06/多数据源Spark实时任务更新MySQL导致死锁/"/>
+  <link rel="canonical" href="https://link3280.github.io/2017/08/06/并发replace into导致MySQL死锁/"/>
 
 
 
@@ -272,7 +272,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/06/多数据源Spark实时任务更新MySQL导致死锁/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/06/并发replace into导致MySQL死锁/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -343,8 +343,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/08/06/多数据源Spark实时任务更新MySQL导致死锁/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/06/多数据源Spark实时任务更新MySQL导致死锁/" itemprop="commentsCount"></span>
+                <a href="/2017/08/06/并发replace into导致MySQL死锁/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/06/并发replace into导致MySQL死锁/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -402,6 +402,7 @@
 </ol>
 <p>问题关键点在于replace是以delete + insert的方式去更新记录，改变了聚集索引上的值。解决这个问题的方案是，更新的时候避免重新分配新的记录，具体可以使用<code>insert ... on duplicate key update ...</code>。该SQL遇到唯一索引冲突时，总是使用update旧记录的方式来更新。</p>
 <p>参考文献：<br>1.<a href="http://mysql.taobao.org/index.php?title=MySQL%E5%86%85%E6%A0%B8%E6%9C%88%E6%8A%A5_2015.03" target="_blank" rel="external">淘宝MySQL团队的博客</a><br>2.<a href="https://dev.mysql.com/doc/refman/5.7/en/index-merge-optimization.html" target="_blank" rel="external">MySQL 5.7 Reference Manual</a><br>3.<a href="http://mp.weixin.qq.com/s?src=3&amp;timestamp=1502030882&amp;ver=1&amp;signature=CpfJpQymWKMovehcjRVjTEhRqVpDyV9*k9OyZXNcFpXGtCgeez4sZlzHrdGqJASoNpjatpwdxtdmNR0STpVUgYfo0IFHfaUuquzSjbxY6NqQ9*iNYp45ZPkIg**2H1O8KhP5dQWKPWQ8SbSEvXNUyHcK8keeY1WeEtHZvsn8wuE=" target="_blank" rel="external">MySQL 死锁与日志二三事</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/08/06/并发replace%20into导致MySQL死锁/" target="_blank" rel="external">时间与精神的小屋 - 并发replace into导致MySQL死锁</a></em></font>
 
       
     </div>
@@ -711,7 +712,7 @@
 		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/08/06/多数据源Spark实时任务更新MySQL导致死锁/"});
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/08/06/并发replace into导致MySQL死锁/"});
 		
 
 		(function() {

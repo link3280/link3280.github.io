@@ -98,7 +98,7 @@
 <meta property="og:description" content="平时spark thrift server多用来做探索性的查询，比如验证下数据格式或count一下某天数据数量，都是轻量级的查询，查询效率也比较满意。没想到最近要真正用起来的时候，却遭遇各种瓶颈。">
 <meta property="og:image" content="https://link3280.github.io/img/spark结果集协议.png">
 <meta property="og:image" content="https://link3280.github.io/img/doinator_tree.png">
-<meta property="og:updated_time" content="2017-03-24T14:40:48.333Z">
+<meta property="og:updated_time" content="2017-12-17T05:39:11.830Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="记一次排查Spark thrift server OOM错误的经历">
 <meta name="twitter:description" content="平时spark thrift server多用来做探索性的查询，比如验证下数据格式或count一下某天数据数量，都是轻量级的查询，查询效率也比较满意。没想到最近要真正用起来的时候，却遭遇各种瓶颈。">
@@ -387,6 +387,7 @@
 <p><img src="/img/doinator_tree.png" alt="Alt Driver dominator_tree" title="Driver dominator_tree"></p>
 <p>可以看到 org.apache.spark.sql.catalyst.InternalRow[][] 这个二维数组吃了1.2G的内存，其中行是succeeded tasks的index，列是每个task结果集中的一行。我初略算了下，每行占2字节，这个分析结果的内存占用是比较合理的。我count一下要查的表，其实有900W行，那么就是要占18G内存，算上反序列化的空间膨胀，应该也只要6G左右的数据，那么为什么我算hive表大小的时候只有300M呢？突然想起平时在HDFS的文件都是lzo压缩的，我看到hive表没有.lzo后缀就以为没有压缩，这肯定是不对的。查一下，hive表果然默认使用了deflate压缩，由于这个表空值比较多，数据比较稀疏，所以压缩率很高，把6G的数据压到了300M。  </p>
 <p>到此为止，OOM问题算是找到原因了。  </p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/02/05/记一次排查Spark%20thrift%20server%20OOM错误的经历/" target="_blank" rel="external">时间与精神的小屋 - 记一次排查Spark thrift server OOM错误的经历</a></em></font>
 
       
     </div>

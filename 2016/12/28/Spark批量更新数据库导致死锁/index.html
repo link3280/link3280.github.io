@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Spark,Bugfix," />
+  <meta name="keywords" content="Bugfix,Spark," />
 
 
 
@@ -96,7 +96,7 @@
 <meta property="og:url" content="https://link3280.github.io/2016/12/28/Spark批量更新数据库导致死锁/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="今天同事的实时分析脚本遇到一个问题，mysql数据库写入失败。其实功能很简单，从数据流读取用户登录数据，更新用户的最近一次登录时间。这个脚本在项目冷启动阶段运行正常，但数据量增长之后不时更新失败。">
-<meta property="og:updated_time" content="2017-04-23T08:48:08.169Z">
+<meta property="og:updated_time" content="2017-12-17T05:20:49.275Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Spark批量更新数据库导致死锁">
 <meta name="twitter:description" content="今天同事的实时分析脚本遇到一个问题，mysql数据库写入失败。其实功能很简单，从数据流读取用户登录数据，更新用户的最近一次登录时间。这个脚本在项目冷启动阶段运行正常，但数据量增长之后不时更新失败。">
@@ -374,7 +374,7 @@
 <a id="more"></a>
 <p>查了脚本之后发现问题在于，这个脚本在RDD的foreachPartition里面用事务batch更新mysql，而在事务没有commit之前，<a href="http://dev.mysql.com/doc/refman/5.6/en/innodb-locks-set.html" target="_blank" rel="external">该链接是对整个索引范围的表有排他锁的</a>。这导致不同executor并行更新的时候会出现锁表的情况。这个问题之前由于batch比较小，冲突几率较低，测试期间一直没有暴露出来，现在线上突然出问题真是惊出一身冷汗(⊙v⊙)！。最后的解决方式是，partition中的所有更新操作先记录下来，汇总到driver节点再一并更新。这样虽然增加了网络传输和并行计算的能力，但为了安全性还是值得的。</p>
 <p>其实这个问题很典型，是由于全局资源和局部操作的不一致导致的。换句话说，partition只是全局计算的一部分，但却有更新整个表的权限，必然会导致冲突。MapReduce的基本思想就是将数据切分成多份，（在一个阶段内）每份相互没有依赖，所以才可以并行计算。如果有全局的操作，应该在Reduce之后再进行。虽然现在对于数据分析师来说MapReduce已经基本不需要直接写了，但它的思想是分布式的基础，理解透彻还是大有裨益的。</p>
-
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2016/12/28/Spark批量更新数据库导致死锁/" target="_blank" rel="external">时间与精神的小屋 - Spark批量更新数据库导致死锁</a></em></font>
       
     </div>
 
@@ -403,9 +403,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Spark/" rel="tag"># Spark</a>
-          
             <a href="/tags/Bugfix/" rel="tag"># Bugfix</a>
+          
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
           
         </div>
       

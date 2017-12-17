@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="大数据,Flume," />
+  <meta name="keywords" content="Flume,大数据," />
 
 
 
@@ -96,7 +96,7 @@
 <meta property="og:url" content="https://link3280.github.io/2017/03/18/估算Flume的内存消耗/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="本文翻译自：Flume Memory Consumption">
-<meta property="og:updated_time" content="2017-04-08T09:21:20.168Z">
+<meta property="og:updated_time" content="2017-12-17T05:21:21.634Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="如何估算Flume需要的内存">
 <meta name="twitter:description" content="本文翻译自：Flume Memory Consumption">
@@ -382,7 +382,7 @@
 <h2 id="Flume核心需要的内存"><a href="#Flume核心需要的内存" class="headerlink" title="Flume核心需要的内存"></a>Flume核心需要的内存</h2><p>Flume核心会占用总heap内存中的大概50MB。最后，推荐给计算得出的内存留有一个缓冲空间。生产环境的JVM内存使用可以通过JMX来监控和可视化，这样可以在一个特定的工作负载下，更好地理解实际的内存分配。</p>
 <h2 id="内存配置案例"><a href="#内存配置案例" class="headerlink" title="内存配置案例"></a>内存配置案例</h2><p>Flume从flume-env.sh读取环境变量，这个默认是禁用的(这个文件会被命名为 $FLUME/conf/flume-env.sh.template).启用的方式就是简单地将其重命名为flume-env.sh，并根据你计算得出的需求修改配置。另外最好在启动的时候就初始化需要的内存，而不是等内存不够的时候再加，这样能避免当新的内存加入时出现朱丽叶假死(Juliet pause)，也就是full GC.</p>
 <p>经过GC优化的内存调整应该如下:<br>#将最小内存设置为2GB，最大为16GB，最大直接内存为256MB。<br>#使用并行并发的垃圾回收器来减少出现长时间 stop-the-world GC暂停的概率。<br>JAVA_OPTS=”-Xms2000m -Xmx16000m -Xss128k -XX:MaxDirectMemorySize=256m<br>    -XX:+UseParNewGC -XX:+UseConcMarkSweepGC”</p>
-
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/03/18/如何估算Flume需要的内存/" target="_blank" rel="external">时间与精神的小屋 - 如何估算Flume需要的内存</a></em></font>
       
     </div>
 
@@ -411,9 +411,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/大数据/" rel="tag"># 大数据</a>
-          
             <a href="/tags/Flume/" rel="tag"># Flume</a>
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
           
         </div>
       

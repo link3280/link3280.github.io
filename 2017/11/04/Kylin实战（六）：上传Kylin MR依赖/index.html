@@ -96,7 +96,7 @@
 <meta property="og:url" content="https://link3280.github.io/2017/11/04/Kylin实战（六）：上传Kylin MR依赖/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="Kylin构建cube的MR任务建立在同一个Hadoop集群的所有节点一致的前提下，通常来说这也是分布式系统的一个良好规范，确保了服务不会和物理机器耦合。 然而很多情况下现实并没有那么美好， 集群节点常常存在异构问题，比如有些节点有安装HBase/Hive，有些则没有。如果在这样的集群上构建cube，很可能会因为ClassNotFoundException而失败。更加令人头疼的是企业中可能只有Ha">
-<meta property="og:updated_time" content="2017-12-10T14:28:27.283Z">
+<meta property="og:updated_time" content="2017-12-17T05:07:04.629Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（六）：上传Kylin MR依赖">
 <meta name="twitter:description" content="Kylin构建cube的MR任务建立在同一个Hadoop集群的所有节点一致的前提下，通常来说这也是分布式系统的一个良好规范，确保了服务不会和物理机器耦合。 然而很多情况下现实并没有那么美好， 集群节点常常存在异构问题，比如有些节点有安装HBase/Hive，有些则没有。如果在这样的集群上构建cube，很可能会因为ClassNotFoundException而失败。更加令人头疼的是企业中可能只有Ha">
@@ -374,6 +374,7 @@
 <a id="more"></a>
 <p>这时<code>kylin.job.mr.lib.dir</code>参数便可以派上用场。你可以在 Kylin build server 节点上设置一个本地文件夹，将HBase和Hive依赖拷贝到里面，然后在<code>conf/kylin.properties</code>里增加<code>kylin.job.rm.lib.dir</code>参数并指向这个文件夹。在Kylin启动MR任务时，这个文件夹里的jar会作为MR的<code>-libjars</code>依赖分发到集群节点并加到classpath里。</p>
 <p>上传本地依赖的做法十分灵活，可以作为临时解决方案来进行应急处理，但也会带来了不少潜在的问题。首先是依赖版本不一致，并且如果出现了jar hell之类的问题troubleshooting将会非常困难。其次是HBase和Hive在每次MR任务前都要分发，虽然有distribute cache来缓存减少网络IO，但仍然占用了多一份空间和增长了MR启动时间。因此最根本的解决方案还是保持集群节点的一致性。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/11/04/Kylin实战（六）：上传Kylin MR依赖/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（六）：上传Kylin MR依赖</a></em></font>
 
       
     </div>
@@ -416,8 +417,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/10/28/Kylin实战（五）：优化cube构建/" rel="next" title="Kylin实战（五）：优化cube build">
-                <i class="fa fa-chevron-left"></i> Kylin实战（五）：优化cube build
+              <a href="/2017/10/28/Kylin实战（五）：优化cube构建/" rel="next" title="Kylin实战（五）：优化cube构建">
+                <i class="fa fa-chevron-left"></i> Kylin实战（五）：优化cube构建
               </a>
             
           </div>

@@ -100,7 +100,7 @@
 这个方案的问题在于太过死板，如果用户突然又想以20为区间">
 <meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/static_bucket.jpg">
 <meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/dynamic_bucket.jpg">
-<meta property="og:updated_time" content="2017-12-16T08:25:50.659Z">
+<meta property="og:updated_time" content="2017-12-17T05:07:23.950Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（七）：实现维度分桶">
 <meta name="twitter:description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
@@ -402,7 +402,7 @@
 </li>
 </ol>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>静态分桶和动态分桶的本质区别在于分桶操作是发生在HBase Coprocessor还是Kylin Server。虽然目前两种分桶可以满足绝大多数分桶的需求，但是毕竟属于查询级别的操作，从效率上和可维护性上不及原生支持。最好的解决方案是Kylin官方提供SQL分桶函数，比如”bucket(level, 10)”，并在Coprocessor的级别上支持这个函数。如果能顺便支持String类型和Date类型的分桶，那就更好了。</p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.com/2017/12/10/Kylin实战（七）：实现维度分桶/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（七）：实现维度分桶</a></em></font>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/12/10/Kylin实战（七）：实现维度分桶/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（七）：实现维度分桶</a></em></font>
 
       
     </div>

@@ -99,7 +99,7 @@
 <meta property="og:description" content="一般情况下，使用add partition语句为Hive表新增partition:1ALTER TABLE table_name ADD [IF NOT EXISTS] PARTITION (partition_column1=&apos;value1&apos;, partition_column2=&apos;value2&apos;,) [LOCATION &apos;location1&apos;];
 其中Location默认为最低层目录，如果该目">
 <meta property="og:image" content="https://link3280.github.io/img/hive_err.png">
-<meta property="og:updated_time" content="2017-04-03T04:56:59.547Z">
+<meta property="og:updated_time" content="2017-12-17T05:23:41.681Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Hive使用递归子目录作为partition">
 <meta name="twitter:description" content="一般情况下，使用add partition语句为Hive表新增partition:1ALTER TABLE table_name ADD [IF NOT EXISTS] PARTITION (partition_column1=&apos;value1&apos;, partition_column2=&apos;value2&apos;,) [LOCATION &apos;location1&apos;];
@@ -388,6 +388,7 @@
 <p>也就是说，Hive只是简单地在location后面使用通配符来查找文件，当匹配到了文件夹，无法处理就报错了。那么既然是HDFS路径，使用HDFS支持的正则通配可以吗？很遗憾，Hive对location是进行了转义处理的，正则通配并不起作用。 </p>
 <p>这样一来，只好从MapReduce入手了。要过滤输入文件，第一个想到的必须是InputFormat。在编写MapReduce程序时，FileInputFormat有个函数,FileInputFormat.setInputDirRecursive(job,  true),应该就是我们需要的。查一下FileInputFormat相关参数，在静态成员变量中找到了：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String INPUT_DIR_RECURSIVE = <span class="string">"mapreduce.input.fileinputformat.input.dir.recursive"</span>;</div></pre></td></tr></table></figure></p>
 <p>于是，将该参数设为true。在Hive中使用时，再将hive.mapred.supports.subdirectories设为true，再执行查询就没问题了！</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/03/22/Hive使用递归子目录作为partition/" target="_blank" rel="external">时间与精神的小屋 - Hive使用递归子目录作为partition</a></em></font>
 
       
     </div>

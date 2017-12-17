@@ -96,7 +96,7 @@
 <meta property="og:url" content="https://link3280.github.io/2017/05/06/实时计算与离线计算的区别和联系/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="目前大数据计算通常分为两大类：以Storm为代表的实时计算和以MapReduce为代表的离线计算。实时计算对数据处理时间有着较高的要求，对于延迟阈值大数据界一直没有统一标准，默认是秒级（严格来说实时系统必须保证在某个时间边界内响应，通常是毫秒级或亚秒级，但无论是Spark Streaming还是Storm都只能保证计算时间较低，因此应该属于近实时系统）。离线计算对数据处理时间不太敏感，通常只要求在">
-<meta property="og:updated_time" content="2017-05-06T11:57:15.808Z">
+<meta property="og:updated_time" content="2017-12-17T05:18:51.386Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="实时计算与离线计算的区别和联系">
 <meta name="twitter:description" content="目前大数据计算通常分为两大类：以Storm为代表的实时计算和以MapReduce为代表的离线计算。实时计算对数据处理时间有着较高的要求，对于延迟阈值大数据界一直没有统一标准，默认是秒级（严格来说实时系统必须保证在某个时间边界内响应，通常是毫秒级或亚秒级，但无论是Spark Streaming还是Storm都只能保证计算时间较低，因此应该属于近实时系统）。离线计算对数据处理时间不太敏感，通常只要求在">
@@ -377,6 +377,7 @@
 <p>其实在数据接收上流式计算和批处理计算并没有本质的区别，实际上流式处理是批处理的一个特例。批处理系统划分batch主要有两个标准：batch size和batch window。Batch size是按照数据的容量来切分batch，batch window是通过时间窗口来切分batch，一般任何一个标准达到阈值就可以切分。所以可以说流式计算是batch size为1、batch window不限的批处理计算特例，N+1离线计算是batch size不限、batch window为1天的批处理计算特例。回到实时计算和离线计算这个场景，其实也并非只有流式计算和N+1计算，以Spark Streaming作为代表的micrb-batch就是介乎两者之间。Spark Streaming将数据根据batch window切分，window大小可以是几秒到几分钟，以满足不同程度的实时要求。</p>
 <p>从自然界的角度来说，所有数据的产生都应该是流式的，而批处理是在流式采集、流式计算做不到或者成本太高的时候的一种妥协的办法，因为批处理通常可以复用计算过程的某些步骤，更加经济。这好比工作日通勤，可以选择自己开车或者搭公交：自己开车贵，但随上随走，延迟低；搭公交便宜，可是你到公交站往往还要等一会。这种情况下最优策略当然是按需选择，赶时间的时候自己开车，不赶时间就搭公交车。噢，还有一种情况是你想开车但是刚好限号了，那么也必须搭公交。这在数据处理时也是存在的，当你上游数据就是批量数据的时候，那么你也只好跟着批量处理。</p>
 <p>最后，实时计算引擎和离线计算引擎根本的不同在于设计的目标，实时计算引擎注重低延迟，而离线计算引擎注重高吞吐。两种计算引擎的基础是相同的，在该基础上再在分别针对各自的目标进行了较大程度的特化，这也体现了辩证法中的对立统一规律。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/05/06/实时计算与离线计算的区别和联系/" target="_blank" rel="external">时间与精神的小屋 - 实时计算与离线计算的区别和联系</a></em></font>
 
       
     </div>
