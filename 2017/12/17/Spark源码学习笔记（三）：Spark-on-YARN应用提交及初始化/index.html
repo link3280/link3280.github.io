@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Hive," />
+  <meta name="keywords" content="Spark,YARN," />
 
 
 
@@ -90,16 +90,19 @@
 
 
 
-<meta name="description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
+<meta name="description" content="作为提交Spark应用的高级接口，SparkSubmit封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行bin/spark-sbumit命令背后，Spark为执行用户代码做了大量的准备，其中最为核心的一点便是Spark调度器的初始化。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="[译]Hive权限控制官方文档">
-<meta property="og:url" content="https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/index.html">
+<meta property="og:title" content="Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化">
+<meta property="og:url" content="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
-<meta property="og:updated_time" content="2017-12-17T05:51:39.461Z">
+<meta property="og:description" content="作为提交Spark应用的高级接口，SparkSubmit封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行bin/spark-sbumit命令背后，Spark为执行用户代码做了大量的准备，其中最为核心的一点便是Spark调度器的初始化。">
+<meta property="og:image" content="https://link3280.github.io/img/yarn-api/Spark-YARN-Cluster.png">
+<meta property="og:image" content="https://link3280.github.io/img/yarn-api/Spark-YARN-Client.png">
+<meta property="og:updated_time" content="2017-12-17T15:57:01.569Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="[译]Hive权限控制官方文档">
-<meta name="twitter:description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
+<meta name="twitter:title" content="Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化">
+<meta name="twitter:description" content="作为提交Spark应用的高级接口，SparkSubmit封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行bin/spark-sbumit命令背后，Spark为执行用户代码做了大量的准备，其中最为核心的一点便是Spark调度器的初始化。">
+<meta name="twitter:image" content="https://link3280.github.io/img/yarn-api/Spark-YARN-Cluster.png">
 
 
 
@@ -127,13 +130,13 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/"/>
+  <link rel="canonical" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/"/>
 
 
 
 
 
-  <title>[译]Hive权限控制官方文档 | 时间与精神的小屋</title>
+  <title>Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化 | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -272,7 +275,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -289,7 +292,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">[译]Hive权限控制官方文档</h2>
+          <h2 class="post-title" itemprop="name headline">Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化</h2>
         
 
         <div class="post-meta">
@@ -301,8 +304,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-06-15T22:43:32+08:00">
-                2017-06-15
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-12-17T21:30:09+08:00">
+                2017-12-17
               </time>
             
 
@@ -324,8 +327,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Hive/" itemprop="url" rel="index">
-                    <span itemprop="name">Hive</span>
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
                   </a>
                 </span>
 
@@ -343,8 +346,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/06/15/[译]Hive权限控制官方文档/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/06/15/[译]Hive权限控制官方文档/" itemprop="commentsCount"></span>
+                <a href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -370,17 +373,30 @@
       
 
       
-        <p>翻译自：<a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization" target="_blank" rel="external">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization</a></p>
+        <p>作为提交Spark应用的高级接口，SparkSubmit封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行<code>bin/spark-sbumit</code>命令背后，Spark为执行用户代码做了大量的准备，其中最为核心的一点便是Spark调度器的初始化。</p>
 <a id="more"></a>
-<h1 id="使用案例"><a href="#使用案例" class="headerlink" title="使用案例"></a>使用案例</h1><ol>
-<li>Hive作为表存储层。这是在使用Apache Pig，MapReduce和其他MMP数据库(Cloudera Impala，Facebook Presto，Spark SQL等)时很常见。这种情况下，Hive提供了表抽象和存储上的元数据(尤其是对于HDFS)。这些用户可以直接访问HDFS和metastore服务器(它为Hive元数据提供了访问接口)。HDFS的访问是通过HDFS访问控制授权的，而元数据的访问需要通过Hive配置来授权。</li>
-<li>Hive作为SQL引擎。这是Hive最常见的情况。下面是对于SQL用户和BI工具来说的”Hive界面”，可以分为两个子文件夹：<br>a. Hive命令行用户。这些用户拥有直接访问HDFS和Hive metastore的权限，这跟案例1很相似。注意，不久后Hive CLI会正式被弃用以支持Beeline。<br>b. ODBC/JDBC和其他HiveServer2 API的用户(Beeline CLI就是一个例子)。这些用户可以通过HiveServer2访问所有数据和元数据，但不能直接访问HDFS或者metastore。</li>
+<h1 id="Spark调度后台初始化流程"><a href="#Spark调度后台初始化流程" class="headerlink" title="Spark调度后台初始化流程"></a>Spark调度后台初始化流程</h1><p>每个应用都从SparkContext的初始化开始，而SparkContext初始化阶段的重要工作之一就是启动SchedulerBackend。SchedulerBackend作为Driver与Executor的通信接口，负责对Executor的管理，需要随Driver初始化以便Executor启动后可以通过它向Driver注册自己。另外TaskScheduler作为SchedulerBackend的门面(Facade)，会被传递给SparkContext的DAGScheduler。此后DAGScheduler负责高级的作业(Job)和阶段(Stage)管理，TaskScheduler负责低级的任务(Task)分发、执行和监控等操作。</p>
+<p>SparkContext初始化的部分代码：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line">/**</div><div class="line"> * Create a task scheduler based on a given master URL.</div><div class="line"> * Return a 2-tuple of the scheduler backend and the task scheduler.</div><div class="line"> */</div><div class="line">private def createTaskScheduler(</div><div class="line">    sc: SparkContext,</div><div class="line">    master: String,</div><div class="line">    deployMode: String): (SchedulerBackend, TaskScheduler) = &#123;</div><div class="line">  import SparkMasterRegex._</div><div class="line"></div><div class="line">  master match &#123;</div><div class="line">    //为简单起见，删除了local模式的case。</div><div class="line">    case SPARK_REGEX(sparkUrl) =&gt;</div><div class="line">      val scheduler = new TaskSchedulerImpl(sc)</div><div class="line">      val masterUrls = sparkUrl.split(&quot;,&quot;).map(&quot;spark://&quot; + _)</div><div class="line">      val backend = new StandaloneSchedulerBackend(scheduler, sc, masterUrls)</div><div class="line">      scheduler.initialize(backend)</div><div class="line">      (backend, scheduler)</div><div class="line"></div><div class="line">    case masterUrl =&gt;</div><div class="line">      //通过master url匹配合适的集群管理器并加载该类。</div><div class="line">      //masterUrl即spark-submit的`--master`参数，或SparkConf的setMaster指定的参数。</div><div class="line">      val cm = getClusterManager(masterUrl) match &#123;</div><div class="line">        case Some(clusterMgr) =&gt; clusterMgr</div><div class="line">        case None =&gt; throw new SparkException(&quot;Could not parse Master URL: &apos;&quot; + master + &quot;&apos;&quot;)</div><div class="line">      &#125;</div><div class="line">      try &#123;</div><div class="line">        val scheduler = cm.createTaskScheduler(sc, masterUrl)</div><div class="line">        val backend = cm.createSchedulerBackend(sc, masterUrl, scheduler)</div><div class="line">        //以SchedulerBackend作为初始化TaskScheduler</div><div class="line">        cm.initialize(scheduler, backend)</div><div class="line">        (backend, scheduler)</div><div class="line">      &#125; catch &#123;</div><div class="line">        case se: SparkException =&gt; throw se</div><div class="line">        case NonFatal(e) =&gt;</div><div class="line">          throw new SparkException(&quot;External scheduler cannot be instantiated&quot;, e)</div><div class="line">      &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h1 id="Spark-on-YARN应用初始化流程"><a href="#Spark-on-YARN应用初始化流程" class="headerlink" title="Spark on YARN应用初始化流程"></a>Spark on YARN应用初始化流程</h1><p>在YARN集群模式下，Spark的守护进程都在YARN框架内，所以大部分上是YARN API的实现。如果对YARN编程不太熟悉可以先阅读董西成的<a href="http://dongxicheng.org/mapreduce-nextgen/how-to-write-an-yarn-applicationmaster/" target="_blank" rel="external">如何编写YARN应用程序</a>。</p>
+<p>Spark-on-YARN有cluster和client两种不同的部署模式，两者区别在<a href="http://www.whitewood.me/2017/03/11/Spark-on-YARN%E4%B8%A4%E7%A7%8D%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%E7%9A%84%E4%B8%8D%E5%90%8C/" target="_blank" rel="external">之前一篇博客</a>提过，而它们的应用初始化流程区别就是如何启动YarnSchedulerBackend。</p>
+<h2 id="YARN-cluster部署模式"><a href="#YARN-cluster部署模式" class="headerlink" title="YARN cluster部署模式"></a>YARN cluster部署模式</h2><p><img src="/img/yarn-api/Spark-YARN-Cluster.png" alt="YARN cluster模式的应用初始化" title="YARN cluster模式的应用初始化"></p>
+<p>步骤如下：</p>
+<ol>
+<li>Spark通过YARN Client申请application id，提交AM初始化上下文后退出。</li>
+<li>RM分配到一个container启动AM。AM初始化后先启动一个独立线程执行Spark Driver，后者通过反射获取并执行用户代码main方法。main方法本身会初始化SparkContext来注册Driver的RPC端口和监控端口，YarnClusterSchedulerBackend会在这个阶段启动。</li>
+<li>等Driver成功启动后，AM启动自己的RPC终端并通过YarnRMClient向RM注册自己，然后不断轮询向RM请求container，并在通过NMClient通知NM在申请到的container上启动Spark Executor，直到executor数目达到预设数目。</li>
+<li>Executor初始化后启动自己的RPC终端，并向Driver注册自己，等待Driver调度。</li>
 </ol>
-<h1 id="权限模型概况"><a href="#权限模型概况" class="headerlink" title="权限模型概况"></a>权限模型概况</h1><h2 id="基于存储的Metastore-Server权限控制"><a href="#基于存储的Metastore-Server权限控制" class="headerlink" title="基于存储的Metastore Server权限控制"></a>基于存储的Metastore Server权限控制</h2><p>在案例1和案例2a中，用户可以不经Hive配置控制直接访问数据。而在真正访问表的存储文件时，HDFS访问权限作为其中一个权限数据源，会对用户操作进行访问校验。通过启用基于存储的Metastore Server权限控制，你可以将它作为唯一数据源，保证数据一致性和元数据授权策略。为了要控制对库/表/分区等元对象的访问， 该权限模型会检查你是否在文件系统上对应的目录有相应的权限。在确保查询以终端用户方式运行的情况下，你也可以通过HiveServer2(在下文的案例2b)来保护访问接口。(在HiveServer2 配置中的hive.server2.enable.doAs 选项应该为true，这也是默认值)。<br>注意，使用HDFS ACL(在Hadoop 2.4以上版本可用)你可以很灵活地控制文件系统的权限，同时为基于存储的权限控制提供更多的灵活性。这项功能在Hive 0.14可用(HIVE-7583)。</p>
-<h2 id="基于SQL标准的HiveServer2权限控制"><a href="#基于SQL标准的HiveServer2权限控制" class="headerlink" title="基于SQL标准的HiveServer2权限控制"></a>基于SQL标准的HiveServer2权限控制</h2><p>虽然基于存储的权限控制可以提供数据库/表/分区级别的权限控制，但更细粒度的权限控制，比如列和视图就没办法做到了，因为文件系统的权限控制是到文件级别的，要求精确权限控制的前提是，有一个能够提供用户有权限(有需要)访问的列和行的数据服务器。但对于文件系统来说，整个文件都是为用户服务的。HiveServer2满足了这个需求，因为它的API有行和列的概念(通过使用SQL)，能够仅提供你的查询需要的行和列。<br>基于SQL标准的权限控制(在Hive 0.13.0引入，HIVE-5837)可以用于实现精确权限控制。它基于SQL标准使用大家熟悉的grant/revoke语句来控制访问。这需要通过HiveServer2配置来启用。<br>注意该权限模型不能用于案例2a(Hive命令行)，这是因为用户可以直接访问HDFS，并能理所当然地绕过基于SQL标准的权限校验，甚至将它关闭。这种情况下关闭它可以避免给用户安全访问的错觉。</p>
-<h2 id="默认的Hive授权-遗留模式"><a href="#默认的Hive授权-遗留模式" class="headerlink" title="默认的Hive授权(遗留模式)"></a>默认的Hive授权(遗留模式)</h2><p>Hive默认的授权模型是Hive早期版本曾使用过的。然后这个模型缺乏完整的访问控制模式，留下了许多安全隐患。比如，需要将权限授予一个未定义的用户，或者任何用户都可以授权自己访问数据表或数据库的权限。这个模型与基于SQL标准的授权模型相似，也提供了基于grant/revoke语句的访问控制。然而，该访问控制与基于SQL标准的授权模型不同，并且它们也不兼容。该模型对于Hive命令行用户同样适用。不过，由于在上述基于SQL标准授权模型的讨论中提到的原因，该模型用在Hive命令行并不安全。</p>
-<h1 id="满足多种案例的授权需求"><a href="#满足多种案例的授权需求" class="headerlink" title="满足多种案例的授权需求"></a>满足多种案例的授权需求</h1><p>使用基于存储的授权模型是满足以上所有案例的简单方式。如果你需要对SQL用户进行精准的访问控制，你也可以同时在HiveServer2启用基于SQL标准的授权模型。也就是说，你可以对metastore API调用启用基于存储的授权模型，同时对HiveServer2启用基于SQL标准的授权模型。</p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/06/15/[译]Hive权限控制官方文档/" target="_blank" rel="external">时间与精神的小屋 - [译]Hive权限控制官方文档</a></em></font>
+<h2 id="YARN-client部署模式"><a href="#YARN-client部署模式" class="headerlink" title="YARN client部署模式"></a>YARN client部署模式</h2><p><img src="/img/yarn-api/Spark-YARN-Client.png" alt="YARN client模式的应用初始化" title="YARN client模式的应用初始化"></p>
+<p>具体步骤如下：</p>
+<ol>
+<li>Spark Submit直接运行用户提交的应用，期间会启动Spark Driver。SparkContext初始化时会启动YarnClientSchedulerBackend，后者通过YARN Client申请application id，提交AM初始化上下文后不断轮询RM获取application最新状态。</li>
+<li>RM分配到一个container启动AM。AM初始化后AM启动自己的RPC终端并通过YarnRMClient向RM注册自己。</li>
+<li>AM不断轮询向RM请求container，并在通过NMClient通知NM在申请到的container上启动Spark Executor，直到executor数目达到预设数目。</li>
+<li>Executor初始化后启动自己的RPC终端，并向Driver注册自己，等待Driver调度。</li>
+</ol>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/" target="_blank" rel="external">时间与精神的小屋 - Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化</a></em></font>
+
       
     </div>
 
@@ -409,7 +425,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Hive/" rel="tag"># Hive</a>
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
+          
+            <a href="/tags/YARN/" rel="tag"># YARN</a>
           
         </div>
       
@@ -422,8 +440,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/05/14/浅谈索引的本质/" rel="next" title="浅谈索引的本质">
-                <i class="fa fa-chevron-left"></i> 浅谈索引的本质
+              <a href="/2017/12/10/Kylin实战（七）：实现维度分桶/" rel="next" title="Kylin实战（七）：实现维度分桶">
+                <i class="fa fa-chevron-left"></i> Kylin实战（七）：实现维度分桶
               </a>
             
           </div>
@@ -431,10 +449,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2017/07/22/curl模拟REST请求/" rel="prev" title="curl模拟REST请求">
-                curl模拟REST请求 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -576,7 +590,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#使用案例"><span class="nav-number">1.</span> <span class="nav-text">使用案例</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#权限模型概况"><span class="nav-number">2.</span> <span class="nav-text">权限模型概况</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#基于存储的Metastore-Server权限控制"><span class="nav-number">2.1.</span> <span class="nav-text">基于存储的Metastore Server权限控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#基于SQL标准的HiveServer2权限控制"><span class="nav-number">2.2.</span> <span class="nav-text">基于SQL标准的HiveServer2权限控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#默认的Hive授权-遗留模式"><span class="nav-number">2.3.</span> <span class="nav-text">默认的Hive授权(遗留模式)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#满足多种案例的授权需求"><span class="nav-number">3.</span> <span class="nav-text">满足多种案例的授权需求</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Spark调度后台初始化流程"><span class="nav-number">1.</span> <span class="nav-text">Spark调度后台初始化流程</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Spark-on-YARN应用初始化流程"><span class="nav-number">2.</span> <span class="nav-text">Spark on YARN应用初始化流程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-cluster部署模式"><span class="nav-number">2.1.</span> <span class="nav-text">YARN cluster部署模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-client部署模式"><span class="nav-number">2.2.</span> <span class="nav-text">YARN client部署模式</span></a></li></ol></li></ol></div>
             
 
           </div>
@@ -712,7 +726,7 @@
 		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/06/15/[译]Hive权限控制官方文档/"});
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/"});
 		
 
 		(function() {
