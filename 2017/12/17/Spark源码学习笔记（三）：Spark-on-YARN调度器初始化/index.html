@@ -90,18 +90,18 @@
 
 
 
-<meta name="description" content="作为提交Spark应用的高级接口，SparkSubmit封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行bin/spark-sbumit命令背后，Spark为执行用户代码做了大量的准备，其中最为核心的一点便是Spark调度器的初始化。">
+<meta name="description" content="作为提交Spark应用的高级接口，SparkContext封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行new SparkContext()命令背后，Spark为执行用户代码做了大量的准备，包括启动BlockManager、HeartbeatReceiver、MetricsSystem等等。不过最为关键的一点还是启动Spark调度器，这点从Spark应用的app">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化">
-<meta property="og:url" content="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/index.html">
+<meta property="og:title" content="Spark源码学习笔记（三）：Spark-on-YARN调度器初始化">
+<meta property="og:url" content="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="作为提交Spark应用的高级接口，SparkSubmit封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行bin/spark-sbumit命令背后，Spark为执行用户代码做了大量的准备，其中最为核心的一点便是Spark调度器的初始化。">
+<meta property="og:description" content="作为提交Spark应用的高级接口，SparkContext封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行new SparkContext()命令背后，Spark为执行用户代码做了大量的准备，包括启动BlockManager、HeartbeatReceiver、MetricsSystem等等。不过最为关键的一点还是启动Spark调度器，这点从Spark应用的app">
 <meta property="og:image" content="https://link3280.github.io/img/yarn-api/Spark-YARN-Cluster.png">
 <meta property="og:image" content="https://link3280.github.io/img/yarn-api/Spark-YARN-Client.png">
-<meta property="og:updated_time" content="2017-12-17T15:57:01.569Z">
+<meta property="og:updated_time" content="2017-12-23T14:59:23.483Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化">
-<meta name="twitter:description" content="作为提交Spark应用的高级接口，SparkSubmit封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行bin/spark-sbumit命令背后，Spark为执行用户代码做了大量的准备，其中最为核心的一点便是Spark调度器的初始化。">
+<meta name="twitter:title" content="Spark源码学习笔记（三）：Spark-on-YARN调度器初始化">
+<meta name="twitter:description" content="作为提交Spark应用的高级接口，SparkContext封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行new SparkContext()命令背后，Spark为执行用户代码做了大量的准备，包括启动BlockManager、HeartbeatReceiver、MetricsSystem等等。不过最为关键的一点还是启动Spark调度器，这点从Spark应用的app">
 <meta name="twitter:image" content="https://link3280.github.io/img/yarn-api/Spark-YARN-Cluster.png">
 
 
@@ -130,13 +130,13 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/"/>
+  <link rel="canonical" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/"/>
 
 
 
 
 
-  <title>Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化 | 时间与精神的小屋</title>
+  <title>Spark源码学习笔记（三）：Spark-on-YARN调度器初始化 | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -275,7 +275,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -292,7 +292,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化</h2>
+          <h2 class="post-title" itemprop="name headline">Spark源码学习笔记（三）：Spark-on-YARN调度器初始化</h2>
         
 
         <div class="post-meta">
@@ -346,8 +346,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/" itemprop="commentsCount"></span>
+                <a href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -373,16 +373,17 @@
       
 
       
-        <p>作为提交Spark应用的高级接口，SparkSubmit封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行<code>bin/spark-sbumit</code>命令背后，Spark为执行用户代码做了大量的准备，其中最为核心的一点便是Spark调度器的初始化。</p>
+        <p>作为提交Spark应用的高级接口，SparkContext封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行<code>new SparkContext()</code>命令背后，Spark为执行用户代码做了大量的准备，包括启动BlockManager、HeartbeatReceiver、MetricsSystem等等。不过最为关键的一点还是启动Spark调度器，这点从Spark应用的applicationId取自TaskScheduler的applicationId便可看出。</p>
 <a id="more"></a>
-<h1 id="Spark调度后台初始化流程"><a href="#Spark调度后台初始化流程" class="headerlink" title="Spark调度后台初始化流程"></a>Spark调度后台初始化流程</h1><p>每个应用都从SparkContext的初始化开始，而SparkContext初始化阶段的重要工作之一就是启动SchedulerBackend。SchedulerBackend作为Driver与Executor的通信接口，负责对Executor的管理，需要随Driver初始化以便Executor启动后可以通过它向Driver注册自己。另外TaskScheduler作为SchedulerBackend的门面(Facade)，会被传递给SparkContext的DAGScheduler。此后DAGScheduler负责高级的作业(Job)和阶段(Stage)管理，TaskScheduler负责低级的任务(Task)分发、执行和监控等操作。</p>
-<p>SparkContext初始化的部分代码：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line">/**</div><div class="line"> * Create a task scheduler based on a given master URL.</div><div class="line"> * Return a 2-tuple of the scheduler backend and the task scheduler.</div><div class="line"> */</div><div class="line">private def createTaskScheduler(</div><div class="line">    sc: SparkContext,</div><div class="line">    master: String,</div><div class="line">    deployMode: String): (SchedulerBackend, TaskScheduler) = &#123;</div><div class="line">  import SparkMasterRegex._</div><div class="line"></div><div class="line">  master match &#123;</div><div class="line">    //为简单起见，删除了local模式的case。</div><div class="line">    case SPARK_REGEX(sparkUrl) =&gt;</div><div class="line">      val scheduler = new TaskSchedulerImpl(sc)</div><div class="line">      val masterUrls = sparkUrl.split(&quot;,&quot;).map(&quot;spark://&quot; + _)</div><div class="line">      val backend = new StandaloneSchedulerBackend(scheduler, sc, masterUrls)</div><div class="line">      scheduler.initialize(backend)</div><div class="line">      (backend, scheduler)</div><div class="line"></div><div class="line">    case masterUrl =&gt;</div><div class="line">      //通过master url匹配合适的集群管理器并加载该类。</div><div class="line">      //masterUrl即spark-submit的`--master`参数，或SparkConf的setMaster指定的参数。</div><div class="line">      val cm = getClusterManager(masterUrl) match &#123;</div><div class="line">        case Some(clusterMgr) =&gt; clusterMgr</div><div class="line">        case None =&gt; throw new SparkException(&quot;Could not parse Master URL: &apos;&quot; + master + &quot;&apos;&quot;)</div><div class="line">      &#125;</div><div class="line">      try &#123;</div><div class="line">        val scheduler = cm.createTaskScheduler(sc, masterUrl)</div><div class="line">        val backend = cm.createSchedulerBackend(sc, masterUrl, scheduler)</div><div class="line">        //以SchedulerBackend作为初始化TaskScheduler</div><div class="line">        cm.initialize(scheduler, backend)</div><div class="line">        (backend, scheduler)</div><div class="line">      &#125; catch &#123;</div><div class="line">        case se: SparkException =&gt; throw se</div><div class="line">        case NonFatal(e) =&gt;</div><div class="line">          throw new SparkException(&quot;External scheduler cannot be instantiated&quot;, e)</div><div class="line">      &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<h1 id="Spark-on-YARN应用初始化流程"><a href="#Spark-on-YARN应用初始化流程" class="headerlink" title="Spark on YARN应用初始化流程"></a>Spark on YARN应用初始化流程</h1><p>在YARN集群模式下，Spark的守护进程都在YARN框架内，所以大部分上是YARN API的实现。如果对YARN编程不太熟悉可以先阅读董西成的<a href="http://dongxicheng.org/mapreduce-nextgen/how-to-write-an-yarn-applicationmaster/" target="_blank" rel="external">如何编写YARN应用程序</a>。</p>
+<h1 id="调度器初始化入口"><a href="#调度器初始化入口" class="headerlink" title="调度器初始化入口"></a>调度器初始化入口</h1><p>每个应用都从SparkContext的实例化开始，而SparkContext初始化阶段的重要工作之一就是启动SchedulerBackend守护进程。SchedulerBackend作为Driver与Executor的RPC通信接口，应该Driver初始化时启动以便Executor启动后可以向Driver注册自己。同时SchedulerBackend的门面(Facade)，TaskScheduler会被传递给SparkContext的DAGScheduler持有。此后DAGScheduler负责高级的作业(Job)和阶段(Stage)管理，将应用分解到TaskSet级别，交由TaskScheduler完成底层的任务(Task)分发、执行和监控等操作。</p>
+<p>SparkContext创建TaskScheduler部分代码：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line">/**</div><div class="line"> * Create a task scheduler based on a given master URL.</div><div class="line"> * Return a 2-tuple of the scheduler backend and the task scheduler.</div><div class="line"> */</div><div class="line">private def createTaskScheduler(</div><div class="line">    sc: SparkContext,</div><div class="line">    master: String,</div><div class="line">    deployMode: String): (SchedulerBackend, TaskScheduler) = &#123;</div><div class="line">  import SparkMasterRegex._</div><div class="line"></div><div class="line">  master match &#123;</div><div class="line">    //为简单起见，删除了local模式的case。</div><div class="line">    case SPARK_REGEX(sparkUrl) =&gt;</div><div class="line">      val scheduler = new TaskSchedulerImpl(sc)</div><div class="line">      val masterUrls = sparkUrl.split(&quot;,&quot;).map(&quot;spark://&quot; + _)</div><div class="line">      val backend = new StandaloneSchedulerBackend(scheduler, sc, masterUrls)</div><div class="line">      scheduler.initialize(backend)</div><div class="line">      (backend, scheduler)</div><div class="line"></div><div class="line">    case masterUrl =&gt;</div><div class="line">      //通过master url匹配合适的集群管理器并加载该类。</div><div class="line">      //masterUrl即spark-submit的`--master`参数，或SparkConf的setMaster指定的参数。</div><div class="line">      val cm = getClusterManager(masterUrl) match &#123;</div><div class="line">        case Some(clusterMgr) =&gt; clusterMgr</div><div class="line">        case None =&gt; throw new SparkException(&quot;Could not parse Master URL: &apos;&quot; + master + &quot;&apos;&quot;)</div><div class="line">      &#125;</div><div class="line">      try &#123;</div><div class="line">        val scheduler = cm.createTaskScheduler(sc, masterUrl)</div><div class="line">        val backend = cm.createSchedulerBackend(sc, masterUrl, scheduler)</div><div class="line">        //以SchedulerBackend作为初始化TaskScheduler</div><div class="line">        cm.initialize(scheduler, backend)</div><div class="line">        (backend, scheduler)</div><div class="line">      &#125; catch &#123;</div><div class="line">        case se: SparkException =&gt; throw se</div><div class="line">        case NonFatal(e) =&gt;</div><div class="line">          throw new SparkException(&quot;External scheduler cannot be instantiated&quot;, e)</div><div class="line">      &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h1 id="YARN模式下调度器的初始化流程"><a href="#YARN模式下调度器的初始化流程" class="headerlink" title="YARN模式下调度器的初始化流程"></a>YARN模式下调度器的初始化流程</h1><p>官方支持的集群管理器有Standalone、Mesos和YARN三种，分别对应StandaloneSchedulerBackend, MesosCoarseGrainedSchedulerBackend和MesosFineGrainedSchedulerBackend,  YarnClusterSchedulerBackend和YarnClientSchedulerBackend三种调度器（后台）。</p>
+<p>其中和Mesos一样作为外部集群管理器，YARN并没有常驻的Spark的守护进程，所以每个Spark应用需要在初始化期间启动这些守护进程（线程），并在应用结束时销毁他们。因此Spark守护进程需要在YARN的框架内实现，如果对YARN编程不太熟悉可以先阅读董西成的<a href="http://dongxicheng.org/mapreduce-nextgen/how-to-write-an-yarn-applicationmaster/" target="_blank" rel="external">如何编写YARN应用程序</a>。</p>
 <p>Spark-on-YARN有cluster和client两种不同的部署模式，两者区别在<a href="http://www.whitewood.me/2017/03/11/Spark-on-YARN%E4%B8%A4%E7%A7%8D%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%E7%9A%84%E4%B8%8D%E5%90%8C/" target="_blank" rel="external">之前一篇博客</a>提过，而它们的应用初始化流程区别就是如何启动YarnSchedulerBackend。</p>
 <h2 id="YARN-cluster部署模式"><a href="#YARN-cluster部署模式" class="headerlink" title="YARN cluster部署模式"></a>YARN cluster部署模式</h2><p><img src="/img/yarn-api/Spark-YARN-Cluster.png" alt="YARN cluster模式的应用初始化" title="YARN cluster模式的应用初始化"></p>
 <p>步骤如下：</p>
 <ol>
-<li>Spark通过YARN Client申请application id，提交AM初始化上下文后退出。</li>
+<li>Spark通过YARN Client申请application id，提交AM初始化上下文后YARN Client退出。</li>
 <li>RM分配到一个container启动AM。AM初始化后先启动一个独立线程执行Spark Driver，后者通过反射获取并执行用户代码main方法。main方法本身会初始化SparkContext来注册Driver的RPC端口和监控端口，YarnClusterSchedulerBackend会在这个阶段启动。</li>
 <li>等Driver成功启动后，AM启动自己的RPC终端并通过YarnRMClient向RM注册自己，然后不断轮询向RM请求container，并在通过NMClient通知NM在申请到的container上启动Spark Executor，直到executor数目达到预设数目。</li>
 <li>Executor初始化后启动自己的RPC终端，并向Driver注册自己，等待Driver调度。</li>
@@ -395,7 +396,8 @@
 <li>AM不断轮询向RM请求container，并在通过NMClient通知NM在申请到的container上启动Spark Executor，直到executor数目达到预设数目。</li>
 <li>Executor初始化后启动自己的RPC终端，并向Driver注册自己，等待Driver调度。</li>
 </ol>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/" target="_blank" rel="external">时间与精神的小屋 - Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化</a></em></font>
+<h1 id="后记"><a href="#后记" class="headerlink" title="后记"></a>后记</h1><p>这篇博客其实从今年较早的时候就开始写了，但YARN调度器这部分代码逻辑实在有点复杂，一边要实现YARN的API（花了不少时间去看YARN的协议），一边要完成Spark守护进程的功能。这让我也花了很多时间来整理，不过离深入浅出依然有很大差距。如果有可以改善的地方，希望读者不吝指教。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/" target="_blank" rel="external">时间与精神的小屋 - Spark源码学习笔记（三）：Spark-on-YARN调度器初始化</a></em></font>
 
       
     </div>
@@ -590,7 +592,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Spark调度后台初始化流程"><span class="nav-number">1.</span> <span class="nav-text">Spark调度后台初始化流程</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Spark-on-YARN应用初始化流程"><span class="nav-number">2.</span> <span class="nav-text">Spark on YARN应用初始化流程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-cluster部署模式"><span class="nav-number">2.1.</span> <span class="nav-text">YARN cluster部署模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-client部署模式"><span class="nav-number">2.2.</span> <span class="nav-text">YARN client部署模式</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#调度器初始化入口"><span class="nav-number">1.</span> <span class="nav-text">调度器初始化入口</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#YARN模式下调度器的初始化流程"><span class="nav-number">2.</span> <span class="nav-text">YARN模式下调度器的初始化流程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-cluster部署模式"><span class="nav-number">2.1.</span> <span class="nav-text">YARN cluster部署模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-client部署模式"><span class="nav-number">2.2.</span> <span class="nav-text">YARN client部署模式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#后记"><span class="nav-number">3.</span> <span class="nav-text">后记</span></a></li></ol></div>
             
 
           </div>
@@ -726,7 +728,7 @@
 		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/"});
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/"});
 		
 
 		(function() {

@@ -273,7 +273,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -292,7 +292,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/" itemprop="url">Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化</a></h2>
+                <a class="post-title-link" href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/" itemprop="url">Spark源码学习笔记（三）：Spark-on-YARN调度器初始化</a></h2>
         
 
         <div class="post-meta">
@@ -346,8 +346,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/" itemprop="commentsCount"></span>
+                <a href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -374,10 +374,10 @@
 
       
         
-          <p>作为提交Spark应用的高级接口，SparkSubmit封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行<code>bin/spark-sbumit</code>命令背后，Spark为执行用户代码做了大量的准备，其中最为核心的一点便是Spark调度器的初始化。</p>
+          <p>作为提交Spark应用的高级接口，SparkContext封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行<code>new SparkContext()</code>命令背后，Spark为执行用户代码做了大量的准备，包括启动BlockManager、HeartbeatReceiver、MetricsSystem等等。不过最为关键的一点还是启动Spark调度器，这点从Spark应用的applicationId取自TaskScheduler的applicationId便可看出。</p>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN应用提交及初始化/#more" rel="contents">
+            <a class="btn" href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/#more" rel="contents">
               阅读全文 &raquo;
             </a>
           </div>
