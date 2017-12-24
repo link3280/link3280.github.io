@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="大数据,Spark," />
+  <meta name="keywords" content="计算机基础,数据库,ML," />
 
 
 
@@ -90,19 +90,16 @@
 
 
 
-<meta name="description" content="在Spark三种常见的资源调度器，YARN、Mesos和Standalone中，最受欢迎的莫过于YARN。YARN与Hadoop原生集成，可以支持不同计算框架在Hadoop集群上的调度，这使得Spark on YARN无需改变配置就可以与MapReduce共享同一个资源池，避免了资源浪费，节省了开发成本。">
+<meta name="description" content="Learned Indexes 论文前两周被发表在arXiv上，引起了业界的广泛关注。作为一种全新的索引模型，Learned Indexes 或将有希望取代目前DBMS的传统索引。其核心思想是将数据查找视为以key为输入的数据地址预测问题，从而可以利用机器学习在预测问题上的研究沉淀来优化数据查找。简单来说，Learned Indexes 是一种结合机器学习的索引模型，能根据数据分布来优化索引结构和">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Spark on YARN两种部署方式的不同">
-<meta property="og:url" content="https://link3280.github.io/2017/03/11/Spark-on-YARN两种部署方式的不同/index.html">
+<meta property="og:title" content="关于Learned Indexes的思考">
+<meta property="og:url" content="https://link3280.github.io/2017/12/24/关于Learned-Indexes的思考/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="在Spark三种常见的资源调度器，YARN、Mesos和Standalone中，最受欢迎的莫过于YARN。YARN与Hadoop原生集成，可以支持不同计算框架在Hadoop集群上的调度，这使得Spark on YARN无需改变配置就可以与MapReduce共享同一个资源池，避免了资源浪费，节省了开发成本。">
-<meta property="og:image" content="https://link3280.github.io/img/spark-yarn-client.png">
-<meta property="og:image" content="https://link3280.github.io/img/spark-yarn-cluster.png">
-<meta property="og:updated_time" content="2017-12-17T05:25:52.769Z">
+<meta property="og:description" content="Learned Indexes 论文前两周被发表在arXiv上，引起了业界的广泛关注。作为一种全新的索引模型，Learned Indexes 或将有希望取代目前DBMS的传统索引。其核心思想是将数据查找视为以key为输入的数据地址预测问题，从而可以利用机器学习在预测问题上的研究沉淀来优化数据查找。简单来说，Learned Indexes 是一种结合机器学习的索引模型，能根据数据分布来优化索引结构和">
+<meta property="og:updated_time" content="2017-12-24T13:33:36.120Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Spark on YARN两种部署方式的不同">
-<meta name="twitter:description" content="在Spark三种常见的资源调度器，YARN、Mesos和Standalone中，最受欢迎的莫过于YARN。YARN与Hadoop原生集成，可以支持不同计算框架在Hadoop集群上的调度，这使得Spark on YARN无需改变配置就可以与MapReduce共享同一个资源池，避免了资源浪费，节省了开发成本。">
-<meta name="twitter:image" content="https://link3280.github.io/img/spark-yarn-client.png">
+<meta name="twitter:title" content="关于Learned Indexes的思考">
+<meta name="twitter:description" content="Learned Indexes 论文前两周被发表在arXiv上，引起了业界的广泛关注。作为一种全新的索引模型，Learned Indexes 或将有希望取代目前DBMS的传统索引。其核心思想是将数据查找视为以key为输入的数据地址预测问题，从而可以利用机器学习在预测问题上的研究沉淀来优化数据查找。简单来说，Learned Indexes 是一种结合机器学习的索引模型，能根据数据分布来优化索引结构和">
 
 
 
@@ -130,13 +127,13 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2017/03/11/Spark-on-YARN两种部署方式的不同/"/>
+  <link rel="canonical" href="https://link3280.github.io/2017/12/24/关于Learned-Indexes的思考/"/>
 
 
 
 
 
-  <title>Spark on YARN两种部署方式的不同 | 时间与精神的小屋</title>
+  <title>关于Learned Indexes的思考 | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -275,7 +272,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/03/11/Spark-on-YARN两种部署方式的不同/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/12/24/关于Learned-Indexes的思考/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -292,7 +289,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">Spark on YARN两种部署方式的不同</h2>
+          <h2 class="post-title" itemprop="name headline">关于Learned Indexes的思考</h2>
         
 
         <div class="post-meta">
@@ -304,8 +301,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-03-11T11:06:11+08:00">
-                2017-03-11
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-12-24T15:24:10+08:00">
+                2017-12-24
               </time>
             
 
@@ -327,8 +324,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Spark/" itemprop="url" rel="index">
-                    <span itemprop="name">Spark</span>
+                  <a href="/categories/计算机基础/" itemprop="url" rel="index">
+                    <span itemprop="name">计算机基础</span>
                   </a>
                 </span>
 
@@ -346,8 +343,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2017/03/11/Spark-on-YARN两种部署方式的不同/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/03/11/Spark-on-YARN两种部署方式的不同/" itemprop="commentsCount"></span>
+                <a href="/2017/12/24/关于Learned-Indexes的思考/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2017/12/24/关于Learned-Indexes的思考/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -373,17 +370,12 @@
       
 
       
-        <p>在Spark三种常见的资源调度器，YARN、Mesos和Standalone中，最受欢迎的莫过于YARN。YARN与Hadoop原生集成，可以支持不同计算框架在Hadoop集群上的调度，这使得Spark on YARN无需改变配置就可以与MapReduce共享同一个资源池，避免了资源浪费，节省了开发成本。  </p>
+        <p>Learned Indexes 论文前两周被发表在arXiv上，引起了业界的广泛关注。作为一种全新的索引模型，Learned Indexes 或将有希望取代目前DBMS的传统索引。其核心思想是将数据查找视为以key为输入的数据地址预测问题，从而可以利用机器学习在预测问题上的研究沉淀来优化数据查找。简单来说，Learned Indexes 是一种结合机器学习的索引模型，能根据数据分布来优化索引结构和查找效率。  </p>
 <a id="more"></a>
-<p>提交到YARN上的任务称为Application，这与Spark的Application概念是相似的。每个Application需要有一个Application Master（下简称AM）代表它与Resource Manager协商资源以及与Node Manager管理分配给该Application的container。AM会在Application启动的时候自动分配，是Application占有的首个container，而其后AM申请的container上会运行Spark的executor。 </p>
-<p>实际上YARN on Spark有client和cluster两种模式，它们之间又有什么区别呢？  </p>
-<h2 id="YARN-client模式"><a href="#YARN-client模式" class="headerlink" title="YARN-client模式"></a>YARN-client模式</h2><p>Spark Application的Driver会在提交作业的节点（也就是client）上运行，Spark Executor的调度由client上的Driver负责，所以整个运行时间client是一直需要和Spark集群保持链接的，各个executor的标准输出和错误输出都会打印到client的控制台。如果在Spark Application运行期间将client kill掉，那么Driver也会随之被kill，整个Spark Application就会停止运行。</p>
-<p><img src="/img/spark-yarn-client.png" alt="Spark YARN-client-mode" title="Spark YARN-client-mode"></p>
-<h2 id="YARN-cluster模式"><a href="#YARN-cluster模式" class="headerlink" title="YARN-cluster模式"></a>YARN-cluster模式</h2><p>Spark Application的Driver在AM内运行，也就是说AM不仅负责资源协商，也负责作业执行的调度。因为client提交Application之后就没有后续的任务了，进程自然退出，Application的运行日志可以在Spark AM的WebUI看到。如果要结束Spark Application，需要使用Hadoop yarn.sh的 application -kill [ApplicationID] 命令。</p>
-<p><img src="/img/spark-yarn-cluster.png" alt="Spark YARN-cluster-mode" title="Spark YARN-cluster-mode"></p>
-<p>综上所述，yarn-client和yarn-cluster的不同在于Spark Driver在client运行还是在AM运行。yarn-client更适合调试或者需要交互的任务（比如Spark-shell），因为Driver标准IO是在client本地。而yarn-cluster更适用于生产任务，因为资源统一由YARN分配，不依赖于某台机器。  </p>
-<p>参考资料：<br>1.<a href="http://blog.cloudera.com/blog/2014/05/apache-spark-resource-management-and-yarn-app-models/" target="_blank" rel="external">Apache Spark Resource Management and YARN App Models</a><br>2.<a href="http://dongxicheng.org/framework-on-yarn/apache-spark-comparing-three-deploying-ways/" target="_blank" rel="external">Apache Spark探秘：三种分布式部署方式比较</a></p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/03/11/Spark on YARN两种部署方式的不同/" target="_blank" rel="external">时间与精神的小屋 - Spark on YARN两种部署方式的不同</a></em></font>
+<p>Learned Indexes本身尚且处于萌芽的阶段，只通过简单实验初步证明了可行性，不像Spanner或GFS等有成熟应用的论文（这也是为什么发表在arXiv上），但其中将索引视为算法模型的思想可以说是打开了新世界的大门。首先，索引作为计算机最早研究的领域之一，其中许多算法已被数学证明为最优解。因此即使是各种NN应用层出不穷的今日，绝大多数人也不会想到将NN应用到索引上。更重要的是，传统算法和机器学习算法一直有一条鸿沟：传统算法的输出一般是确定的和易于解释的，机器学习算法的输出则和习得模型相关，是基于概率的和较难解释甚至无法解释的。计算机底层的系统要求有清晰的逻辑和准确的输出，所以一直是传统算法的天下（当然也和机器学习出现时间较晚有关）。而Learned Indexes的出现，更多是<strong>传统算法和机器学习算法的融合</strong>，比如Hybrid Indexes遇到难以学习的数据分布时会将部分或全部模型替换为传统的B-Tree以保证效率不会低于B-Tree。传统算法和机器学习算法的互补，很有可能会让现代算法再上一个台阶。</p>
+<p>另一方面，作为经常与数据存储打交道的大数据工程师，索引优化是必不可少的一项技能（即便大数据领域的索引并不像传统数据库一样完善）。利用各种数据结构建立一套可以覆盖多数查询的索引是一项很有成就感的工作。但是不得不承认的是面对越来越多样化的数据、指数级别增长的数据和越发复杂的查询模式，设计可以满足查询效率的索引变得复杂甚至难以完成。因此分布式领域的NoSQL和NewSQL多多少少需要对数据分布或查询模式的灵活性作出妥协并针对设计常见提供特定索引。然而这只是将问题抛给了用户，比如HBase的数据热点问题、Hive的非分区字段索引问题，针对这些问题工程师需要进行大量ad-hoc处理，并不是优雅的解决方案。而Learned Indexes的出现将有可能改变这种现状。例如Learned Indexes由于了解存储数据的分布，可能在写入时便将热点key的数据打散分布到各个物理节点，从而避免数据热点问题（当然检索的性能可能受影响）。</p>
+<p>总而言之，Learned Indexes将赋予索引根据数据分布自动调整的能力，未来或许还会将数据访问分布纳入考虑。如果被广泛应用这将会大大减少工程师花费在索引设计和优化的时间和精力。同时它很可能是传统算法与机器学习结合的开始，更多的计算机底层系统和模块会变得更加智能和高效。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/09/24/关于Learned-Indexes的思考/" target="_blank" rel="external">时间与精神的小屋 - 关于Learned Indexes的思考</a></em></font>
 
       
     </div>
@@ -413,9 +405,11 @@
       
         <div class="post-tags">
           
-            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+            <a href="/tags/计算机基础/" rel="tag"># 计算机基础</a>
           
-            <a href="/tags/Spark/" rel="tag"># Spark</a>
+            <a href="/tags/数据库/" rel="tag"># 数据库</a>
+          
+            <a href="/tags/ML/" rel="tag"># ML</a>
           
         </div>
       
@@ -428,8 +422,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2017/02/27/Flume Avro source 解压异常的解决方法/" rel="next" title="Flume Avro source 解压异常的解决方法">
-                <i class="fa fa-chevron-left"></i> Flume Avro source 解压异常的解决方法
+              <a href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/" rel="next" title="Spark源码学习笔记（三）：Spark-on-YARN调度器初始化">
+                <i class="fa fa-chevron-left"></i> Spark源码学习笔记（三）：Spark-on-YARN调度器初始化
               </a>
             
           </div>
@@ -437,10 +431,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2017/03/18/估算Flume的内存消耗/" rel="prev" title="如何估算Flume需要的内存">
-                如何估算Flume需要的内存 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -489,17 +479,8 @@
       
 
       
-        <ul class="sidebar-nav motion-element">
-          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
-            文章目录
-          </li>
-          <li class="sidebar-nav-overview" data-target="site-overview">
-            站点概览
-          </li>
-        </ul>
-      
 
-      <section class="site-overview sidebar-panel">
+      <section class="site-overview sidebar-panel sidebar-panel-active">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
           <img class="site-author-image" itemprop="image"
                src="/img/me.png"
@@ -572,22 +553,6 @@
 
       </section>
 
-      
-      <!--noindex-->
-        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
-          <div class="post-toc">
-
-            
-              
-            
-
-            
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-client模式"><span class="nav-number">1.</span> <span class="nav-text">YARN-client模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-cluster模式"><span class="nav-number">2.</span> <span class="nav-text">YARN-cluster模式</span></a></li></ol></div>
-            
-
-          </div>
-        </section>
-      <!--/noindex-->
       
 
       
@@ -718,7 +683,7 @@
 		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/03/11/Spark-on-YARN两种部署方式的不同/"});
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2017/12/24/关于Learned-Indexes的思考/"});
 		
 
 		(function() {
