@@ -375,7 +375,7 @@
       
         
           <p>Kylin的查询实现分为查询引擎和存储引擎两大模块。查询引擎负责逻辑层服务，提供SQL解析和路由功能，实现上依赖于Apache Calcite；存储引擎负责物理层服务，提供服务原语的底层实现，存储引擎的实现默认为HBase，可以通过实现<code>IStorage</code>接口拓展为其他数据库。</p>
-<p>由于查询效率是Kylin最为关键的性能指标，Kylin开发团队在查询优化上做了大量工作，其中最重要一点就是将OLAP查询模式结合Kylin Cube的存储模型，细分需求并抽象出通用的查询优化技术。</p>
+<p>由于查询效率是数据库最为关键的性能指标，Kylin开发团队在查询优化上做了大量工作，其中最重要一点就是将OLAP查询模式结合Kylin Cube的存储模型，细分需求并抽象出通用的查询优化技术。</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2018/01/20/Kylin实战（八）：查询优化技术/#more" rel="contents">
