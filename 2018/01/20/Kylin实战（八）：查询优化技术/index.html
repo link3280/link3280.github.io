@@ -98,7 +98,7 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="Kylin的查询实现分为查询引擎和存储引擎两大模块。查询引擎负责逻辑层服务，提供SQL解析和路由功能，实现上依赖于Apache Calcite；存储引擎负责物理层服务，提供服务原语的底层实现，存储引擎的实现默认为HBase，可以通过实现IStorage接口拓展为其他数据库。
 由于查询效率是数据库最为关键的性能指标，Kylin开发团队在查询优化上做了大量工作，其中最重要一点就是将OLAP查询模式结合">
-<meta property="og:updated_time" content="2018-01-21T09:18:03.784Z">
+<meta property="og:updated_time" content="2018-01-21T13:26:50.157Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（八）：查询优化技术">
 <meta name="twitter:description" content="Kylin的查询实现分为查询引擎和存储引擎两大模块。查询引擎负责逻辑层服务，提供SQL解析和路由功能，实现上依赖于Apache Calcite；存储引擎负责物理层服务，提供服务原语的底层实现，存储引擎的实现默认为HBase，可以通过实现IStorage接口拓展为其他数据库。
@@ -376,8 +376,8 @@
         <p>Kylin的查询实现分为查询引擎和存储引擎两大模块。查询引擎负责逻辑层服务，提供SQL解析和路由功能，实现上依赖于Apache Calcite；存储引擎负责物理层服务，提供服务原语的底层实现，存储引擎的实现默认为HBase，可以通过实现<code>IStorage</code>接口拓展为其他数据库。</p>
 <p>由于查询效率是数据库最为关键的性能指标，Kylin开发团队在查询优化上做了大量工作，其中最重要一点就是将OLAP查询模式结合Kylin Cube的存储模型，细分需求并抽象出通用的查询优化技术。</p>
 <a id="more"></a>
-<h1 id="存储端聚合（Storage-Aggregation）"><a href="#存储端聚合（Storage-Aggregation）" class="headerlink" title="存储端聚合（Storage Aggregation）"></a>存储端聚合（Storage Aggregation）</h1><p>存储端聚合指在存储引擎服务端，比如HBase的RegionServer，实现的聚合操作。存储端聚合发生在用户提交的查询维度组合对应的cuboid没有物化的情况下，这时Kylin会找到小于该cuboid id的最大的物化cuboid id，基于后者来聚合计算出查询结果数据。其中有个特殊情况是查询里包含只有单个值的维度（称为singleValuesD），这种维度不需要聚合便是结果数据，是否包含该列并不影响目标cuboid的判断。因此具体的判断方法是查询包含的<code>group by</code>维度加上改表的单值维度的集合大小是否等于目标cuboid维度数，是则不需要存储端聚合，否则需要。</p>
-<p>存储端聚合在HBase存储引擎中是通过Coprocessor实现的。用户提交的查询会被Kylin翻译为一个或多个Coprocessor的RPC调用，每个调用对应一次HBase Scan。为了避免用户提交的慢查询对RegionServer造成高负载，Kylin提供了几个参数来限制Coprocessor的资源使用：  </p>
+<h1 id="存储端聚合（Storage-Aggregation）"><a href="#存储端聚合（Storage-Aggregation）" class="headerlink" title="存储端聚合（Storage Aggregation）"></a>存储端聚合（Storage Aggregation）</h1><p>存储端聚合指在存储引擎服务端，比如HBase的RegionServer，实现的聚合操作。存储端聚合发生在用户提交的查询维度组合对应的cuboid没有物化的情况下，这时Kylin会找到cuboid id小于并最接近该cuboid的物化cuboid，基于后者来聚合计算出查询结果数据。其中有个特殊情况是查询里包含只有单个值的维度（称为singleValuesD），这种维度不需要聚合便是结果数据，是否包含该列并不影响目标cuboid的判断。因此具体的判断方法是看查询包含的<code>group by</code>维度加上该表的单值维度，去重后的数量是否等于目标cuboid维度数。若是则不需要存储端聚合，否则需要。</p>
+<p>存储端聚合在HBase存储引擎中是通过Coprocessor实现的。用户提交的查询会被Kylin翻译为一个或多个Coprocessor的RPC调用，每个调用对应一次HBase Scan。为了避免用户提交的慢查询对RegionServer造成高负载，Kylin提供了几个参数来限制Coprocessor的资源使用（本文基于2.2版本，不同版本有差异）：  </p>
 <ul>
 <li><code>kylin.storage.hbase.coprocessor-mem-gb</code>: coprocessor内存大小，默认为3GB。</li>
 <li><code>kylin.storage.hbase.coprocessor-timeout-seconds</code>: 一次PRC的超时时长，默认为HBase RPC超时时长的0.9倍，即 60s * 0.9。</li>
@@ -385,7 +385,7 @@
 <li><code>kylin.storage.hbase.max-scan-result-bytes</code>: 一次RPC返回的最大结果集大小，默认为5MB。</li>
 </ul>
 <p>超出资源限制的查询会失败，如果是由于时间过长还会被记录到慢查询日志中。</p>
-<h1 id="后置聚合（Post-Aggregation）"><a href="#后置聚合（Post-Aggregation）" class="headerlink" title="后置聚合（Post Aggregation）"></a>后置聚合（Post Aggregation）</h1><p>后置聚合是基于存储引擎服务端的返回结果上进行的二次聚合，发生在Kylin Server端。当查询符合以下条件时需要执行后置聚合：</p>
+<h1 id="后置聚合（Post-Aggregation）"><a href="#后置聚合（Post-Aggregation）" class="headerlink" title="后置聚合（Post Aggregation）"></a>后置聚合（Post Aggregation）</h1><p>后置聚合发生在Kylin Server端，是基于存储引擎服务端的返回结果上进行的二次聚合。当查询符合以下条件时Kylin会执行后置聚合：</p>
 <ol>
 <li>查询包含聚合组中的层次维度的高级维度，比如“国家-省份-城市”的“省份”。因为层次维度在cube构建阶段没有被物化，所以需要在查询时基于最低层的层次维度on-the-fly地聚合。</li>
 <li>查询包含衍生维度且其依赖维度不在<code>group by</code>子句中。这时Kylin Server需要根据依赖维度进行一次上卷以计算出查询结果。</li>
@@ -393,12 +393,12 @@
 <li>查询包含对维度的聚合，比如<code>MAX(level)</code>，这类计算也是在Kylin Server端完成的。</li>
 <li>查询不包含分区列(partition column)且该表存在多个分区。因为存储引擎返回的结果是以分区为单位的，所以Kylin Server需要对多个分区数据进行一次合并。</li>
 </ol>
-<h1 id="下推Limit语句（Limit-Pushdown）"><a href="#下推Limit语句（Limit-Pushdown）" class="headerlink" title="下推Limit语句（Limit Pushdown）"></a>下推Limit语句（Limit Pushdown）</h1><p>Kylin会尝试将Limit语句下推到存储端执行以避免扫描cuboid的全部记录，不过前提条件是查询没有涉及全局的数据，适用场景与后置聚合很大程度上互斥。这也十分好理解：如果存储端返回的是局部数据，那么Kylin Server端做二次计算时只能基于部分数据，而且Kylin Server并不能判断数据是否完整，这会使得二次计算的结果不准确。</p>
-<p>下推Limit分为三级：<code>LIMIT_ON_SCAN</code>、<code>LIMIT_ON_RETURN_SIZE</code>和<code>NO_LIMIT</code>。</p>
+<h1 id="Limit语句下推（Limit-Pushdown）"><a href="#Limit语句下推（Limit-Pushdown）" class="headerlink" title="Limit语句下推（Limit Pushdown）"></a>Limit语句下推（Limit Pushdown）</h1><p>Kylin会尝试将Limit语句下推到存储端执行以避免扫描cuboid的全部记录，不过前提条件是查询没有涉及全局的数据，适用场景与后置聚合很大程度上互斥。这也十分好理解：如果存储端返回的是局部数据，那么Kylin Server端做二次计算时只能基于部分数据，而且Kylin Server并不能判断数据是否完整，这会使得二次计算的结果不准确。</p>
+<p>Limit下推分为三级：<code>LIMIT_ON_SCAN</code>、<code>LIMIT_ON_RETURN_SIZE</code>和<code>NO_LIMIT</code>。</p>
 <ul>
-<li><code>LIMIT_ON_SCAN</code>是效果最好的下推，直接减小Scan范围，扫描一定的行数则停止。这要求<code>group by</code>维度组合为rowkey的前缀，要求最为严格。</li>
-<li><code>LIMIT_ON_RETURN_SIZE</code>效果次好，只是减小返回结果集的大小，仍需要扫描整个cuboid。这是条件达不到<code>LIMIT_ON_SCAN</code>，退而求其次的优化。</li>
-<li><code>NO_LIMIT</code>是下推失败，需要返回全部cuboid数据的情况，这通常伴随着后置聚合。满足下列任意条件的查询会下推失败：<ol>
+<li><code>LIMIT_ON_SCAN</code>是效果最好的下推方式，直接减小Scan范围，Coprocessor扫描一定的行数后停止。这需要<code>group by</code>维度组合为rowkey的前缀，要求最为严格。</li>
+<li><code>LIMIT_ON_RETURN_SIZE</code>效果次好，减小了返回结果集的大小，但仍需要扫描整个cuboid。这是条件达不到<code>LIMIT_ON_SCAN</code>，退而求其次的优化。</li>
+<li><code>NO_LIMIT</code>是下推失败，需要返回全部cuboid数据的情况，这通常伴随着后置聚合。满足下列任意条件的查询会下推失败：  <ol>
 <li>查询包含一个或多个衍生维度且至少一个对应的依赖维度不在<code>group by</code>子句中。</li>
 <li>查询包含对放宽维度(Loosened Column)的过滤。放宽维度指的是与依赖维度不是一对一关系的衍生维度，通常除维度表的主键依赖于事实表的主键以外的衍生维度都属于这种。举个例子，在班级信息维度表中，班级是依赖于学号的衍生维度。当用户提交一个基于班级的过滤器，因为存储端并没有存储班级，Kylin会尝试将它翻译成基于学号的过滤器。但是学号和班级并不是一一对应的，因此Kylin只能放弃存储端过滤，将所有可能符合要求的记录返回给Kylin Server，再由Kylin Server获取维度表(Lookp Table)后去完成过滤。</li>
 <li>查询包含<code>order by</code>子句。由于<code>order by</code>是全局排序，所以存储端应该返回全部的cuboid记录（预计算的TopN指标的处理方式有待考证）。</li>
@@ -408,7 +408,7 @@
 </ul>
 <h1 id="非聚合查询（No-Aggregations）"><a href="#非聚合查询（No-Aggregations）" class="headerlink" title="非聚合查询（No-Aggregations）"></a>非聚合查询（No-Aggregations）</h1><p>非聚合查询指没有<code>group by</code>语句和聚合指标的查询，形式上为 <code>select ... from ... where ...</code> 。这种查询或许只是为了大致了解一下Kylin的数据，但是并不符合Kylin的理念。Kylin设计的目标是满足 <code>select dimensionA, dimensionB, sum(messureA) from tbl_a where dimensionA &gt; 0 group by dimensionA, dimensionB</code> 这样的OLAP查询，因此默认并不会保存原始的指标数据。由于这样的查询在新手用户中十分常见，Kylin团队用查询改写的方法来满足这个需求。</p>
 <p>Kylin存储引擎在遇到非聚合查询时，会重写用户查询，将select语句涉及的维度加入<code>group by</code>语句（若为衍生维度则丢弃），涉及的指标改写为使用加总函数（若该指标没有实现加总函数则丢弃）。</p>
-<h1 id="下推Having过滤器（Having-Filter-Pushdown）"><a href="#下推Having过滤器（Having-Filter-Pushdown）" class="headerlink" title="下推Having过滤器（Having Filter Pushdown）"></a>下推Having过滤器（Having Filter Pushdown）</h1><p>下推Having过滤器是一种较少触发的优化，它要求查询的表只有一个segment，一般用于全量构建而不是增量构建的cube。当表满足只有一个segment，且设置了分片列（shard-by column），且<code>group by</code>语句包含所有分片列时，Having的过滤可以下推到存储端进行，因为存储端（比如一个HBase表）的数据就是全局数据。</p>
+<h1 id="Having过滤器下推（Having-Filter-Pushdown）"><a href="#Having过滤器下推（Having-Filter-Pushdown）" class="headerlink" title="Having过滤器下推（Having Filter Pushdown）"></a>Having过滤器下推（Having Filter Pushdown）</h1><p>Having过滤器下推是一种较少触发的优化，它要求查询的表只有一个segment，一般用于全量构建而不是增量构建的cube。当表满足只有一个segment，且设置了分片列（shard-by column），且<code>group by</code>语句包含所有分片列时，Having的过滤可以下推到存储端进行，因为存储端（比如一个HBase表）的数据就是全局数据。</p>
 <font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/01/20/Kylin实战（八）：查询优化技术/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（八）：查询优化技术</a></em></font>
 
       
@@ -602,7 +602,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#存储端聚合（Storage-Aggregation）"><span class="nav-number">1.</span> <span class="nav-text">存储端聚合（Storage Aggregation）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#后置聚合（Post-Aggregation）"><span class="nav-number">2.</span> <span class="nav-text">后置聚合（Post Aggregation）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#下推Limit语句（Limit-Pushdown）"><span class="nav-number">3.</span> <span class="nav-text">下推Limit语句（Limit Pushdown）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#非聚合查询（No-Aggregations）"><span class="nav-number">4.</span> <span class="nav-text">非聚合查询（No-Aggregations）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#下推Having过滤器（Having-Filter-Pushdown）"><span class="nav-number">5.</span> <span class="nav-text">下推Having过滤器（Having Filter Pushdown）</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#存储端聚合（Storage-Aggregation）"><span class="nav-number">1.</span> <span class="nav-text">存储端聚合（Storage Aggregation）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#后置聚合（Post-Aggregation）"><span class="nav-number">2.</span> <span class="nav-text">后置聚合（Post Aggregation）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Limit语句下推（Limit-Pushdown）"><span class="nav-number">3.</span> <span class="nav-text">Limit语句下推（Limit Pushdown）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#非聚合查询（No-Aggregations）"><span class="nav-number">4.</span> <span class="nav-text">非聚合查询（No-Aggregations）</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Having过滤器下推（Having-Filter-Pushdown）"><span class="nav-number">5.</span> <span class="nav-text">Having过滤器下推（Having Filter Pushdown）</span></a></li></ol></div>
             
 
           </div>
