@@ -98,7 +98,7 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="Kylin的查询实现分为查询引擎和存储引擎两大模块。查询引擎负责逻辑层服务，提供SQL解析和路由功能，实现上依赖于Apache Calcite；存储引擎负责物理层服务，提供服务原语的底层实现，存储引擎的实现默认为HBase，可以通过实现IStorage接口拓展为其他数据库。
 由于查询效率是数据库最为关键的性能指标，Kylin开发团队在查询优化上做了大量工作，其中最重要一点就是将OLAP查询模式结合">
-<meta property="og:updated_time" content="2018-01-21T13:26:50.157Z">
+<meta property="og:updated_time" content="2018-01-22T13:49:09.538Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Kylin实战（八）：查询优化技术">
 <meta name="twitter:description" content="Kylin的查询实现分为查询引擎和存储引擎两大模块。查询引擎负责逻辑层服务，提供SQL解析和路由功能，实现上依赖于Apache Calcite；存储引擎负责物理层服务，提供服务原语的底层实现，存储引擎的实现默认为HBase，可以通过实现IStorage接口拓展为其他数据库。
@@ -376,7 +376,7 @@
         <p>Kylin的查询实现分为查询引擎和存储引擎两大模块。查询引擎负责逻辑层服务，提供SQL解析和路由功能，实现上依赖于Apache Calcite；存储引擎负责物理层服务，提供服务原语的底层实现，存储引擎的实现默认为HBase，可以通过实现<code>IStorage</code>接口拓展为其他数据库。</p>
 <p>由于查询效率是数据库最为关键的性能指标，Kylin开发团队在查询优化上做了大量工作，其中最重要一点就是将OLAP查询模式结合Kylin Cube的存储模型，细分需求并抽象出通用的查询优化技术。</p>
 <a id="more"></a>
-<h1 id="存储端聚合（Storage-Aggregation）"><a href="#存储端聚合（Storage-Aggregation）" class="headerlink" title="存储端聚合（Storage Aggregation）"></a>存储端聚合（Storage Aggregation）</h1><p>存储端聚合指在存储引擎服务端，比如HBase的RegionServer，实现的聚合操作。存储端聚合发生在用户提交的查询维度组合对应的cuboid没有物化的情况下，这时Kylin会找到cuboid id小于并最接近该cuboid的物化cuboid，基于后者来聚合计算出查询结果数据。其中有个特殊情况是查询里包含只有单个值的维度（称为singleValuesD），这种维度不需要聚合便是结果数据，是否包含该列并不影响目标cuboid的判断。因此具体的判断方法是看查询包含的<code>group by</code>维度加上该表的单值维度，去重后的数量是否等于目标cuboid维度数。若是则不需要存储端聚合，否则需要。</p>
+<h1 id="存储端聚合（Storage-Aggregation）"><a href="#存储端聚合（Storage-Aggregation）" class="headerlink" title="存储端聚合（Storage Aggregation）"></a>存储端聚合（Storage Aggregation）</h1><p>存储端聚合指在存储引擎服务端，比如HBase的RegionServer，实现的聚合操作。存储端聚合发生在用户提交的查询维度组合对应的cuboid没有物化的情况下，这时Kylin会找到cuboid id大于并最接近该cuboid的物化cuboid，基于后者来聚合计算出查询结果数据。其中有个特殊情况是查询里包含只有单个值的维度（称为singleValuesD），这种维度不需要聚合便是结果数据，是否包含该列并不影响目标cuboid的判断。因此具体的判断方法是看查询包含的<code>group by</code>维度加上该表的单值维度，去重后的数量是否等于目标cuboid维度数。若是则不需要存储端聚合，否则需要。</p>
 <p>存储端聚合在HBase存储引擎中是通过Coprocessor实现的。用户提交的查询会被Kylin翻译为一个或多个Coprocessor的RPC调用，每个调用对应一次HBase Scan。为了避免用户提交的慢查询对RegionServer造成高负载，Kylin提供了几个参数来限制Coprocessor的资源使用（本文基于2.2版本，不同版本有差异）：  </p>
 <ul>
 <li><code>kylin.storage.hbase.coprocessor-mem-gb</code>: coprocessor内存大小，默认为3GB。</li>
