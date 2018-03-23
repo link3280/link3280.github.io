@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Kafka," />
+  <meta name="keywords" content="大数据," />
 
 
 
@@ -90,16 +90,18 @@
 
 
 
-<meta name="description" content="作为对实时数据流进行stateful统计的基础，window函数是各流式计算框架必不可少的特性。然而目前业界并没有对windowing作出标准的定义和分类，不同计算框架提供的windowing方法各有不同，同一术语在不同框架的含义也不一致。因此本文试图从工作积累中结合个人理解，总结出较为全面的windowing概念以及常见策略。">
+<meta name="description" content="作为对流式数据流进行stateful统计的基础，window函数是各流式计算框架必不可少的特性。然而目前业界并没有对windowing作出标准的定义和分类，不同计算框架提供的windowing方法各有不同，同一术语在不同框架的含义也不一致，这给流式计算造成了不必要的学习成本。因此本文试图从工作积累出发并结合个人理解，总结出较为全面的windowing概念以及常见策略。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="实时计算的windowing">
-<meta property="og:url" content="https://link3280.github.io/2018/03/21/实时计算的windowing/index.html">
+<meta property="og:title" content="流式计算的windowing">
+<meta property="og:url" content="https://link3280.github.io/2018/03/21/流式计算的windowing/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="作为对实时数据流进行stateful统计的基础，window函数是各流式计算框架必不可少的特性。然而目前业界并没有对windowing作出标准的定义和分类，不同计算框架提供的windowing方法各有不同，同一术语在不同框架的含义也不一致。因此本文试图从工作积累中结合个人理解，总结出较为全面的windowing概念以及常见策略。">
-<meta property="og:updated_time" content="2018-03-22T15:37:15.003Z">
+<meta property="og:description" content="作为对流式数据流进行stateful统计的基础，window函数是各流式计算框架必不可少的特性。然而目前业界并没有对windowing作出标准的定义和分类，不同计算框架提供的windowing方法各有不同，同一术语在不同框架的含义也不一致，这给流式计算造成了不必要的学习成本。因此本文试图从工作积累出发并结合个人理解，总结出较为全面的windowing概念以及常见策略。">
+<meta property="og:image" content="https://link3280.github.io/img/types-of-windows.png">
+<meta property="og:updated_time" content="2018-03-23T16:26:48.273Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="实时计算的windowing">
-<meta name="twitter:description" content="作为对实时数据流进行stateful统计的基础，window函数是各流式计算框架必不可少的特性。然而目前业界并没有对windowing作出标准的定义和分类，不同计算框架提供的windowing方法各有不同，同一术语在不同框架的含义也不一致。因此本文试图从工作积累中结合个人理解，总结出较为全面的windowing概念以及常见策略。">
+<meta name="twitter:title" content="流式计算的windowing">
+<meta name="twitter:description" content="作为对流式数据流进行stateful统计的基础，window函数是各流式计算框架必不可少的特性。然而目前业界并没有对windowing作出标准的定义和分类，不同计算框架提供的windowing方法各有不同，同一术语在不同框架的含义也不一致，这给流式计算造成了不必要的学习成本。因此本文试图从工作积累出发并结合个人理解，总结出较为全面的windowing概念以及常见策略。">
+<meta name="twitter:image" content="https://link3280.github.io/img/types-of-windows.png">
 
 
 
@@ -127,13 +129,13 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2018/03/21/实时计算的windowing/"/>
+  <link rel="canonical" href="https://link3280.github.io/2018/03/21/流式计算的windowing/"/>
 
 
 
 
 
-  <title>实时计算的windowing | 时间与精神的小屋</title>
+  <title>流式计算的windowing | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -272,7 +274,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/03/21/实时计算的windowing/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/03/21/流式计算的windowing/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -289,7 +291,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">实时计算的windowing</h2>
+          <h2 class="post-title" itemprop="name headline">流式计算的windowing</h2>
         
 
         <div class="post-meta">
@@ -324,8 +326,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Kafka/" itemprop="url" rel="index">
-                    <span itemprop="name">Kafka</span>
+                  <a href="/categories/大数据/" itemprop="url" rel="index">
+                    <span itemprop="name">大数据</span>
                   </a>
                 </span>
 
@@ -343,8 +345,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/03/21/实时计算的windowing/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2018/03/21/实时计算的windowing/" itemprop="commentsCount"></span>
+                <a href="/2018/03/21/流式计算的windowing/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2018/03/21/流式计算的windowing/" itemprop="commentsCount"></span>
                 </a>
               </span>
               <!--/noindex-->
@@ -370,64 +372,25 @@
       
 
       
-        <p>作为对实时数据流进行stateful统计的基础，window函数是各流式计算框架必不可少的特性。然而目前业界并没有对windowing作出标准的定义和分类，不同计算框架提供的windowing方法各有不同，同一术语在不同框架的含义也不一致。因此本文试图从工作积累中结合个人理解，总结出较为全面的windowing概念以及常见策略。</p>
+        <p>作为对流式数据流进行stateful统计的基础，window函数是各流式计算框架必不可少的特性。然而目前业界并没有对windowing作出标准的定义和分类，不同计算框架提供的windowing方法各有不同，同一术语在不同框架的含义也不一致，这给流式计算造成了不必要的学习成本。因此本文试图从工作积累出发并结合个人理解，总结出较为全面的windowing概念以及常见策略。</p>
 <a id="more"></a>
-<h1 id="windowing概念"><a href="#windowing概念" class="headerlink" title="windowing概念"></a>windowing概念</h1><p>因为实时数据流是永不停歇的，我们无法获取所有的数据并产出一个最终的结果，更重要的是很多情况下我们更关心的是最近的状态，而不是从实时数据流启动至今的统计数据，所以我们将数据流切分为一个个计算批次，并在每个批次的基础上进行统计，这种计算方式就是windowing。总而言之，<strong>windowing是将无边界的实时数据流划分为计算批次的统计手段</strong>。通常window函数会配合groupby函数一起使用，即作用于grouped stream上。</p>
-<h1 id="windowing策略"><a href="#windowing策略" class="headerlink" title="windowing策略"></a>windowing策略</h1><p>Windowing策略从对象指标上分为3种，即基于时间(time window)，基于记录数(count window)以及基于会话(session window)，其中基于时间的windowing又可以分为滚动窗口(tumbling window)和滑动窗口(sliding window)。</p>
-<table>
-<thead>
-<tr>
-<th>Window name</th>
-<th>Behavior</th>
-<th>Short description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>滚动时间窗口</td>
-<td>基于时间</td>
-<td>固定窗口大小，窗口间无重叠</td>
-</tr>
-<tr>
-<td>滑动时间窗口</td>
-<td>基于时间</td>
-<td>固定窗口大小，窗口间有重叠</td>
-</tr>
-<tr>
-<td>滚动计数窗口</td>
-<td>基于记录数</td>
-<td>固定窗口大小，窗口间无重叠</td>
-</tr>
-<tr>
-<td>滑动计数窗口</td>
-<td>基于记录数</td>
-<td>固定窗口大小，窗口间有重叠</td>
-</tr>
-<tr>
-<td>会话窗口</td>
-<td>基于会话</td>
-<td>动态窗口大小，窗口间无重叠，数据驱动</td>
-</tr>
-</tbody>
-</table>
+<h1 id="windowing概念"><a href="#windowing概念" class="headerlink" title="windowing概念"></a>windowing概念</h1><p>因为实时数据流是永不停歇的，我们无法获取所有的数据并产出一个最终的结果。更重要的是很多情况下我们更关心的是最近的状态，而不是从实时数据流启动至今的统计数据。所以我们将数据流切分为一个个片段，即计算窗口，比如最近5分钟或最近100条消息，然后在每个窗口的基础上进行统计，这种计算方式就是windowing。总而言之，<strong>windowing是将无边界的实时数据流划分为计算窗口的统计手段</strong>。通常window函数会配合groupby函数一起使用，即作用于grouped stream上。</p>
+<h1 id="windowing策略"><a href="#windowing策略" class="headerlink" title="windowing策略"></a>windowing策略</h1><p>Windowing策略从对象指标上分为3种，即基于时间(time window)，基于计数(count window)以及基于会话(session window)，其中基于时间和基于的windowing又可以分为滚动窗口(tumbling window)和滑动窗口(sliding window)。其中与时间相关的windowing，计算间隔(step)与统计窗口(window)的关系如下:</p>
+<p><img src="/img/types-of-windows.png" alt="window分类" title="window分类(count-based和time-based相似)"></p>
 <h2 id="时间窗口"><a href="#时间窗口" class="headerlink" title="时间窗口"></a>时间窗口</h2><p>时间窗口顾名思义是根据时间来划分窗口，然而这里的时间是有所讲究的，总体来讲可以分为以下三种：</p>
 <ul>
-<li>事件时间(event time)：消息所代表事件的业务时间</li>
+<li>事件时间(event time)：消息所代表事件的业务时间，依赖于数据本身</li>
 <li>消化时间(ingestion time)：消息到达计算引擎的时间</li>
 <li>处理时间(processing time)：消息被实际处理的时间</li>
 </ul>
-<p>根据业务需求不同用户可以灵活采用时间口径。</p>
-<h3 id="滚动时间窗口"><a href="#滚动时间窗口" class="headerlink" title="滚动时间窗口"></a>滚动时间窗口</h3><p>滚动窗口是最为简单的windowing策略，实际上离线计算从某种程度上就属于滚动窗口。滚动窗口的特点是计算间隔与统计窗口相等，计算批次之间没有重叠部分(non-overlapping)，因此每次计算只需要考虑当前批次的数据，不需要维持跨计算批次的数据或状态。</p>
-<h3 id="滑动时间窗口"><a href="#滑动时间窗口" class="headerlink" title="滑动时间窗口"></a>滑动时间窗口</h3><p>滑动窗口的概念借鉴自TCP。一般统计窗口大于计算间隔，因此连续的两次计算间有重叠(overlapping)，一条记录会出现在ceil(统计窗口/计算间隔)个计算批次里。从图上来看就像统计窗口随着数据流滑动，每次滑动的步长就是计算间隔。实时计算中很大部分指标都应用了滑动窗口，包括监控中常见的qps/tps或者搜索引擎近24小时的热搜关键词。实际上滚动窗口也是滑动窗口的一个特例。</p>
+<p>根据业务需求不同用户可以灵活采用时间口径。事件时间最为有用但处理最为复杂，因为消息有可能乱序到达甚至迟到，所以我们不能保证在合理的时间窗口内收集到所有的事件。处理时间容易处理一些，因为消息窗口起始结束时间都由服务端控制，但对业务的价值比较小。</p>
+<h4 id="滚动时间窗口"><a href="#滚动时间窗口" class="headerlink" title="滚动时间窗口"></a>滚动时间窗口</h4><p>滚动窗口是最为简单的windowing策略，实际上离线计算从某种程度上就属于滚动窗口。滚动窗口的特点是计算间隔与统计窗口相等，任意两次计算的数据没有重叠部分(non-overlapping)，因此每次计算只需要考虑前一次计算间隔对应的数据，不需要维持跨计算间隔的数据或状态。</p>
+<h4 id="滑动时间窗口"><a href="#滑动时间窗口" class="headerlink" title="滑动时间窗口"></a>滑动时间窗口</h4><p>滑动窗口的概念借鉴自TCP，一般统计窗口大于计算间隔，因此连续的两次计算间有重叠(overlapping)，一条记录会出现在ceil(统计窗口/计算间隔)个统计窗口里。从图上来看就像统计窗口随着数据流滑动，每次滑动的步长就是计算间隔。实时计算中很大部分指标都应用了滑动窗口，例如监控中常见的qps/tps或者搜索引擎近24小时的热搜关键词。实际上滚动窗口也是滑动窗口的一个特例。</p>
 <h2 id="计数窗口"><a href="#计数窗口" class="headerlink" title="计数窗口"></a>计数窗口</h2><p>滚动计数窗口与滑动计数机制类似于上文两种窗口，区别仅在于用于划分边界的指标不是时间而是当前未处理的记录数。计数窗口不如时间窗口直观，但更适合数据量较小或在时间上分布不均匀的数据流。比如广告系统可能一天会展示10000次某个广告，不过时间并不固定而是通过用户画像判断是否应该展示，这时最近1000次展示的购买率则比最近1小时的购买率更有意义。</p>
-<h2 id="会话窗口"><a href="#会话窗口" class="headerlink" title="会话窗口"></a>会话窗口</h2><p>会话窗口是比较特殊的一类windowing策略，它基于时间间隔来划分窗口。会话窗口没有固定的大小或起始结束时间，而是动态地打开和关闭窗口。当收到消息时判断当前是否有会话，若有则并入当前会话，否则新建一个会话，一个会话超过一定时长没有新的消息则会关闭。其中值得注意的地方是由于会话的判断基于时间，这里也涉及到上文所说的三种时间的区别。如果基于处理时间，那么消息一定有序的，但如果基于事件时间和消化时间，消息可能是乱序的，这样可能遇到已经关闭的窗口被重新打开，甚至和下一个窗口合并的情况。</p>
-<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><ol>
-<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.2/dev/windows.html" target="_blank" rel="external">Flink document - Windows</a></li>
-<li><a href="https://flink.apache.org/news/2015/12/04/Introducing-windows.html" target="_blank" rel="external">Introducing-windows</a></li>
-<li><a href="http://kafka.apache.org/10/documentation/streams/developer-guide/dsl-api.html#windowing" target="_blank" rel="external">Kafka Stream DSL</a></li>
-<li><a href="https://www.slideshare.net/SoftwareMill/windowing-data-in-big-data-streams" target="_blank" rel="external">windowing-data-in-big-data-streams</a></li>
-</ol>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/3/22/实时计算的windowing/" target="_blank" rel="external">时间与精神的小屋 - 实时计算的windowing</a></em></font>
+<h2 id="会话窗口"><a href="#会话窗口" class="headerlink" title="会话窗口"></a>会话窗口</h2><p>会话窗口是比较特殊的一类windowing策略，它基于时间间隔来划分窗口。会话窗口没有固定的大小或起始结束时间，而是动态地打开和关闭窗口。当收到消息时判断当前是否有会话，若有则并入当前会话，否则新建一个会话，一个会话超过一定时长没有新的消息则会关闭。其中值得注意的地方是由于会话的判断基于时间，这里也涉及到上文所说的三种时间的区别。如果基于处理时间，那么消息一定有序的，但如果基于事件时间和消化时间，消息可能是乱序的，这样可能遇到已经关闭的窗口被重新打开，甚至和下一个窗口合并的情况，具体决定于处理迟到记录的策略。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>尽管不同计算引擎的提供的window API有所差异，但其背后的策略都是相似的。在享受window函数带来的便捷的同时，更重要的是考虑如何持续化和恢复计算状态，会不会带来数据丢失或数据重复的潜在问题。</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>1.<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.2/dev/windows.html" target="_blank" rel="external">Flink document - Windows</a><br>2.<a href="https://flink.apache.org/news/2015/12/04/Introducing-windows.html" target="_blank" rel="external">Introducing-windows</a><br>3.<a href="http://kafka.apache.org/10/documentation/streams/developer-guide/dsl-api.html#windowing" target="_blank" rel="external">Kafka Stream DSL</a><br>4.<a href="https://www.slideshare.net/SoftwareMill/windowing-data-in-big-data-streams" target="_blank" rel="external">windowing-data-in-big-data-streams</a><br>5.<a href="https://softwaremill.com/windowing-in-big-data-streams-spark-flink-kafka-akka/" target="_blank" rel="external">Windowing data in Big Data Streams - Spark, Flink, Kafka, Akka</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/3/22/流式计算的windowing/" target="_blank" rel="external">时间与精神的小屋 - 流式计算的windowing</a></em></font>
       
     </div>
 
@@ -456,7 +419,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Kafka/" rel="tag"># Kafka</a>
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
           
         </div>
       
@@ -562,7 +525,7 @@
             
             <div class="site-state-item site-state-categories">
               <a href="/categories/index.html">
-                <span class="site-state-item-count">13</span>
+                <span class="site-state-item-count">12</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -573,7 +536,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">33</span>
+                <span class="site-state-item-count">32</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -619,7 +582,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#windowing概念"><span class="nav-number">1.</span> <span class="nav-text">windowing概念</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#windowing策略"><span class="nav-number">2.</span> <span class="nav-text">windowing策略</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#时间窗口"><span class="nav-number">2.1.</span> <span class="nav-text">时间窗口</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#滚动时间窗口"><span class="nav-number">2.1.1.</span> <span class="nav-text">滚动时间窗口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#滑动时间窗口"><span class="nav-number">2.1.2.</span> <span class="nav-text">滑动时间窗口</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#计数窗口"><span class="nav-number">2.2.</span> <span class="nav-text">计数窗口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#会话窗口"><span class="nav-number">2.3.</span> <span class="nav-text">会话窗口</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">3.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#windowing概念"><span class="nav-number">1.</span> <span class="nav-text">windowing概念</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#windowing策略"><span class="nav-number">2.</span> <span class="nav-text">windowing策略</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#时间窗口"><span class="nav-number">2.1.</span> <span class="nav-text">时间窗口</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#滚动时间窗口"><span class="nav-number">2.1.0.1.</span> <span class="nav-text">滚动时间窗口</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#滑动时间窗口"><span class="nav-number">2.1.0.2.</span> <span class="nav-text">滑动时间窗口</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#计数窗口"><span class="nav-number">2.2.</span> <span class="nav-text">计数窗口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#会话窗口"><span class="nav-number">2.3.</span> <span class="nav-text">会话窗口</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">4.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
             
 
           </div>
@@ -755,7 +718,7 @@
 		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
 
 		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2018/03/21/实时计算的windowing/"});
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2018/03/21/流式计算的windowing/"});
 		
 
 		(function() {
