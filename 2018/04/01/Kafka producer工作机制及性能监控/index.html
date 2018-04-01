@@ -1,0 +1,1067 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kafka," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="前言最近在做Kafka 1.0.0版本压测的时候，遇到了producer生产效率不稳定的情况。具体表现为当对6个以上有3个同步副本的TopicPartition进行生产时，producer每隔不定时长生产会被阻塞一段时间，控制台报出大量的batch expiring错误，整体吞吐量因此大打折扣。
+虽然0.11.x版本之后的client性能测试脚本新增了许多metrics输出，以帮助用户监控和tro">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka producer工作机制及性能监控">
+<meta property="og:url" content="https://link3280.github.io/2018/04/01/Kafka producer工作机制及性能监控/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="前言最近在做Kafka 1.0.0版本压测的时候，遇到了producer生产效率不稳定的情况。具体表现为当对6个以上有3个同步副本的TopicPartition进行生产时，producer每隔不定时长生产会被阻塞一段时间，控制台报出大量的batch expiring错误，整体吞吐量因此大打折扣。
+虽然0.11.x版本之后的client性能测试脚本新增了许多metrics输出，以帮助用户监控和tro">
+<meta property="og:image" content="https://link3280.github.io/img/kip19gliffy.png">
+<meta property="og:updated_time" content="2018-04-01T14:45:09.484Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kafka producer工作机制及性能监控">
+<meta name="twitter:description" content="前言最近在做Kafka 1.0.0版本压测的时候，遇到了producer生产效率不稳定的情况。具体表现为当对6个以上有3个同步副本的TopicPartition进行生产时，producer每隔不定时长生产会被阻塞一段时间，控制台报出大量的batch expiring错误，整体吞吐量因此大打折扣。
+虽然0.11.x版本之后的client性能测试脚本新增了许多metrics输出，以帮助用户监控和tro">
+<meta name="twitter:image" content="https://link3280.github.io/img/kip19gliffy.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2018/04/01/Kafka producer工作机制及性能监控/"/>
+
+
+
+
+
+  <title>Kafka producer工作机制及性能监控 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了呢</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/04/01/Kafka producer工作机制及性能监控/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Kafka producer工作机制及性能监控</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-01T15:49:01+08:00">
+                2018-04-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/" itemprop="url" rel="index">
+                    <span itemprop="name">Kafka</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            <!--noindex-->
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/04/01/Kafka producer工作机制及性能监控/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2018/04/01/Kafka producer工作机制及性能监控/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+              <!--/noindex-->
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>最近在做Kafka 1.0.0版本压测的时候，遇到了producer生产效率不稳定的情况。具体表现为当对6个以上有3个同步副本的TopicPartition进行生产时，producer每隔不定时长生产会被阻塞一段时间，控制台报出大量的batch expiring错误，整体吞吐量因此大打折扣。</p>
+<p>虽然0.11.x版本之后的client性能测试脚本新增了许多metrics输出，以帮助用户监控和troubleshooting，然而在不了解producer背后运作机制的情况下，仅凭metrics字面意义是难以利用好这些数据的。因此，我决定花一个周末的时间来梳理一下Kafka producer端的架构及工作原理，特别是其中的延迟保证机制，另外整理下producer各项metrics背后的含义。</p>
+<a id="more"></a>
+<h1 id="工作机制"><a href="#工作机制" class="headerlink" title="工作机制"></a>工作机制</h1><p>如同大多数高吞吐量的系统设计，KafkaProducer将实际业务逻辑与IO分离以实现异步IO。Kafka producer包含了一个缓存池用于保存未发送到服务端的消息，同时后台的IO线程负责将消息转化为请求并传输至服务端。</p>
+<p>具体produce流程如下：当KafkaProducer需要发送消息，首先会先从bootstrap servers获取最新的topic-partition信息，这个过程会阻塞生产线程，直到MetadataRequest完成。随后KafkaProducer开始做序列化和partition，将生成的消息追加到RecordAccumulator里。RecordAccumulator负责将消息收集分类形成batch，并维护消息的状态，决定什么情况下消息符合发送要求（ready），什么情况下消息会过期（expired）等等。RecordAccumulator拥有一个BufferPool实例，用于管理缓存消息的内存分配。当BufferPool耗尽内存之后，会阻塞生产线程，直至足够的内存被释放。在分配到需要的内存之后，消息会停驻在BufferPool中等待batch达到设置的<code>batch.size</code>或者足够时间即<code>linger.ms</code>，然后进入就绪(ready）状态。最后，后台IO线程Sender会不断检查就绪的batch，将其包装成ProduceRequest发送到broker。</p>
+<h1 id="延迟保证机制"><a href="#延迟保证机制" class="headerlink" title="延迟保证机制"></a>延迟保证机制</h1><p>因为消息队列是Kafka主要使用场景之一，提供在一定延迟内的消息送达对于用户十分重要。然而由于系统设计的问题，目前并没有一个配置来从out-of-box角度直接控制消息的延迟，取而代之的是两个主要的参数：<code>block.max.ms</code>和<code>request.timeout.ms</code>。其中<code>max.block.ms</code>包含两部分，一是请求topic元数据时的最大阻塞时长，二是等待BufferPool分配内存的最大阻塞时长，两者之和超过阈值会导致TimeoutException。而<code>request.timeout.ms</code>则有两重含义，分别是表示batch就绪后在RecordAccumulator等待的最大时长和等待ProduceRequest返回的最大时长，超过时长的请求会被认为失败，触发Producer进行重试并在重试次数耗光后返回失败。</p>
+<p>整个消息生产的延时可以用下图（源自KIP-19）表示：  </p>
+<p><img src="/img/kip19gliffy.png" alt="&quot;produce延时&quot;" title="produce延时"></p>
+<p>各阶段的延迟如下：<br><strong>1. send阶段</strong>: 发送TopicMetadataRequest获取最新元数据，然后将消息放至发送缓存池。如上文所述，该步骤可以阻塞最多<code>block.max.ms</code>。其后该记录会成为消息batch的一部分，有可能是原有的未满batch或者新的batch。<br><strong>2. batching阶段</strong>: 在最坏的情况下，这个batch是新的，会在等待最多<code>linger.ms</code>之后被认为是ready状态，但它还需要等待被调度才会实际发送。<code>linger</code>在缓冲里通常有两种意义：一种是类似于链接的<code>max.idle</code>，即超过一定时长没有更新则关闭窗口；另外一种是类似于批处理的batch window，窗口经过一定时间后一定会关闭。这里的语义是后者。<br><strong>3. await-send阶段</strong>: 等待传输到broker的机会。只有当相应partition所在broker处于sendable状态时，一个batch才可以被发送（比如受到<code>max.inflight.requests</code>限制时）。因为当Sender收到属于未知partition的消息时，需要阻塞线程向broker获取元数据。为了避免引入额外的超时参数，KIP-19用<code>request.timeout.ms</code>配置来决定在accumulator的batch是否过期。从batch变为ready状态计时就开始，直到batch被真正发送到网络上。注意这里有个比较特殊的地方是，KIP-9的机制不会将已知的partition的batch纳入超时统计的范围，因此在图中这部分时长是问号，但这个机制在KAFKA-2805中被移除，所以还是可以大致将这部分的最大延时假设为<code>request.timeout.ms</code>。<br><strong>4. inflight阶段</strong>: 消息已通过网络发送出去，producer等待请求响应以确认成功，<code>request.timeout.ms</code>以后超时返回错误。<br><strong>5. retry阶段</strong>: 如果上一步请求超时或者发生可重试的错误，producer会等待<code>retry.backoff.ms</code>后再重试，直至<code>retries</code>耗尽。</p>
+<h1 id="Metrics"><a href="#Metrics" class="headerlink" title="Metrics"></a>Metrics</h1><p>Kafka producer的metrics十分丰富，但过于细致缺乏概括性的直观指标，而且由于metrics所在层次不同，相互之间不免有关联或者重叠，因此需要深入了解其工作机制后再分析这些metrics才有意义。</p>
+<h2 id="全局的Request-Metrics"><a href="#全局的Request-Metrics" class="headerlink" title="全局的Request Metrics"></a>全局的Request Metrics</h2><table>
+<thead>
+<tr>
+<th>metric</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>outgoing-byte-rate</td>
+<td>每秒发至所有服务器的流出字节数</td>
+</tr>
+<tr>
+<td>request-rate</td>
+<td>每秒发送请求数的均值</td>
+</tr>
+<tr>
+<td>request-size-avg</td>
+<td>窗口内平均请求大小</td>
+</tr>
+<tr>
+<td>request-size-max</td>
+<td>窗口内最大请求大小</td>
+</tr>
+<tr>
+<td>incoming-byte-rate</td>
+<td>每秒收到所有服务器的流入字节数</td>
+</tr>
+<tr>
+<td>request-latency-avg</td>
+<td>平均请求延时，单位为ms</td>
+</tr>
+<tr>
+<td>reuqest-latency-max</td>
+<td>最大请求延时，单位为ms</td>
+</tr>
+<tr>
+<td>response-rate</td>
+<td>每秒收到返回数的均值</td>
+</tr>
+</tbody>
+</table>
+<h2 id="全局的连接Metrics"><a href="#全局的连接Metrics" class="headerlink" title="全局的连接Metrics"></a>全局的连接Metrics</h2><table>
+<thead>
+<tr>
+<th>metric</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>connection-creation-rate</td>
+<td>窗口内每秒新建连接数</td>
+</tr>
+<tr>
+<td>connection-close-rate</td>
+<td>创建内每秒关闭连接数</td>
+</tr>
+<tr>
+<td>network-io-rate</td>
+<td>每秒所有连接的网络平均读写次数</td>
+</tr>
+<tr>
+<td>outgoing-byte-rate</td>
+<td>每秒发至该broker的平均字节数</td>
+</tr>
+<tr>
+<td>request-rate</td>
+<td>每秒发送至该broker的平均请求数</td>
+</tr>
+<tr>
+<td>request-size-avg</td>
+<td>在broker窗口内所有请求的平均大小</td>
+</tr>
+<tr>
+<td>request-size-max</td>
+<td>在broker窗口内所有请求的最大大小</td>
+</tr>
+<tr>
+<td>incoming-byte-rate</td>
+<td>每秒从该broker接受的平均字节数</td>
+</tr>
+<tr>
+<td>response-rate</td>
+<td>每秒从该broker收到的平均响应数</td>
+</tr>
+<tr>
+<td>select-rate</td>
+<td>IO层每秒检查新IO请求来执行的次数</td>
+</tr>
+<tr>
+<td>io-wait-time-ns-avg</td>
+<td>IO线程等待可用socket的平均时间</td>
+</tr>
+<tr>
+<td>io-wait-ratio</td>
+<td>IO线程等待可用socket的时间比例</td>
+</tr>
+<tr>
+<td>io-time-ns-avg</td>
+<td>每个select调用花费的平均时间，单位为纳秒</td>
+</tr>
+<tr>
+<td>io-ratio</td>
+<td>IO线程执行IO操作的时间比例</td>
+</tr>
+<tr>
+<td>connection-count</td>
+<td>当前活跃的连接数</td>
+</tr>
+<tr>
+<td>successful-authentication-rate</td>
+<td>成功使用SASL或SSL成功认证的连接数</td>
+</tr>
+<tr>
+<td>failed-authentication-rate</td>
+<td>认证失败的连接数</td>
+</tr>
+</tbody>
+</table>
+<h2 id="Prodcuer-Metrics"><a href="#Prodcuer-Metrics" class="headerlink" title="Prodcuer Metrics"></a>Prodcuer Metrics</h2><table>
+<thead>
+<tr>
+<th>metric</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>waiting-threads</td>
+<td>等待消息进入缓存的被阻塞线程数</td>
+</tr>
+<tr>
+<td>buffer-total-bytes</td>
+<td>客户端可用的最大缓存大小(包含已使用的)</td>
+</tr>
+<tr>
+<td>buffer-available-bytes</td>
+<td>未被使用的缓存大小</td>
+</tr>
+<tr>
+<td>bufferpool-wait-time</td>
+<td>追加记录到缓存时等待空间分配的时间比例</td>
+</tr>
+</tbody>
+</table>
+<h2 id="Borker级别的Producer-Sender-Metrics"><a href="#Borker级别的Producer-Sender-Metrics" class="headerlink" title="Borker级别的Producer Sender Metrics"></a>Borker级别的Producer Sender Metrics</h2><table>
+<thead>
+<tr>
+<th>metric</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>batch-size-avg</td>
+<td>partition级别的平均batch大小</td>
+</tr>
+<tr>
+<td>batch-size-max</td>
+<td>partition级别的最大batch大小</td>
+</tr>
+<tr>
+<td>batch-split-rate</td>
+<td>平均每秒split的batch数</td>
+</tr>
+<tr>
+<td>batch-split-total</td>
+<td>split batch总数</td>
+</tr>
+<tr>
+<td>compression-rate-avg</td>
+<td>消息batch的平均压缩率</td>
+</tr>
+<tr>
+<td>metadata-age</td>
+<td>当前producer使用的元数据的年龄，单位为秒</td>
+</tr>
+<tr>
+<td>produce-throttle-time-avg</td>
+<td>每个请求被broker限流的平均时间</td>
+</tr>
+<tr>
+<td>produce-throttle-time-max</td>
+<td>单个请求被broker限流的最大时间</td>
+</tr>
+<tr>
+<td>record-error-rate</td>
+<td>每秒发送错误的平均记录数</td>
+</tr>
+<tr>
+<td>record-error-total</td>
+<td>发送错误的总记录数</td>
+</tr>
+<tr>
+<td>record-queue-time-avg</td>
+<td>batch停留在发送缓存的平均时间</td>
+</tr>
+<tr>
+<td>record-queue-time-max</td>
+<td>batch停留在发送缓存的最大时间</td>
+</tr>
+<tr>
+<td>record-retry-rate</td>
+<td>每秒平均重试记录数</td>
+</tr>
+<tr>
+<td>record-retry-total</td>
+<td>每秒总重试记录数</td>
+</tr>
+<tr>
+<td>record-send-rate</td>
+<td>每秒平均记录数</td>
+</tr>
+<tr>
+<td>record-send-total</td>
+<td>发送总记录数</td>
+</tr>
+<tr>
+<td>record-size-avg</td>
+<td>在broker窗口内所有记录的平均大小</td>
+</tr>
+<tr>
+<td>record-size-max</td>
+<td>在broker窗口内所有记录的最大大小</td>
+</tr>
+<tr>
+<td>records-per-request-avg</td>
+<td>每个请求包含的平均记录数</td>
+</tr>
+<tr>
+<td>request-latency-avg</td>
+<td>平均请求延时，单位为ms</td>
+</tr>
+<tr>
+<td>reuqest-latency-max</td>
+<td>最大请求延时，单位为ms</td>
+</tr>
+<tr>
+<td>requestin-flight</td>
+<td>当前在传输中等待响应的请求数</td>
+</tr>
+</tbody>
+</table>
+<h2 id="Topic级别的Producer-Sender-Metrics"><a href="#Topic级别的Producer-Sender-Metrics" class="headerlink" title="Topic级别的Producer Sender Metrics"></a>Topic级别的Producer Sender Metrics</h2><table>
+<thead>
+<tr>
+<th>metric</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>byte-rate</td>
+<td>每秒发至该topic的平均字节数</td>
+</tr>
+<tr>
+<td>byte-total</td>
+<td>发至该topic的总字节数</td>
+</tr>
+<tr>
+<td>compression-rate</td>
+<td>发至该topic的消息batch的平均压缩率</td>
+</tr>
+<tr>
+<td>record-retry-rate</td>
+<td>每秒发向该topic的平均重试记录数</td>
+</tr>
+<tr>
+<td>record-retry-total</td>
+<td>每秒发向该topic的总重试记录数</td>
+</tr>
+<tr>
+<td>record-error-rate</td>
+<td>每秒发向该topic并发送错误的平均记录数</td>
+</tr>
+<tr>
+<td>record-error-total</td>
+<td>发向该topic并发送错误的总记录数</td>
+</tr>
+<tr>
+<td>record-send-rate</td>
+<td>每秒发至该topic的平均记录数</td>
+</tr>
+<tr>
+<td>record-send-total</td>
+<td>发至该topic的总记录数</td>
+</tr>
+</tbody>
+</table>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>1.<a href="https://cwiki.apache.org/confluence/display/KAFKA/KIP-91+Provide+Intuitive+User+Timeouts+in+The+Producer" target="_blank" rel="external">KIP-91: Provide Intuitive User Timeouts in The Produer</a><br>2.<a href="https://cwiki.apache.org/confluence/display/KAFKA/KIP-19+-+Add+a+request+timeout+to+NetworkClient" target="_blank" rel="external">KIP-19: Add a request time out to NetworkClient</a><br>3.<a href="https://kafka.apache.org/documentation/#producerconfigs" target="_blank" rel="external">Kafka documentation</a><br>4.<a href="https://docs.confluent.io/current/kafka/monitoring.html#global-request-metrics" target="_blank" rel="external">confluent-monitoring</a><br>5.<a href="https://issues.apache.org/jira/browse/KAFKA-1251?attachmentOrder=desc" target="_blank" rel="external">KAFKA-1251: Add metrics to the producer</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/04/01/Kafka%20producer工作机制及性能监控/" target="_blank" rel="external">时间与精神的小屋 - Kafka producer工作机制及性能监控</a></em></font>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kafka/" rel="tag"># Kafka</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/03/21/流式计算的windowing/" rel="next" title="流式计算的windowing">
+                <i class="fa fa-chevron-left"></i> 流式计算的windowing
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="hypercomments_widget"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">34</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">13</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">33</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#工作机制"><span class="nav-number">2.</span> <span class="nav-text">工作机制</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#延迟保证机制"><span class="nav-number">3.</span> <span class="nav-text">延迟保证机制</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Metrics"><span class="nav-number">4.</span> <span class="nav-text">Metrics</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#全局的Request-Metrics"><span class="nav-number">4.1.</span> <span class="nav-text">全局的Request Metrics</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#全局的连接Metrics"><span class="nav-number">4.2.</span> <span class="nav-text">全局的连接Metrics</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Prodcuer-Metrics"><span class="nav-number">4.3.</span> <span class="nav-text">Prodcuer Metrics</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Borker级别的Producer-Sender-Metrics"><span class="nav-number">4.4.</span> <span class="nav-text">Borker级别的Producer Sender Metrics</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Topic级别的Producer-Sender-Metrics"><span class="nav-number">4.5.</span> <span class="nav-text">Topic级别的Producer Sender Metrics</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+		<script type="text/javascript">
+		_hcwp = window._hcwp || [];
+
+		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
+
+		
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2018/04/01/Kafka producer工作机制及性能监控/"});
+		
+
+		(function() {
+		if("HC_LOAD_INIT" in window)return;
+		HC_LOAD_INIT = true;
+		var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
+		var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
+		hcc.src = ("https:" == document.location.protocol ? "https" : "http")+"://w.hypercomments.com/widget/hc/94362/"+lang+"/widget.js";
+		var s = document.getElementsByTagName("script")[0];
+		s.parentNode.insertBefore(hcc, s.nextSibling);
+		})();
+		</script>
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
