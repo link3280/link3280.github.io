@@ -374,7 +374,7 @@
 
       
         
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>最近在做Kafka 1.0.0版本压测的时候，遇到了producer生产效率不稳定的情况。具体表现为当对6个以上有3个同步副本的TopicPartition进行生产时，producer每隔不定时长生产会被阻塞一段时间，控制台报出大量的batch expiring错误，整体吞吐量因此大打折扣。</p>
+          <p>最近在做Kafka 1.0.0版本压测的时候，遇到了producer生产效率不稳定的情况。具体表现为当对6个以上有3个同步副本的TopicPartition进行生产时，producer每隔不定时长生产会被阻塞一段时间，控制台报出大量的batch expiring错误，整体吞吐量因此大打折扣。</p>
 <p>虽然0.11.x版本之后的client性能测试脚本新增了许多metrics输出，以帮助用户监控和troubleshooting，然而在不了解producer背后运作机制的情况下，仅凭metrics字面意义是难以利用好这些数据的。因此，我决定花一个周末的时间来梳理一下Kafka producer端的架构及工作原理，特别是其中的延迟保证机制，另外整理下producer各项metrics背后的含义。</p>
           <!--noindex-->
           <div class="post-button text-center">
