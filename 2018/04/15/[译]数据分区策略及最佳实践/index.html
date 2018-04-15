@@ -90,25 +90,19 @@
 
 
 
-<meta name="description" content="本文翻译自Azure architecture-center的data-partitioning，部分有删改
-
-数据分区在许多大规模的解决方案里，数据被分为独立管理和访问的分区。在分区的策略的选择上需要十分谨慎，以达到分扬长避短的效果。分区可以提升可拓展性，隔离资源减小竞争和优化性能。分区的另外一个好处是可以提供根据使用模式来分离数据的机制。比如，你可以将较老的不常用的冷数据存储归档存储在便宜的">
+<meta name="description" content="本文翻译自Azure architecture-center的data-partitioning，部分有删改">
 <meta property="og:type" content="article">
 <meta property="og:title" content="[译]数据分区策略及最佳实践">
 <meta property="og:url" content="https://link3280.github.io/2018/04/15/[译]数据分区策略及最佳实践/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="本文翻译自Azure architecture-center的data-partitioning，部分有删改
-
-数据分区在许多大规模的解决方案里，数据被分为独立管理和访问的分区。在分区的策略的选择上需要十分谨慎，以达到分扬长避短的效果。分区可以提升可拓展性，隔离资源减小竞争和优化性能。分区的另外一个好处是可以提供根据使用模式来分离数据的机制。比如，你可以将较老的不常用的冷数据存储归档存储在便宜的">
+<meta property="og:description" content="本文翻译自Azure architecture-center的data-partitioning，部分有删改">
 <meta property="og:image" content="https://link3280.github.io/img/DataPartitioning01.png">
 <meta property="og:image" content="https://link3280.github.io/img/DataPartitioning02.png">
 <meta property="og:image" content="https://link3280.github.io/img/DataPartitioning03.png">
-<meta property="og:updated_time" content="2018-04-15T13:47:27.232Z">
+<meta property="og:updated_time" content="2018-04-15T13:55:11.192Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="[译]数据分区策略及最佳实践">
-<meta name="twitter:description" content="本文翻译自Azure architecture-center的data-partitioning，部分有删改
-
-数据分区在许多大规模的解决方案里，数据被分为独立管理和访问的分区。在分区的策略的选择上需要十分谨慎，以达到分扬长避短的效果。分区可以提升可拓展性，隔离资源减小竞争和优化性能。分区的另外一个好处是可以提供根据使用模式来分离数据的机制。比如，你可以将较老的不常用的冷数据存储归档存储在便宜的">
+<meta name="twitter:description" content="本文翻译自Azure architecture-center的data-partitioning，部分有删改">
 <meta name="twitter:image" content="https://link3280.github.io/img/DataPartitioning01.png">
 
 
@@ -383,15 +377,15 @@
         <blockquote>
 <p>本文翻译自Azure architecture-center的<a href="https://github.com/mspnp/architecture-center/blob/eddc89a884de56847df59a9a18ce96865c10a4cc/docs/best-practices/data-partitioning.md" target="_blank" rel="external">data-partitioning</a>，部分有删改</p>
 </blockquote>
-<h1 id="数据分区"><a href="#数据分区" class="headerlink" title="数据分区"></a>数据分区</h1><p>在许多大规模的解决方案里，数据被分为独立管理和访问的分区。在分区的策略的选择上需要十分谨慎，以达到分扬长避短的效果。分区可以提升可拓展性，隔离资源减小竞争和优化性能。分区的另外一个好处是可以提供根据使用模式来分离数据的机制。比如，你可以将较老的不常用的冷数据存储归档存储在便宜的设备上。</p>
 <a id="more"></a>
+<p>在许多大规模的解决方案里，数据被分为独立管理和访问的分区。在分区的策略的选择上需要十分谨慎，以达到分扬长避短的效果。分区可以提升可拓展性，隔离资源减小竞争和优化性能。分区的另外一个好处是可以提供根据使用模式来分离数据的机制。比如，你可以将较老的不常用的冷数据存储归档存储在便宜的设备上。</p>
 <h2 id="为什么要数据分区"><a href="#为什么要数据分区" class="headerlink" title="为什么要数据分区"></a>为什么要数据分区</h2><p>大多数云应用或云服务提供数据存储和数据检索操作。应用使用的数据存储设计会给系统的性能，吞吐量和可拓展性产生显著的压力。一个大规模系统常用的技术是将数据分为若干分区。</p>
 <blockquote>
-<p>在这篇文章，分区这个数据意思是将数据物理上切分为多个数据存储单位，这和SQL Server的分表是不同的。  </p>
+<p>在这篇文章，分区这个术语的意思是将数据物理上切分为多个数据存储单位，这和SQL Server的分表是不同的。  </p>
 </blockquote>
 <p>将数据分区可以带来一系列的好处。举例，它的作用有:   </p>
 <ul>
-<li>提升可拓展性: 当你纵向拓展一个数据库系统，它最终会达到物理硬件的限制。如果你将数据切为不同的分区，每个分区分布在不同的服务器上，你可以无限水平拓展系统。  </li>
+<li>提升可拓展性: 当你纵向拓展一个数据库系统，它最终会达到物理硬件的限制。如果你将数据切为不同的分区，每个分区分布在不同的服务器上，你可以无限地水平拓展系统。  </li>
 <li>提高性能: 每个分片上的数据访问操作发生在规模更小的数据集上。如果数据被合理切分，分区可以令你的系统更有效率。比如，涉及多个数据分片的操作可以并行执行，每个分区可以被放在离使用它的应用更近的地方以减小网络延迟。  </li>
 <li>提高可用性: 将数据分布在多个服务器上可以避免单点故障。如果一个服务器挂掉或者正在维护，只有它对应的数据分片不可用，对其他分片的操作仍可以正常进行。提高分区数量会减小一个服务器不可用导致的影响，因为不可用的数据比例更加小。对每个分区进行冗余备份可以进一步减小分区不可用的概率。分区同时也是将对可用性要求很高的关键数据和一般的低价值数据分离的办法。</li>
 <li>提高安全性: 取决于数据的特性和分区的方式，可以将敏感数据和非敏感数据存储在不同分区，同时也是不同的服务器或存储设备，所以可以为敏感数据所在分区实施特别的安全策略。</li>
@@ -416,7 +410,7 @@
 </ul>
 <p>十分重要的一点是，以上三种策略是可以混合使用的。它们并不相互排斥，而且建议你在设计分区方式时将它们全部纳入考虑范围。比如，你可以将数据分为多个shard，然后在一个shard内进一步纵向切分数据。相似地，功能分区的数据同样可以水平切分为shards(也可以纵向切分)。</p>
 <p>然而，策略的不同要求会产生一些冲突问题，你在设计一个在处理数据上满足性能要求的分区策略时必须评估和权衡这些问题。以下的章节会更详细地探讨每种分区策略。</p>
-<h3 id="水平分区-sharding"><a href="#水平分区-sharding" class="headerlink" title="水平分区(sharding)"></a>水平分区(sharding)</h3><p>图1展示了水平分区的概览。在这个例子中，产品库存被基于产品主键切分为多个shard。每个shard保存了一个连续范围的shard key对应的数据(A-G和H-Z)，根据字母表顺序组织。</p>
+<h4 id="水平分区-sharding"><a href="#水平分区-sharding" class="headerlink" title="水平分区(sharding)"></a>水平分区(sharding)</h4><p>图1展示了水平分区的概览。在这个例子中，产品库存被基于产品主键切分为多个shard。每个shard保存了一个连续范围的shard key对应的数据(A-G和H-Z)，根据字母表顺序组织。</p>
 <p><img src="/img/DataPartitioning01.png" alt="图1.水平分区" title="水平分区"></p>
 <p>水平分区帮助你将负载分布到更多的机器上，减小了资源竞争，提升了性能。你可以通过另外服务器上增加更多的shard来将系统水平拓展。  </p>
 <p>实现这个分区策略最为关键的因素是分区键的选择，在系统开始运作之后再改变分区键是很困难的。分区键必须确保可以将数据分布到多个服务器，在多个shard间到达负载均衡。   </p>
@@ -424,12 +418,12 @@
 <p>如果你使用某个分区模式，一定要避免形成会影响性能和可用性的热点。比如，如果你对客户id而不是客户姓名首字母使用hash分桶，可以避免常见首字母和非常见首字母带来的不均匀数据分布。  </p>
 <p>选择shard key时要尽量避免未来需要将大shard拆分为小shard，或将小shard合并为大shard，或将修改分片存储的数据模式。这些操作会非常耗费时间，并且在操作的时候可能需要下线一个甚至多个分区。 </p>
 <p>如果shard有冗余，在一些副本在切分合并或修改时，其他副本仍然可以保持在线。但是在重新配置这些副本时，系统可能需要限制对相应数据的操作。譬如，这些副本的数据可以被标记为只读，以限制修改时造成的不一致性的影响范围。  </p>
-<h3 id="纵向分区"><a href="#纵向分区" class="headerlink" title="纵向分区"></a>纵向分区</h3><p>最为常见的纵向分区作用是减少读取常访问数据的相关IO和性能成本。图2展示了纵向分区的一个例子，在这个例子中，数据项的不同属性被放在不同的分区。一个分区保存了常访问的数据，包括名称，描述和产品的价格信息。另一个分区保存了库存数目和最近下单日期。  </p>
+<h4 id="纵向分区"><a href="#纵向分区" class="headerlink" title="纵向分区"></a>纵向分区</h4><p>最为常见的纵向分区作用是减少读取常访问数据的相关IO和性能成本。图2展示了纵向分区的一个例子，在这个例子中，数据项的不同属性被放在不同的分区。一个分区保存了常访问的数据，包括名称，描述和产品的价格信息。另一个分区保存了库存数目和最近下单日期。  </p>
 <p><img src="/img/DataPartitioning02.png" alt="图2.纵向分区" title="纵向分区"></p>
 <p>当展示产品详情给顾客时，应用规律性地查询产品名称，描述和价格。库存和最近下单日期保存在额外同一个分区，因为它们经常被一起查询。  </p>
 <p>这样的分区模式拥有额外的一个优势，即变化很少的数据(产品名，描述和价格)和相对动态的数据(库存和最近下单日期)分离了。应用可以通过缓存较少改变的数据来获得性能提升。  </p>
 <p>另一个常见的场景是提高敏感数据的安全性，比如你可以将信用卡号码和对应的信用卡安全校验码分开存储。  </p>
-<h3 id="功能分区"><a href="#功能分区" class="headerlink" title="功能分区"></a>功能分区</h3><p>对于可以识别每个业务领域或应用服务的边界的系统，功能分区可以提高隔离性和数据访问效率。另一个常见的用处是分离需要读写的数据和用于报告的只读数据。图3展示了库存数据与顾客数据分离的功能分区。  </p>
+<h4 id="功能分区"><a href="#功能分区" class="headerlink" title="功能分区"></a>功能分区</h4><p>对于可以识别每个业务领域或应用服务的边界的系统，功能分区可以提高隔离性和数据访问效率。另一个常见的用处是分离需要读写的数据和用于报告的只读数据。图3展示了库存数据与顾客数据分离的功能分区。  </p>
 <p><img src="/img/DataPartitioning03.png" alt="图3.功能分区" title="功能分区"></p>
 <p>这样的分区策略可以帮助减少跨系统模块的数据访问链接。</p>
 <h3 id="为可拓展性设计分区"><a href="#为可拓展性设计分区" class="headerlink" title="为可拓展性设计分区"></a>为可拓展性设计分区</h3><p>考虑每个分区的大小和负载并平衡它们使得数据分布到尽可能大的范围是十分重要的。然而，你也必须将数据切分到不会超出单点拓展能力的程度。  </p>
@@ -494,7 +488,7 @@
 <li>如何加载数据到不同的分区和将来自其他数据源的数据存入。为了防止分区过量地增长，你需要定期(或许是每月一次)归档和删除数据，这可能需要将数据转换为符合归档模式的格式。  </li>
 <li>如何定位数据完整性问题。考虑运行一个定时进程来定位数据一致性问题，比如一个分区的数据引用了另外一个分区的不存在的数据。这个进程可能会尝试自动修复这些问题，或者给运维管理人员发警报提醒他们手动修复。比如，在一个电商应用，生成订单的进程需要新增数据记录到其他分区。如果这个进程挂掉，有可能出现有商品没有对应的订单号的问题。  </li>
 </ul>
-<font face="#D2691E" size="3"><em>本文是原翻译，转载请注明：<a href="http://www.whitewood.me/2018/04/15/[译]数据分区策略及最佳实践/" target="_blank" rel="external">时间与精神的小屋 - [译]数据分区策略及最佳实践</a></em></font>
+<font face="#D2691E" size="3"><em>本文是原文翻译，转载请注明：<a href="http://www.whitewood.me/2018/04/15/[译]数据分区策略及最佳实践/" target="_blank" rel="external">时间与精神的小屋 - [译]数据分区策略及最佳实践</a></em></font>
 
       
     </div>
@@ -689,7 +683,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#数据分区"><span class="nav-number">1.</span> <span class="nav-text">数据分区</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么要数据分区"><span class="nav-number">1.1.</span> <span class="nav-text">为什么要数据分区</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#设计分区"><span class="nav-number">1.2.</span> <span class="nav-text">设计分区</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#分区策略"><span class="nav-number">1.2.1.</span> <span class="nav-text">分区策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#水平分区-sharding"><span class="nav-number">1.2.2.</span> <span class="nav-text">水平分区(sharding)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#纵向分区"><span class="nav-number">1.2.3.</span> <span class="nav-text">纵向分区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#功能分区"><span class="nav-number">1.2.4.</span> <span class="nav-text">功能分区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为可拓展性设计分区"><span class="nav-number">1.2.5.</span> <span class="nav-text">为可拓展性设计分区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为查询性能设计分区"><span class="nav-number">1.2.6.</span> <span class="nav-text">为查询性能设计分区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为高可用设计分区"><span class="nav-number">1.2.7.</span> <span class="nav-text">为高可用设计分区</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#理解分区如何影响设计和开发"><span class="nav-number">1.3.</span> <span class="nav-text">理解分区如何影响设计和开发</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么要数据分区"><span class="nav-number">1.</span> <span class="nav-text">为什么要数据分区</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#设计分区"><span class="nav-number">2.</span> <span class="nav-text">设计分区</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#分区策略"><span class="nav-number">2.1.</span> <span class="nav-text">分区策略</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#水平分区-sharding"><span class="nav-number">2.1.1.</span> <span class="nav-text">水平分区(sharding)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#纵向分区"><span class="nav-number">2.1.2.</span> <span class="nav-text">纵向分区</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#功能分区"><span class="nav-number">2.1.3.</span> <span class="nav-text">功能分区</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为可拓展性设计分区"><span class="nav-number">2.2.</span> <span class="nav-text">为可拓展性设计分区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为查询性能设计分区"><span class="nav-number">2.3.</span> <span class="nav-text">为查询性能设计分区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为高可用设计分区"><span class="nav-number">2.4.</span> <span class="nav-text">为高可用设计分区</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#理解分区如何影响设计和开发"><span class="nav-number">3.</span> <span class="nav-text">理解分区如何影响设计和开发</span></a></li></ol></div>
             
 
           </div>
