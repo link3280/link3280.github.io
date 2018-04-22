@@ -108,7 +108,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/open-messaging/replication.jpg">
 <meta property="og:image" content="https://link3280.github.io/img/open-messaging/upgrade.jpg">
 <meta property="og:image" content="https://link3280.github.io/img/open-messaging/rpc.jpg">
-<meta property="og:updated_time" content="2018-04-22T13:12:07.444Z">
+<meta property="og:updated_time" content="2018-04-22T13:28:44.969Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="OpenMessaging概述">
 <meta name="twitter:description" content="OpenMessaging是一个与厂商以及语言无关的，为金融/电子商务/物联网/大数据领域的消息系统和实时数据计算而设计的工业标准。OpenMessaging在去年10月阿里云的云栖大会上宣布进入Linux Foundation引起了不小的关注，然而自此之后便杳无音讯，半年过去gitub repo提交寥寥无几，连specifition都只写了目录，目前来看有点雷声大雨点小的感觉。">
@@ -416,7 +416,7 @@
 <h3 id="Streaming"><a href="#Streaming" class="headerlink" title="Streaming"></a>Streaming</h3><p><img src="/img/open-messaging/streaming.jpg" alt="流"><br>StreamingConsumer就是为这种情况设计的面向流的consumer，可以很容易地和下游的流计算系统集成。  </p>
 <h3 id="Filter"><a href="#Filter" class="headerlink" title="Filter"></a>Filter</h3><p>在大多数的情况下，consumer并不对原始数据感兴趣，而且consumer总希望消费的是经过某些处理的消息，其中最为重要的就是过滤。  </p>
 <p>如下图所示，Routing模型可以十分方便地实现过滤。在图中，消息会在经过两个filter operator后被路由到queue，该queue需要保存带student标签的并且age属性为18-23的消息。<br><img src="/img/open-messaging/filter.jpg" alt="过滤"></p>
-<h3 id="Online-Test"><a href="#Online-Test" class="headerlink" title="Online Test"></a>Online Test</h3><p><img src="/img/open-messaging/online-test.jpg" alt="线上测试" title="线上测试"><br>测试对于严谨的系统来说是必不可少的环节，而AB Test等测试方法往往要求线上环境，OpenMessaging可以通过创建一个新的Routing来满足。</p>
+<h3 id="Online-Test"><a href="#Online-Test" class="headerlink" title="Online Test"></a>Online Test</h3><p><img src="/img/open-messaging/online-test.jpg" alt="线上测试"><br>测试对于严谨的系统来说是必不可少的环节，而AB Test等测试方法往往要求线上环境，OpenMessaging可以通过创建一个新的Routing来满足。</p>
 <h3 id="Replication"><a href="#Replication" class="headerlink" title="Replication"></a>Replication</h3><p><img src="/img/open-messaging/replication.jpg" alt="冗余"><br>有时候producer和consumer分布在不同的数据中心，OpenMessaging提供了一个简单的方式来将消息从一个地区路由到另外一个地区，即一个topic连接多个routing形成冗余备份。  </p>
 <h3 id="Upgrade"><a href="#Upgrade" class="headerlink" title="Upgrade"></a>Upgrade</h3><p><img src="/img/open-messaging/upgrade.jpg" alt="升级"><br>Queue的版本和consumer版本适配，可以通过创建不同版本的queue来同时支持多版本的consumer。</p>
 <h3 id="RPC"><a href="#RPC" class="headerlink" title="RPC"></a>RPC</h3><p><img src="/img/open-messaging/rpc.jpg" alt="RPC"><br>RPC相当于同步消息，即服务端只类似一个blocking queue，producer生产消息后会阻塞，直到consumer确认消费。</p>
