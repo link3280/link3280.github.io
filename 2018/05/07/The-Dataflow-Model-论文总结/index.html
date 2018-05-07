@@ -1,0 +1,807 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="实时计算," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="The Dataflow Model 是 Google Research 于2015年发表的一篇流式处理领域的有指导性意义的论文，它对数据集特征和相应的计算方式进行了归纳总结，并针对大规模/无边界/乱序数据集，提出一种可以平衡准确性/延迟/处理成本的数据模型。这篇论文的目的不在于解决目前流计算引擎无法解决的问题，而是提供一个灵活的通用数据模型，可以无缝地切合不同的应用场景。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="The Dataflow Model 论文总结">
+<meta property="og:url" content="https://link3280.github.io/2018/05/07/The-Dataflow-Model-论文总结/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="The Dataflow Model 是 Google Research 于2015年发表的一篇流式处理领域的有指导性意义的论文，它对数据集特征和相应的计算方式进行了归纳总结，并针对大规模/无边界/乱序数据集，提出一种可以平衡准确性/延迟/处理成本的数据模型。这篇论文的目的不在于解决目前流计算引擎无法解决的问题，而是提供一个灵活的通用数据模型，可以无缝地切合不同的应用场景。">
+<meta property="og:image" content="https://link3280.github.io/img/windowing.png">
+<meta property="og:image" content="https://link3280.github.io/img/lambda-architecture.jpg">
+<meta property="og:updated_time" content="2018-05-07T14:02:39.044Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="The Dataflow Model 论文总结">
+<meta name="twitter:description" content="The Dataflow Model 是 Google Research 于2015年发表的一篇流式处理领域的有指导性意义的论文，它对数据集特征和相应的计算方式进行了归纳总结，并针对大规模/无边界/乱序数据集，提出一种可以平衡准确性/延迟/处理成本的数据模型。这篇论文的目的不在于解决目前流计算引擎无法解决的问题，而是提供一个灵活的通用数据模型，可以无缝地切合不同的应用场景。">
+<meta name="twitter:image" content="https://link3280.github.io/img/windowing.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2018/05/07/The-Dataflow-Model-论文总结/"/>
+
+
+
+
+
+  <title>The Dataflow Model 论文总结 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/05/07/The-Dataflow-Model-论文总结/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">The Dataflow Model 论文总结</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-05-07T21:44:54+08:00">
+                2018-05-07
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/实时计算/" itemprop="url" rel="index">
+                    <span itemprop="name">实时计算</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            <!--noindex-->
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/05/07/The-Dataflow-Model-论文总结/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2018/05/07/The-Dataflow-Model-论文总结/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+              <!--/noindex-->
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>The Dataflow Model 是 Google Research 于2015年发表的一篇流式处理领域的有指导性意义的论文，它对数据集特征和相应的计算方式进行了归纳总结，并针对大规模/无边界/乱序数据集，提出一种可以平衡准确性/延迟/处理成本的数据模型。这篇论文的目的不在于解决目前流计算引擎无法解决的问题，而是提供一个灵活的通用数据模型，可以无缝地切合不同的应用场景。</p>
+<a id="more"></a>
+<h1 id="CLC-与-CAP-定理"><a href="#CLC-与-CAP-定理" class="headerlink" title="CLC 与 CAP 定理"></a>CLC 与 CAP 定理</h1><p>CAP 定理一直是设计分布式系统首要考虑的问题之一，而在流式处理领域 CAP 有了新的拓展，即 Correctness (准确性)，Latency (延迟)，Cost (成本)，本文将其简称 CLC 。CLC 与 CAP 最大的不同点在于 CAP 的网络分区发生在系统内，而 CLC 则是发生在系统与外部环境，其余特征十分相似，有着紧密的内在联系。</p>
+<p>Correctness 对应 CAP 定理的 Consistence 。如果说分布式存储的 Consistence 表示的是不同副本达到完全一致状态的时间窗口，Correctness 则是在固定的时间窗口内接受到的数据及其计算结果的正确程度(是否乱序，是否完整)。两者看起来似乎并没有很强的联系，但其实两者都是因为数据网络延迟而造成的系统状态落后于真实状态。不同点在于 Consistence 面向的数据源通常是分布式系统的内部节点，而 Correctness 面向的是系统外部的数据源，状态更加不可控。比如前者可以设置超时参数来控制数据的延迟在一个合理的范围，但后者由于数据源在系统外，可能会接受到严重滞后的数据，比如一个用户在野外游玩时的数据在其设备连上网络时一次性发送给服务器。  </p>
+<p>Latency 对应 CAP 定理的 Availability 。由于实时数据流是无边界的，我们不能假设在某个时间点数据会变得完整，更不能一直等待到那个时刻，因为实时数据流的价值就在于实时性，那时我们的计算结果将一文不值。因此普遍的做法是将实时数据流切分为一个个时间窗口，每当窗口关闭的时候计算一次结果。一个关键的选择便是窗口关闭的算法，还有由此带来的(也是这里所关心的)延迟。因为在一个窗口活跃期间，数据仍被视为可变的不能用于计算，所以也可以被视为不可用。这与CAP定理的 Availability 显然十分相似，不同点在于由于时间窗口是周期性的正常活动，并不需要像CAP定理一样将不可用场景视为故障。  </p>
+<p>Cost 对应 CAP 定理的 Partition Tolerance 。Cost 指的是对于延迟数据的处理带来的额外成本，延迟的定义是事件对应的时间窗口已经关闭，需要修正历史计算结果。类似分布式系统出现网络分区，流处理系统和数据源也会出现网络不可达的情况，具体表现为数据延迟。不同点在于并没有很好的办法来处理 Partition ，而数据延迟是可以处理的，关键在于处理成本上，比如要重算多久的数据。因此对于一个确定的可接受的延迟成本(Cost)，“延迟容忍性”也是确定的。  </p>
+<h1 id="逻辑引擎设计"><a href="#逻辑引擎设计" class="headerlink" title="逻辑引擎设计"></a>逻辑引擎设计</h1><p>无论是流式计算/微批次或是批处理，它们要处理的问题都可以抽象为以下几个问题: </p>
+<ul>
+<li>What: 需要计算的结果数据是什么  </li>
+<li>Where: 计算的上下文环境是什么</li>
+<li>When: 什么时候计算输出结果  </li>
+<li>How: 如何修正早期计算结果  </li>
+</ul>
+<p>针对这些问题，The Dataflow Model 分别提出了 windowing model ， triggering model 和 incremental processing model 。值得注意的是，这些模型并不依赖物理引擎的具体实现，以允许系统设计者结合自己需求灵活集成其中的思想，以及在CLC三者中寻找平衡。  </p>
+<h2 id="核心原语"><a href="#核心原语" class="headerlink" title="核心原语"></a>核心原语</h2><p>常见的数据处理函数可以分为聚合函数与非聚合函数两大类。对于非聚合函数，每条数据都是独立的，计算引擎只需将它转换为下游需求的格式即可。而聚合类函数只能作用于有界数据集，所以我们需要将实时数据流切分为多个窗口(经常还伴随着分组)，然后才可以将聚合函数应用到其上。</p>
+<p>在 The Dataflow Model 论文中，计算引擎提供两个原语，<code>ParDo</code>和<code>GroupByKey</code>。<code>ParDo</code>负责执行用户函数，对数据流进行非聚合类的转换。如果<code>Pardo</code>作用于无边界数据集，那么它的输出仍是无边界数据集。而<code>GroupByKey</code>负责将数据进行分组，它会将所有相同key的数据收集到一起，然后再发至下游。显然由于缓存数据的特性，它会将无边界数据转换为有边界数据，但是它没办到单独做到这点，还需要和window函数配合使用。  </p>
+<p>通过核心原语，用户可以较为自由地描述计算过程，解答了<code>What</code>的问题。</p>
+<h2 id="窗口策略模型"><a href="#窗口策略模型" class="headerlink" title="窗口策略模型"></a>窗口策略模型</h2><p>除了常见的滑动窗口/翻滚窗口/会话窗口的分类，该论文提出了校准窗口与非校准窗口的区别，定义了基础的窗口操作以及如何基于这些操作来实现不同的Windowing策略。</p>
+<p><img src="/img/windowing.png" alt="窗口类型"></p>
+<p>校准窗口指的是落在窗口对应时间范围内的所有数据都被用于该窗口的计算，比如金融市场常见的“前一天交易量”。而非校准窗口指的是只有落在窗口相应时间范围的数据的某一子集用于该窗口的计算，比如只计算某个key的数据。常见的窗口中，翻滚窗口和滑动窗口都属于校准窗口，而会话窗口属于非校准窗口，因为不同key的会话是独立的，只有时间相近且key相同的事件会落入同一会话窗口。  </p>
+<p>该论文在原语上提供了<code>GroupByKey</code>，支持聚合的系统经常会将其重新定义为粒度更细的<code>GroupByByAndWindow</code>。而论文中的操作实现对非校准窗口的支持，者包含了两个关键的观点: 一是从模型简化的角度上，把所有的窗口策略都当做非对齐窗口，而底层实现来负责把对齐窗口作为一个特例进行优化；二是窗口操作可以被分隔为<code>assignWindows</code>和<code>mergeWindows</code>两个相关的操作。</p>
+<p><code>assignWindows</code>即为事件分配对于的窗口。细心的同学可以发现这里的Window是复数，是不是意味着可以为一个事件分配多个窗口？事实上的确如此，这里的分配操作更像是复制到窗口里，因此如果分配给多个窗口则会产生冗余。  </p>
+<p><code>mergeWindows</code>即对多个窗口进行合并，通常的使用场景是滑动窗口(校准窗口)间的合并和会话窗口(非校准窗口)间的合并。  </p>
+<p>Windowing 策略描述了事件处理的上下文，即<code>Where</code>的问题。</p>
+<h2 id="触发器和增量处理"><a href="#触发器和增量处理" class="headerlink" title="触发器和增量处理"></a>触发器和增量处理</h2><p>流式计算引擎的难题之一在于知道何时关闭窗口并计算出结果发往下游。由于事件是无序的，我们无法获得一个明确的标识表示窗口对于的数据已经完全达到，这被称为窗口的完整性问题。最基础的方案是使用水位线(watermark)来解决，即根据一定算法根据最近处理的事件的事件时间估算出一个称为水位线的时间（比如最近 5 min 到达的事件的最小事件时间），早于该时间的事情被视为已经完全被处理。然而水位线是启发式的，并不能完全避免迟到的事件，另外水位线也可能引入额外的延迟。  </p>
+<p>因此只凭水位线来保证窗口完整性是不够的，论文借鉴了 Lambda 架构的思想来规避完整性问题。Lambda 架构由 Storm 的作者 Nathan Marz 提出，其核心思想是融合离线计算和在线计算以提供高可用性和最终一致性。</p>
+<p><img src="/img/lambda-architecture.jpg" alt="lambda architecture" title="lambda architecture"></p>
+<p>Lambda 架构包含三个核心 view: batch view ，real time view 和 query view。batch view 存放较早前（一般是数小时以前）的完整数据的离线计算结果；real time view 存放的是未进入 batch view 的数据的计算结果，这部分会随着新数据到来而频繁更新；query view 负责处理查询，合并 batch view 和 real time view 的结果输出。  </p>
+<p>Lambda 架构有高可用，低延迟和高容错的优点 ，但不足也显然易见: 需要开发和维护两条数据处理管道。<br>针对这个问题 The Dataflow Model 论文引入了触发器机制来简化 Lambda 架构，以合并两条数据处理管道。  </p>
+<p>简单来说，触发器决定了什么时候一个窗口被计算和输出为窗格（稳定的计算结果），即<code>When</code>的问题。其中最为常见的是基于时间，基于数据到达情况的触发器，基于窗口估计完成度（水位线）的触发器，除此以外也支持用户自定义触发器。  </p>
+<p>除了控制窗口结果计算何时触发，触发器还提供了三种重定义模式来控制同一窗口的不同窗格关联情况，以规范化<code>How</code>。  </p>
+<ul>
+<li>抛弃: 窗口触发后，窗口内的数据被丢弃，不同窗格之间没有联系。</li>
+<li>累积: 窗口触发后，窗口内的数据仍被保留在持久化的状态中，而后期的计算结果是对上一次结果的一个修正的版本。</li>
+<li>累计和撤回: 窗口触发后，在进行累积语义的基础上，计算结果的一份复制也被保留到持久化状态中。当该窗口将来再次触发时（迟到的数据抵达），上一次的结果值先下发做撤回处理，然后将新的结果作为正常数据下发。</li>
+</ul>
+<p>其中抛弃模式效率最高，因为不需要维持状态或者过去窗口的数据，但应用场景有限，适合下游实现了累积统计的情况；累积模式与 Lambda 架构十分相似，适用场景广泛，是最常见的模式；累积和撤回模式是最复杂成本最高的模式，需要下游也支持可撤回操作，适合上游操作会导致下游不同的key分布的情况。</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><ol>
+<li><a href="https://static.googleusercontent.com/media/research.google.com/zh-CN//pubs/archive/43864.pdf" target="_blank" rel="external">The Dataflow Model: A Practical Approach to Balancing<br>Correctness, Latency, and Cost in Massive-Scale,<br>Unbounded, Out-of-Order Data Processing</a></li>
+<li><a href="https://yq.aliyun.com/articles/64911" target="_blank" rel="external">流计算精品翻译: The Dataflow Model</a></li>
+<li><a href="http://nathanmarz.com/blog/how-to-beat-the-cap-theorem.html" target="_blank" rel="external">How to beat the CAP theorem</a></li>
+<li><a href="http://www.cnblogs.com/fxjwind/p/5124174.html" target="_blank" rel="external">The Dataflow Model 论文</a></li>
+</ol>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/05/07/The-Dataflow-Model-论文总结/" target="_blank" rel="external">时间与精神的小屋 - The Dataflow Model 论文总结</a></em></font>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/实时计算/" rel="tag"># 实时计算</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/04/22/OpenMessaging概述/" rel="next" title="OpenMessaging概述">
+                <i class="fa fa-chevron-left"></i> OpenMessaging概述
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="hypercomments_widget"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">37</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">36</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#CLC-与-CAP-定理"><span class="nav-number">1.</span> <span class="nav-text">CLC 与 CAP 定理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#逻辑引擎设计"><span class="nav-number">2.</span> <span class="nav-text">逻辑引擎设计</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#核心原语"><span class="nav-number">2.1.</span> <span class="nav-text">核心原语</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#窗口策略模型"><span class="nav-number">2.2.</span> <span class="nav-text">窗口策略模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#触发器和增量处理"><span class="nav-number">2.3.</span> <span class="nav-text">触发器和增量处理</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">3.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+		<script type="text/javascript">
+		_hcwp = window._hcwp || [];
+
+		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
+
+		
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2018/05/07/The-Dataflow-Model-论文总结/"});
+		
+
+		(function() {
+		if("HC_LOAD_INIT" in window)return;
+		HC_LOAD_INIT = true;
+		var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
+		var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
+		hcc.src = ("https:" == document.location.protocol ? "https" : "http")+"://w.hypercomments.com/widget/hc/94362/"+lang+"/widget.js";
+		var s = document.getElementsByTagName("script")[0];
+		s.parentNode.insertBefore(hcc, s.nextSibling);
+		})();
+		</script>
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
