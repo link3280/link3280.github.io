@@ -1,0 +1,792 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大数据,Flink,实时计算," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="Flink 为实时计算提供了三种时间，即事件时间（event time）、摄入时间（ingestion time）和处理时间（processing time）。在进行 window 计算时，使用摄入时间或处理时间的消息都是以系统的墙上时间（wall clocks）为标准，因此事件都是按序到达的。然而如果使用更为有意义的事件时间则会需要面对乱序事件问题（out-of-order events）和迟到">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink Watermark 机制浅析">
+<meta property="og:url" content="https://link3280.github.io/2018/06/01/Flink-Watermark-机制浅析/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="Flink 为实时计算提供了三种时间，即事件时间（event time）、摄入时间（ingestion time）和处理时间（processing time）。在进行 window 计算时，使用摄入时间或处理时间的消息都是以系统的墙上时间（wall clocks）为标准，因此事件都是按序到达的。然而如果使用更为有意义的事件时间则会需要面对乱序事件问题（out-of-order events）和迟到">
+<meta property="og:image" content="https://link3280.github.io/img/flink/watermark.png">
+<meta property="og:updated_time" content="2018-06-01T16:12:04.235Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink Watermark 机制浅析">
+<meta name="twitter:description" content="Flink 为实时计算提供了三种时间，即事件时间（event time）、摄入时间（ingestion time）和处理时间（processing time）。在进行 window 计算时，使用摄入时间或处理时间的消息都是以系统的墙上时间（wall clocks）为标准，因此事件都是按序到达的。然而如果使用更为有意义的事件时间则会需要面对乱序事件问题（out-of-order events）和迟到">
+<meta name="twitter:image" content="https://link3280.github.io/img/flink/watermark.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2018/06/01/Flink-Watermark-机制浅析/"/>
+
+
+
+
+
+  <title>Flink Watermark 机制浅析 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/06/01/Flink-Watermark-机制浅析/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink Watermark 机制浅析</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-06-01T22:29:23+08:00">
+                2018-06-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            <!--noindex-->
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/06/01/Flink-Watermark-机制浅析/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count hc-comment-count" data-xid="2018/06/01/Flink-Watermark-机制浅析/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+              <!--/noindex-->
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Flink 为实时计算提供了三种时间，即事件时间（event time）、摄入时间（ingestion time）和处理时间（processing time）。在进行 window 计算时，使用摄入时间或处理时间的消息都是以系统的墙上时间（wall clocks）为标准，因此事件都是按序到达的。然而如果使用更为有意义的事件时间则会需要面对乱序事件问题（out-of-order events）和迟到事件问题（late events）。针对这两个问题，Flink 主要采用了以水位线（watermark）为核心的机制来应对。</p>
+<a id="more"></a>
+<h1 id="窗口与水位线"><a href="#窗口与水位线" class="headerlink" title="窗口与水位线"></a>窗口与水位线</h1><p>当基于事件时间的数据流进行窗口计算时，最为困难的一点是如何确定对应当前窗口的事件已尽全部到达。比如需要统计最近5分钟打开音乐播放器的用户数，服务端怎么确保聚合计算时已经收集好所有用户最近5分钟的打开播放器日志？事实上不存在能百分百准确判断的方法，因此业界常用的方法是基于已经收集的消息来估算是否还有消息未到达，这就是水位线的思想。</p>
+<p>水位线实际上是一个时间戳，意义是早于该时间的消息已经完全抵达计算引擎，即假设不会再有时间小于水位线的事件到达。这个假设是触发窗口计算的基础，只有水位线越过窗口对应的结束时间，窗口才会关闭和进行计算。</p>
+<h1 id="水位线的计算"><a href="#水位线的计算" class="headerlink" title="水位线的计算"></a>水位线的计算</h1><p>理想情况下水位线应该与处理时间一致，并且处理时间与事件时间只相差常数时间甚至为零，这意味着消息产生后马上被处理。然而水位线的计算总是存在一定的延迟（见图1），具体的延迟根据水位线实现的不同而也有所差别。Flink 提供了常规的定期水位线以及定制化的标点水位线两种生成水位线的方式供用户选择。</p>
+<p align="center"><br><img src="/img/flink/watermark.png" alt="Ideal Watermark versus Actual Watermark" title="图1.理想水位线与实际水位线"><br></p>
+
+<h2 id="定期水位线"><a href="#定期水位线" class="headerlink" title="定期水位线"></a>定期水位线</h2><p>定期水位线（Periodic Watermark）按照固定时间间隔生成新的水位线，不管是否有新的消息抵达。水位线提升的时间间隔是由用户设置的，在两次水位线提升时隔内会有一部分消息流入，用户可以根据这部分数据来计算出新的水位线。举个例子，最简单的水位线算法就是取目前为止最大的事件时间，然而这种方式比较暴力，对乱序事件的容忍程度比较低，容易出现大量迟到事件。</p>
+<p>应用定期水位线需要实现<code>AssignerWithPeriodicWatermarks</code> API，以下是 Flink 官网提供的定期水位线的实现例子。</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">BoundedOutOfOrdernessGenerator</span> <span class="keyword">extends</span> <span class="title">AssignerWithPeriodicWatermarks</span>[<span class="type">MyEvent</span>] </span>&#123;</div><div class="line"></div><div class="line">    <span class="keyword">val</span> maxOutOfOrderness = <span class="number">3500</span>L; <span class="comment">// 3.5 seconds</span></div><div class="line"></div><div class="line">    <span class="keyword">var</span> currentMaxTimestamp: <span class="type">Long</span>;</div><div class="line"></div><div class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">extractTimestamp</span></span>(element: <span class="type">MyEvent</span>, previousElementTimestamp: <span class="type">Long</span>): <span class="type">Long</span> = &#123;</div><div class="line">        <span class="keyword">val</span> timestamp = element.getCreationTime()</div><div class="line">        currentMaxTimestamp = max(timestamp, currentMaxTimestamp)</div><div class="line">        timestamp;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">getCurrentWatermark</span></span>(): <span class="type">Watermark</span> = &#123;</div><div class="line">        <span class="comment">// return the watermark as current highest timestamp minus the out-of-orderness bound</span></div><div class="line">        <span class="keyword">new</span> <span class="type">Watermark</span>(currentMaxTimestamp - maxOutOfOrderness);</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>其中<code>extractTimestamp</code>用于从消息中提取事件时间，而<code>getCurrentWatermark</code>用于生成新的水位线，新的水位线只有大于当前水位线才是有效的。每个窗口都会有该类的一个实例，因此可以利用实例的成员变量保存状态，比如上例中的当前最大时间戳。</p>
+<h2 id="标点水位线"><a href="#标点水位线" class="headerlink" title="标点水位线"></a>标点水位线</h2><p>标点水位线（Punctuated Watermark）通过数据流中某些特殊标记事件来触发新水位线的生成。这种方式下窗口的触发与时间无关，而是决定于何时收到标记事件。</p>
+<p>应用标点水位线需要实现<code>AssignerWithPunctuatedWatermarks</code> API，以下是 Flink 官网提供的标点水位线的实现例子。</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">PunctuatedAssigner</span> <span class="keyword">extends</span> <span class="title">AssignerWithPunctuatedWatermarks</span>[<span class="type">MyEvent</span>] </span>&#123;</div><div class="line"></div><div class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">extractTimestamp</span></span>(element: <span class="type">MyEvent</span>, previousElementTimestamp: <span class="type">Long</span>): <span class="type">Long</span> = &#123;</div><div class="line">        element.getCreationTime</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">checkAndGetNextWatermark</span></span>(lastElement: <span class="type">MyEvent</span>, extractedTimestamp: <span class="type">Long</span>): <span class="type">Watermark</span> = &#123;</div><div class="line">        <span class="keyword">if</span> (element.hasWatermarkMarker()) <span class="keyword">new</span> <span class="type">Watermark</span>(extractedTimestamp) <span class="keyword">else</span> <span class="literal">null</span></div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>其中<code>extractTimestamp</code>用于从消息中提取事件时间，<code>checkAndGetNextWatermark</code>用于检查事件是否标点事件，若是则生成新的水位线。不同于定期水位线定时调用<code>getCurrentWatermark</code>，标点水位线是每接受一个事件就需要调用<code>checkAndGetNextWatermark</code>，若返回值非 null 且新水位线大于当前水位线，则触发窗口计算。</p>
+<h1 id="迟到事件"><a href="#迟到事件" class="headerlink" title="迟到事件"></a>迟到事件</h1><p>虽说水位线表明着早于它的事件不应该再出现，但是上如上文所讲，接收到水位线以前的的消息是不可避免的，这就是所谓的迟到事件。实际上迟到事件是乱序事件的特例，和一般乱序事件不同的是它们的乱序程度超出了水位线的预计，导致窗口在它们到达之前已经关闭。</p>
+<p>迟到事件出现时窗口已经关闭并产出了计算结果，因此处理的方法有3种：</p>
+<ol>
+<li>重新激活已经关闭的窗口并重新计算以修正结果。</li>
+<li>将迟到事件收集起来另外处理。</li>
+<li>将迟到事件视为错误消息并丢弃。</li>
+</ol>
+<p>Flink 默认的处理方式是第3种直接丢弃，其他两种方式分别使用<code>Side Output</code>和<code>Allowed Lateness</code>。</p>
+<p><code>Side Output</code>机制可以将迟到事件单独放入一个数据流分支，这会作为 window 计算结果的副产品，以便用户获取并对其进行特殊处理。</p>
+<p><code>Allowed Lateness</code>机制允许用户设置一个允许的最大迟到时长。Flink 会再窗口关闭后一直保存窗口的状态直至超过允许迟到时长，这期间的迟到事件不会被丢弃，而是默认会触发窗口重新计算。因为保存窗口状态需要额外内存，并且如果窗口计算使用了 <code>ProcessWindowFunction</code> API 还可能使得每个迟到事件触发一次窗口的全量计算，代价比较大，所以允许迟到时长不宜设得太长，迟到事件也不宜过多，否则应该考虑降低水位线提高的速度或者调整算法。</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>1.<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.5/dev/event_timestamps_watermarks.html" target="_blank" rel="external">Flink 官方文档 - Event Time</a><br>2.<a href="http://www.cnblogs.com/fxjwind/p/7657058.html" target="_blank" rel="external">Flink – process watermark</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/06/01/Flink-Watermark-机制浅析/" target="_blank" rel="external">时间与精神的小屋 - Flink Watermark 机制浅析</a></em></font>
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+            <a href="/tags/实时计算/" rel="tag"># 实时计算</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/05/13/Flink-轻量级异步快照-ABS-实现原理/" rel="next" title="Flink 轻量级异步快照 ABS 实现原理">
+                <i class="fa fa-chevron-left"></i> Flink 轻量级异步快照 ABS 实现原理
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="hypercomments_widget"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">39</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">37</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#窗口与水位线"><span class="nav-number">1.</span> <span class="nav-text">窗口与水位线</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#水位线的计算"><span class="nav-number">2.</span> <span class="nav-text">水位线的计算</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#定期水位线"><span class="nav-number">2.1.</span> <span class="nav-text">定期水位线</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#标点水位线"><span class="nav-number">2.2.</span> <span class="nav-text">标点水位线</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#迟到事件"><span class="nav-number">3.</span> <span class="nav-text">迟到事件</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">4.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+		<script type="text/javascript">
+		_hcwp = window._hcwp || [];
+
+		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
+
+		
+		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "2018/06/01/Flink-Watermark-机制浅析/"});
+		
+
+		(function() {
+		if("HC_LOAD_INIT" in window)return;
+		HC_LOAD_INIT = true;
+		var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
+		var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
+		hcc.src = ("https:" == document.location.protocol ? "https" : "http")+"://w.hypercomments.com/widget/hc/94362/"+lang+"/widget.js";
+		var s = document.getElementsByTagName("script")[0];
+		s.parentNode.insertBefore(hcc, s.nextSibling);
+		})();
+		</script>
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
