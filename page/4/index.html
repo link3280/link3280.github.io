@@ -273,6 +273,156 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/03/22/Hive使用递归子目录作为partition/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/03/22/Hive使用递归子目录作为partition/" itemprop="url">Hive使用递归子目录作为partition</a></h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-03-22T23:04:18+08:00">
+                2017-03-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hive/" itemprop="url" rel="index">
+                    <span itemprop="name">Hive</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/03/22/Hive使用递归子目录作为partition/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/03/22/Hive使用递归子目录作为partition/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>一般情况下，使用add partition语句为Hive表新增partition:<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">ADD</span> [<span class="keyword">IF</span> <span class="keyword">NOT</span> <span class="keyword">EXISTS</span>] <span class="keyword">PARTITION</span> (partition_column1=<span class="string">'value1'</span>, partition_column2=<span class="string">'value2'</span>,) [LOCATION <span class="string">'location1'</span>];</div></pre></td></tr></table></figure></p>
+<p>其中Location默认为最低层目录，如果该目录仍包含子目录，Hive就会报错。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/03/22/Hive使用递归子目录作为partition/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/03/18/估算Flume的内存消耗/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -340,17 +490,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/03/18/估算Flume的内存消耗/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/03/18/估算Flume的内存消耗/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/03/18/估算Flume的内存消耗/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -490,17 +639,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/03/11/Spark-on-YARN两种部署方式的不同/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/03/11/Spark-on-YARN两种部署方式的不同/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/03/11/Spark-on-YARN两种部署方式的不同/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -640,17 +788,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/02/27/Flume Avro source 解压异常的解决方法/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/02/27/Flume Avro source 解压异常的解决方法/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/02/27/Flume Avro source 解压异常的解决方法/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -790,17 +937,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/02/18/[译]Spark调优教程中文版/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/02/18/[译]Spark调优教程中文版/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/02/18/[译]Spark调优教程中文版/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -940,17 +1086,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/02/05/记一次排查Spark thrift server OOM错误的经历/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/02/05/记一次排查Spark thrift server OOM错误的经历/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/02/05/记一次排查Spark thrift server OOM错误的经历/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1090,17 +1235,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/01/14/从蒙代尔三角到分布式CAP原则/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/01/14/从蒙代尔三角到分布式CAP原则/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/01/14/从蒙代尔三角到分布式CAP原则/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1240,17 +1384,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2016/12/28/Spark批量更新数据库导致死锁/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2016/12/28/Spark批量更新数据库导致死锁/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/12/28/Spark批量更新数据库导致死锁/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1390,17 +1533,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2016/12/25/浅谈数据工程师和SQL/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2016/12/25/浅谈数据工程师和SQL/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/12/25/浅谈数据工程师和SQL/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1544,17 +1686,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2016/12/24/出现了，我的第一篇博客！/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2016/12/24/出现了，我的第一篇博客！/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2016/12/24/出现了，我的第一篇博客！/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1667,7 +1808,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">39</span>
+                <span class="site-state-item-count">40</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1840,34 +1981,30 @@
 
   
 
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+
+  
 
 
 
-	
-
-		<script type="text/javascript">
-		_hcwp = window._hcwp || [];
-
-		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
-
-		
-
-		(function() {
-		if("HC_LOAD_INIT" in window)return;
-		HC_LOAD_INIT = true;
-		var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
-		var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
-		hcc.src = ("https:" == document.location.protocol ? "https" : "http")+"://w.hypercomments.com/widget/hc/94362/"+lang+"/widget.js";
-		var s = document.getElementsByTagName("script")[0];
-		s.parentNode.insertBefore(hcc, s.nextSibling);
-		})();
-		</script>
 
 	
 
 
 
 
+
+  
+
+
+
+
+
+  
 
 
 

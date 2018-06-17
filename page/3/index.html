@@ -273,6 +273,156 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/" itemprop="url">Spark源码学习笔记（一）：Broadcast机制</a></h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-08-19T20:55:16+08:00">
+                2017-08-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/08/19/Spark源码学习笔记（一）：Broadcast机制/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>读源码是大数据开发工程师的自我修养之一，趁最近项目进度比较快，我决定抽时间来系统学习一下代码质量广受好评的Spark源码。虽然工作中使用的是Apache 发行版的1.6.1，所以读源码时还是保持一致。好项目都是高内聚低耦合，这就方便逐个组件剖析。先从core包开始，这次要讲的是<code>org.apache.spark.broadcast</code>。</p>
+<p>在Spark应用启动时，Driver需要将序列化之后的task发至executor上。官方建议task的大小应该在20KB以下，以保证Application可以快速启动。如果task要使用比较大的变量，比如一个维度表，这时就会用到Spark的broadcast机制。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/08/19/Spark源码学习笔记（一）：Broadcast机制/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -340,17 +490,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/08/12/Kylin实战（一）：用Hive UDTF平铺内嵌类型字段/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -490,17 +639,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/08/06/并发replace into导致MySQL死锁/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/08/06/并发replace into导致MySQL死锁/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/08/06/并发replace into导致MySQL死锁/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -640,17 +788,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/07/22/curl模拟REST请求/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/07/22/curl模拟REST请求/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/07/22/curl模拟REST请求/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -790,17 +937,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/06/15/[译]Hive权限控制官方文档/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/06/15/[译]Hive权限控制官方文档/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/06/15/[译]Hive权限控制官方文档/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -940,17 +1086,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/05/14/浅谈索引的本质/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/05/14/浅谈索引的本质/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/05/14/浅谈索引的本质/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1092,17 +1237,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/05/06/实时计算与离线计算的区别和联系/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/05/06/实时计算与离线计算的区别和联系/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/05/06/实时计算与离线计算的区别和联系/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1242,17 +1386,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/04/23/谈谈分布式计算中的join/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/04/23/谈谈分布式计算中的join/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/04/23/谈谈分布式计算中的join/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1393,17 +1536,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/04/08/MultipleOutputs实现MapReduce多个输出/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/04/08/MultipleOutputs实现MapReduce多个输出/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/04/08/MultipleOutputs实现MapReduce多个输出/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1547,17 +1689,16 @@
 
           
             
-            <!--noindex-->
               <span class="post-comments-count">
                 <span class="post-meta-divider">|</span>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
                 <a href="/2017/04/02/没有好平台如何成长/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/04/02/没有好平台如何成长/" itemprop="commentsCount"></span>
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/04/02/没有好平台如何成长/" itemprop="commentCount"></span>
                 </a>
               </span>
-              <!--/noindex-->
             
           
 
@@ -1586,157 +1727,6 @@
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2017/04/02/没有好平台如何成长/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/03/22/Hive使用递归子目录作为partition/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Paul Lin">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/img/me.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="时间与精神的小屋">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h2 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/03/22/Hive使用递归子目录作为partition/" itemprop="url">Hive使用递归子目录作为partition</a></h2>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-03-22T23:04:18+08:00">
-                2017-03-22
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Hive/" itemprop="url" rel="index">
-                    <span itemprop="name">Hive</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-            <!--noindex-->
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/03/22/Hive使用递归子目录作为partition/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count hc-comment-count" data-xid="2017/03/22/Hive使用递归子目录作为partition/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-              <!--/noindex-->
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>一般情况下，使用add partition语句为Hive表新增partition:<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">ADD</span> [<span class="keyword">IF</span> <span class="keyword">NOT</span> <span class="keyword">EXISTS</span>] <span class="keyword">PARTITION</span> (partition_column1=<span class="string">'value1'</span>, partition_column2=<span class="string">'value2'</span>,) [LOCATION <span class="string">'location1'</span>];</div></pre></td></tr></table></figure></p>
-<p>其中Location默认为最低层目录，如果该目录仍包含子目录，Hive就会报错。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2017/03/22/Hive使用递归子目录作为partition/#more" rel="contents">
               阅读全文 &raquo;
             </a>
           </div>
@@ -1822,7 +1812,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">39</span>
+                <span class="site-state-item-count">40</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1995,34 +1985,30 @@
 
   
 
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+
+  
 
 
 
-	
-
-		<script type="text/javascript">
-		_hcwp = window._hcwp || [];
-
-		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
-
-		
-
-		(function() {
-		if("HC_LOAD_INIT" in window)return;
-		HC_LOAD_INIT = true;
-		var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
-		var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
-		hcc.src = ("https:" == document.location.protocol ? "https" : "http")+"://w.hypercomments.com/widget/hc/94362/"+lang+"/widget.js";
-		var s = document.getElementsByTagName("script")[0];
-		s.parentNode.insertBefore(hcc, s.nextSibling);
-		})();
-		</script>
 
 	
 
 
 
 
+
+  
+
+
+
+
+
+  
 
 
 

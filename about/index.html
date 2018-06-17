@@ -294,7 +294,12 @@
           
   <div class="comments" id="comments">
     
-      <div id="hypercomments_widget"></div>
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
     
   </div>
 
@@ -333,7 +338,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">39</span>
+                <span class="site-state-item-count">40</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -506,36 +511,42 @@
 
   
 
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/about/index.html';
+          this.page.identifier = 'about/index.html';
+          this.page.title = 'Paul Lin';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
 
 
 
 	
 
-		<script type="text/javascript">
-		_hcwp = window._hcwp || [];
-
-		_hcwp.push({widget:"Bloggerstream", widget_id: 94362, selector:".hc-comment-count", label: "{\%COUNT%\}" });
-
-		
-		_hcwp.push({widget:"Stream", widget_id: 94362, xid: "about/index.html"});
-		
-
-		(function() {
-		if("HC_LOAD_INIT" in window)return;
-		HC_LOAD_INIT = true;
-		var lang = (navigator.language || navigator.systemLanguage || navigator.userLanguage || "en").substr(0, 2).toLowerCase();
-		var hcc = document.createElement("script"); hcc.type = "text/javascript"; hcc.async = true;
-		hcc.src = ("https:" == document.location.protocol ? "https" : "http")+"://w.hypercomments.com/widget/hc/94362/"+lang+"/widget.js";
-		var s = document.getElementsByTagName("script")[0];
-		s.parentNode.insertBefore(hcc, s.nextSibling);
-		})();
-		</script>
-
-	
 
 
 
 
+  
+
+
+
+
+
+  
 
 
 
