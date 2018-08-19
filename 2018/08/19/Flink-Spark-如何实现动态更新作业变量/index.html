@@ -1,0 +1,802 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Spark,Flink," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="由于实时场景对可用性十分敏感，实时作业通常需要避免频繁重启，因此动态加载作业配置（变量）是实时计算里十分常见的需求，比如通常复杂事件处理 (CEP) 的规则或者在线机器学习的模型。尽管常见，实现起来却并没有那么简单，其中最难点在于如何确保节点状态在变更期间的一致性。目前来说一般有两种实现方式：
+
+轮询拉取方式，即作业算子定时检测在外部系统的配置是否有变更，若有则同步配置。
+控制流方式，即作业除了用">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink/Spark 如何实现动态更新作业配置">
+<meta property="og:url" content="https://link3280.github.io/2018/08/19/Flink-Spark-如何实现动态更新作业变量/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="由于实时场景对可用性十分敏感，实时作业通常需要避免频繁重启，因此动态加载作业配置（变量）是实时计算里十分常见的需求，比如通常复杂事件处理 (CEP) 的规则或者在线机器学习的模型。尽管常见，实现起来却并没有那么简单，其中最难点在于如何确保节点状态在变更期间的一致性。目前来说一般有两种实现方式：
+
+轮询拉取方式，即作业算子定时检测在外部系统的配置是否有变更，若有则同步配置。
+控制流方式，即作业除了用">
+<meta property="og:image" content="https://link3280.github.io/img/control-stream.png">
+<meta property="og:updated_time" content="2018-08-19T12:59:53.803Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink/Spark 如何实现动态更新作业配置">
+<meta name="twitter:description" content="由于实时场景对可用性十分敏感，实时作业通常需要避免频繁重启，因此动态加载作业配置（变量）是实时计算里十分常见的需求，比如通常复杂事件处理 (CEP) 的规则或者在线机器学习的模型。尽管常见，实现起来却并没有那么简单，其中最难点在于如何确保节点状态在变更期间的一致性。目前来说一般有两种实现方式：
+
+轮询拉取方式，即作业算子定时检测在外部系统的配置是否有变更，若有则同步配置。
+控制流方式，即作业除了用">
+<meta name="twitter:image" content="https://link3280.github.io/img/control-stream.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2018/08/19/Flink-Spark-如何实现动态更新作业变量/"/>
+
+
+
+
+
+  <title>Flink/Spark 如何实现动态更新作业配置 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/08/19/Flink-Spark-如何实现动态更新作业变量/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink/Spark 如何实现动态更新作业配置</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-08-19T20:47:21+08:00">
+                2018-08-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/08/19/Flink-Spark-如何实现动态更新作业变量/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/08/19/Flink-Spark-如何实现动态更新作业变量/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>由于实时场景对可用性十分敏感，实时作业通常需要避免频繁重启，因此动态加载作业配置（变量）是实时计算里十分常见的需求，比如通常复杂事件处理 (CEP) 的规则或者在线机器学习的模型。尽管常见，实现起来却并没有那么简单，其中最难点在于如何确保节点状态在变更期间的一致性。目前来说一般有两种实现方式：</p>
+<ul>
+<li>轮询拉取方式，即作业算子定时检测在外部系统的配置是否有变更，若有则同步配置。</li>
+<li>控制流方式，即作业除了用于计算的一个或多个普通数据流以外，还有提供一个用于改变作业算子状态的元数据流，也就是控制流。</li>
+</ul>
+<a id="more"></a>
+<p>轮询拉取方式基于 pull 模式，一般实现是用户在 Stateful 算子(比如 RichMap)里实现后台线程定时从外部系统同步变量。这种方式对于一般作业或许足够，但存在两个缺点分别限制了作业的实时性和准确性的进一步提高：首先，轮询总是有一定的延迟，因此变量的变更不能第一时间生效；其次，这种方式依赖于节点本地时间来进行校准。如果在同一时间有的节点已经检测到变更并更新状态，而有的节点还没有检测到或者还未更新，就会造成短时间内的不一致。</p>
+<p>控制流方式基于 push 模式，变更的检测和节点更新的一致性都由计算框架负责，从用户视角看只需要定义如何更新算子状态并负责将控制事件丢入控制流，后续工作计算框架会自动处理。控制流不同于其他普通数据流的地方在于控制流是以广播形式流动的，否则在有 Keyby 或者 rebalance 等提高并行度分流的算子的情况下就无法将控制事件传达给所有的算子。</p>
+<p>以目前最流行的两个实时计算框架 Spark Streaming 和 Flink 来说，前者是以类似轮询的方式来实现实时作业的更新，而后者则是基于控制流的方式。</p>
+<h2 id="Spark-Streaming-Broadcast-Variable"><a href="#Spark-Streaming-Broadcast-Variable" class="headerlink" title="Spark Streaming Broadcast Variable"></a>Spark Streaming Broadcast Variable</h2><p>Spark Streaming 为用户提供了 Broadcast Varialbe，可以用于节点算子状态的初始化和后续更新。Broacast Variable 是一组只读的变量，它在作业初始化时由 Spark Driver 生成并广播到每个 Executor 节点，随后该节点的 Task 可以复用同一份变量。</p>
+<p>Broadcast Variable 的设计初衷是为了避免大文件，比如 NLP 常用的分词词典，随序列化后的作业对象一起分发，造成重复分发的网络资源浪费和启动时间延长。这类文件的更新频率是相对低的，扮演的角色类似于只读缓存，通过设置 TTL 来定时更新，缓存过期之后 Executor 节点会重新向 Driver 请求最新的变量。</p>
+<p>Broadcast Variable 并不是从设计理念上就支持低延迟的作业状态更新，因此用户想出了不少 Hack 的方法，其中最为常见的方式是：一方面在 Driver 实现后台线程不断更新 Broadcast Variavle，另一方面在作业运行时通过显式地删除 Broadcast Variable 来迫使 Executor 重新从 Driver 拉取最新的 Broadcast Variable。这个过程会发生在两个 micro batch 计算之间，以确保每个 micro batch 计算过程中状态是一致的。</p>
+<p>比起用户在算子内访问外部系统实现更新变量，这种方式的优点在于一致性更有保证。因为 Broadcast Variable 是统一由 Driver 更新并推到 Executor 的，这就保证不同节点的更新时间是一致的。然而相对地，缺点是会给 Driver 带来比较大的负担，因为需要不断分发全量的 Broadcast Variable (试想下一个巨大的 Map，每次只会更新少数 Entry，却要整个 Map 重新分发)。在 Spark 2.0 版本以后，Broadcast Variable 的分发已经从 Driver 单点改为基于 BitTorrent 的 P2P 分发，这一定程度上缓解了随着集群规模提升 Driver 分发变量的压力，但我个人对这种方式能支持到多大规模的部署还是持怀疑态度。另外一点是重新分发 Broadcast Variable 需要阻塞作业进行，这也会使作业的吞吐量和延迟受到比较大的影响。</p>
+<h2 id="Flink-Broadcast-State-amp-Stream"><a href="#Flink-Broadcast-State-amp-Stream" class="headerlink" title="Flink Broadcast State &amp; Stream"></a>Flink Broadcast State &amp; Stream</h2><p>Broadcast Stream 是 Flink 1.5.0 发布的新特性，基于控制流的方式实现了实时作业的状态更新。Broadcast Stream 的创建方式与普通数据流相同，例如从 Kafka Topic 读取，特别之处在于它承载的是控制事件流，会以广播形式将数据发给下游算子的每个实例。Broadcast Stream 需要在作业拓扑的某个节点和普通数据流 (Main Stream) join 到一起。</p>
+<p><img src="/img/control-stream.png" alt="Control Stream Topo"></p>
+<p>该节点的算子需要同时处理普通数据流和控制流：一方面它需要读取控制流以更新本地状态 (Broadcast State)，另外一方面需要读取 Main Stream 并根据 Broadcast State 来进行数据转换。由于每个算子实例读到的控制流都是相同的，它们生成的 Broadcast State 也是相同的，从而达到通过控制消息来更新所有算子实例的效果。</p>
+<p>目前 Flink 的 Broadcast Stream 从效果上实现了控制流的作业状态更新，不过在编程模型上还不够自然。最为关键的一点是 Broadcast Stream 的使用方式与普通的 DataStream 差别比较大，即需要和 DataStream 连接成为 BroadcastConnectedStream 后，再通过特殊的 BroadcastProcessFunction 来处理，而 BroadcastProcessFunction 目前只支持 类似于 RichCoFlatMap 效果的操作。RichCoFlatMap 可以间接实现对 Main Stream 的 Map 转换（返回一只有一个元素的集合）和 Filter 转换（返回空集合），但无法实现 Window 类计算。这意味着如果用户希望改变 Window 算子的状态，那么需要将状态管理提前到上游的 BroadcastProcessFunction，然后再通过 BroadcastProcessFunction 的输出来将影响下游 Window 算子的行为。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>实时作业运行时动态加载变量可以令大大提升实时作业的灵活性和适应更多应用场景，目前无论是 Flink 还是 Spark Streaming 对动态加载变量的支持都不是特别完美。Spark Streaming 受限于 Micro Batch 的计算模型（虽然现在 2.3 版本引入 Continuous Streaming 来支持流式处理，但离成熟还需要一定时间），将作业变量作为一致性和实时性要求相对低的节点本地缓存，并不支持低延迟地、低成本地更新作业变量。Flink 将变量更新视为特殊的控制事件流，符合 Even Driven 的流式计算框架定位，目前在业界已有比较成熟的应用。不过美中不足的是编程模型的统一性上有提高空间：控制流目前只能用于和数据流的 join，这意味着下游节点无法继续访问控制流，从而降低了编程模型的灵活性。个人认为最好的情况是大部分的算子都可以被拓展为具有 BroadcastOperator，就像 RichFunction 一样，它们可以接收一个多个控制流，并维护对应的 BroadcastState，这样控制流的接入成本将显著下降。</p>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>1.<a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-17+Side+Inputs+for+DataStream+API" target="_blank" rel="external">FLIP-17 Side Inputs for DataStream API</a><br>2.<a href="https://data-artisans.com/blog/bettercloud-dynamic-alerting-apache-flink" target="_blank" rel="external">Dynamically Configured Stream Processing: How BetterCloud Built an Alerting System with Apache Flink®</a><br>3.<a href="https://mux.com/blog/using-control-streams-to-manage-apache-flink-applications/" target="_blank" rel="external">Using Control Streams to Manage Apache Flink Applications</a><br>4.<a href="https://stackoverflow.com/questions/33372264/how-can-i-update-a-broadcast-variable-in-spark-streaming" target="_blank" rel="external">StackOverFlow - ow can I update a broadcast variable in spark streaming?</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/08/19/Flink-Spark-如何实现动态更新作业变量/" target="_blank" rel="external">时间与精神的小屋 - Flink/Spark 如何实现动态更新作业变量</a></em></font>
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/07/07/Flink-内存管理机制/" rel="next" title="Flink 内存管理机制">
+                <i class="fa fa-chevron-left"></i> Flink 内存管理机制
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">42</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">37</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Spark-Streaming-Broadcast-Variable"><span class="nav-number">1.</span> <span class="nav-text">Spark Streaming Broadcast Variable</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Flink-Broadcast-State-amp-Stream"><span class="nav-number">2.</span> <span class="nav-text">Flink Broadcast State & Stream</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文献"><span class="nav-number">4.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2018/08/19/Flink-Spark-如何实现动态更新作业变量/';
+          this.page.identifier = '2018/08/19/Flink-Spark-如何实现动态更新作业变量/';
+          this.page.title = 'Flink/Spark 如何实现动态更新作业配置';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
