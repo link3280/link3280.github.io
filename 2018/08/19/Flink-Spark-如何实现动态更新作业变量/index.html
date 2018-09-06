@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Spark,Flink," />
+  <meta name="keywords" content="Flink,Spark," />
 
 
 
@@ -103,7 +103,7 @@
 轮询拉取方式，即作业算子定时检测在外部系统的配置是否有变更，若有则同步配置。
 控制流方式，即作业除了用">
 <meta property="og:image" content="https://link3280.github.io/img/control-stream.png">
-<meta property="og:updated_time" content="2018-08-19T12:59:53.803Z">
+<meta property="og:updated_time" content="2018-09-06T12:11:17.030Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink/Spark 如何实现动态更新作业配置">
 <meta name="twitter:description" content="由于实时场景对可用性十分敏感，实时作业通常需要避免频繁重启，因此动态加载作业配置（变量）是实时计算里十分常见的需求，比如通常复杂事件处理 (CEP) 的规则或者在线机器学习的模型。尽管常见，实现起来却并没有那么简单，其中最难点在于如何确保节点状态在变更期间的一致性。目前来说一般有两种实现方式：
@@ -396,8 +396,8 @@
 <h2 id="Flink-Broadcast-State-amp-Stream"><a href="#Flink-Broadcast-State-amp-Stream" class="headerlink" title="Flink Broadcast State &amp; Stream"></a>Flink Broadcast State &amp; Stream</h2><p>Broadcast Stream 是 Flink 1.5.0 发布的新特性，基于控制流的方式实现了实时作业的状态更新。Broadcast Stream 的创建方式与普通数据流相同，例如从 Kafka Topic 读取，特别之处在于它承载的是控制事件流，会以广播形式将数据发给下游算子的每个实例。Broadcast Stream 需要在作业拓扑的某个节点和普通数据流 (Main Stream) join 到一起。</p>
 <p><img src="/img/control-stream.png" alt="Control Stream Topo"></p>
 <p>该节点的算子需要同时处理普通数据流和控制流：一方面它需要读取控制流以更新本地状态 (Broadcast State)，另外一方面需要读取 Main Stream 并根据 Broadcast State 来进行数据转换。由于每个算子实例读到的控制流都是相同的，它们生成的 Broadcast State 也是相同的，从而达到通过控制消息来更新所有算子实例的效果。</p>
-<p>目前 Flink 的 Broadcast Stream 从效果上实现了控制流的作业状态更新，不过在编程模型上还不够自然。最为关键的一点是 Broadcast Stream 的使用方式与普通的 DataStream 差别比较大，即需要和 DataStream 连接成为 BroadcastConnectedStream 后，再通过特殊的 BroadcastProcessFunction 来处理，而 BroadcastProcessFunction 目前只支持 类似于 RichCoFlatMap 效果的操作。RichCoFlatMap 可以间接实现对 Main Stream 的 Map 转换（返回一只有一个元素的集合）和 Filter 转换（返回空集合），但无法实现 Window 类计算。这意味着如果用户希望改变 Window 算子的状态，那么需要将状态管理提前到上游的 BroadcastProcessFunction，然后再通过 BroadcastProcessFunction 的输出来将影响下游 Window 算子的行为。</p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>实时作业运行时动态加载变量可以令大大提升实时作业的灵活性和适应更多应用场景，目前无论是 Flink 还是 Spark Streaming 对动态加载变量的支持都不是特别完美。Spark Streaming 受限于 Micro Batch 的计算模型（虽然现在 2.3 版本引入 Continuous Streaming 来支持流式处理，但离成熟还需要一定时间），将作业变量作为一致性和实时性要求相对低的节点本地缓存，并不支持低延迟地、低成本地更新作业变量。Flink 将变量更新视为特殊的控制事件流，符合 Even Driven 的流式计算框架定位，目前在业界已有比较成熟的应用。不过美中不足的是编程模型的统一性上有提高空间：控制流目前只能用于和数据流的 join，这意味着下游节点无法继续访问控制流，从而降低了编程模型的灵活性。个人认为最好的情况是大部分的算子都可以被拓展为具有 BroadcastOperator，就像 RichFunction 一样，它们可以接收一个多个控制流，并维护对应的 BroadcastState，这样控制流的接入成本将显著下降。</p>
+<p>目前 Flink 的 Broadcast Stream 从效果上实现了控制流的作业状态更新，不过在编程模型上有点和一般直觉不同。原因主要在于 Flink 对控制流的处理方式和普通数据流保持了一致，最为明显的一点是控制流除了改变本地 State 还可以产生 output，这很大程度上影响了 Broadcast Stream 的使用方式。Broadcast Stream 的使用方式与普通的 DataStream 差别比较大，即需要和 DataStream 连接成为 BroadcastConnectedStream 后，再通过特殊的 BroadcastProcessFunction 来处理，而 BroadcastProcessFunction 目前只支持 类似于 RichCoFlatMap 效果的操作。RichCoFlatMap 可以间接实现对 Main Stream 的 Map 转换（返回一只有一个元素的集合）和 Filter 转换（返回空集合），但无法实现 Window 类计算。这意味着如果用户希望改变 Window 算子的状态，那么需要将状态管理提前到上游的 BroadcastProcessFunction，然后再通过 BroadcastProcessFunction 的输出来将影响下游 Window 算子的行为。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>实时作业运行时动态加载变量可以令大大提升实时作业的灵活性和适应更多应用场景，目前无论是 Flink 还是 Spark Streaming 对动态加载变量的支持都不是特别完美。Spark Streaming 受限于 Micro Batch 的计算模型（虽然现在 2.3 版本引入 Continuous Streaming 来支持流式处理，但离成熟还需要一定时间），将作业变量作为一致性和实时性要求相对低的节点本地缓存，并不支持低延迟地、低成本地更新作业变量。Flink 将变量更新视为特殊的控制事件流，符合 Even Driven 的流式计算框架定位，目前在业界已有比较成熟的应用。不过美中不足的是编程模型的易用性上有提高空间：控制流目前只能用于和数据流的 join，这意味着下游节点无法继续访问控制流或者需要把控制流数据插入到数据流中（这种方式并不优雅），从而降低了编程模型的灵活性。个人认为最好的情况是大部分的算子都可以被拓展为具有 BroadcastOperator，就像 RichFunction 一样，它们可以接收一个数据流和一个至多个控制流，并维护对应的 BroadcastState，这样控制流的接入成本将显著下降。</p>
 <h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>1.<a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-17+Side+Inputs+for+DataStream+API" target="_blank" rel="external">FLIP-17 Side Inputs for DataStream API</a><br>2.<a href="https://data-artisans.com/blog/bettercloud-dynamic-alerting-apache-flink" target="_blank" rel="external">Dynamically Configured Stream Processing: How BetterCloud Built an Alerting System with Apache Flink®</a><br>3.<a href="https://mux.com/blog/using-control-streams-to-manage-apache-flink-applications/" target="_blank" rel="external">Using Control Streams to Manage Apache Flink Applications</a><br>4.<a href="https://stackoverflow.com/questions/33372264/how-can-i-update-a-broadcast-variable-in-spark-streaming" target="_blank" rel="external">StackOverFlow - ow can I update a broadcast variable in spark streaming?</a></p>
 <font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/08/19/Flink-Spark-如何实现动态更新作业变量/" target="_blank" rel="external">时间与精神的小屋 - Flink/Spark 如何实现动态更新作业变量</a></em></font>
       
@@ -428,9 +428,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Spark/" rel="tag"># Spark</a>
-          
             <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
           
         </div>
       
