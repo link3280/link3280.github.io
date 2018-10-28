@@ -273,6 +273,157 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/05/14/浅谈索引的本质/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2017/05/14/浅谈索引的本质/" itemprop="url">浅谈索引的本质</a></h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-05-14T15:24:05+08:00">
+                2017-05-14
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/计算机基础/" itemprop="url" rel="index">
+                    <span itemprop="name">计算机基础</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/05/14/浅谈索引的本质/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/05/14/浅谈索引的本质/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>提起索引大家通常想到的就是MySQL等关系型数据库管理系统的索引，但索引的定义远远不止这么窄：HBase TreeMap形式的聚集索引，ES等搜索引擎的倒排索引，甚至数组的下标都可以被称为index。</p>
+<p>那么索引该怎么定义呢？我从各个权威网站并没有找到很好的描述：<a href="https://en.wikipedia.org/wiki/Index">Wikipedia</a>并没有为computer science的index做一个概述，而是细分成lookup table、database index、search engine index等进行说明；<a href="http://baike.baidu.com/link?url=rOh-1Ml9ONFCfCEexk_2pISh-q1bzZ2kMeWHtkxbSywWBm62wyqZGLJWHxAonhkwBXtfOvHLAOnG85HD8LBBey-xtFOi7fk2TYUprsmtpJi">百度百科</a>只针对数据库领域进行说明：在关系数据库中，索引是一种单独的、物理的对数据库表中一列或多列的值进行排序的一种存储结构，它是某个表中一列或若干列值的集合和相应的指向表中物理标识这些值的数据页的逻辑指针清单；较为满意的一个答案是<a href="http://www.thefreedictionary.com/index">THE FRRE DICTIONARY</a>上：Something that serves to guide, point out, or otherwise facilitate reference（用于引导、指出或其他帮助引用的事物），不过不够详细具体。</p>
+<p><strong>以我的理解，索引的本质是基于对象的一个或多个属性按照某种数据结构（树、哈希、有序链表等）进行组织，以加速查找的一种技术。其中有两个关键点，一是基于一个或多个属性，二是数据结构。</strong></p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2017/05/14/浅谈索引的本质/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/05/06/实时计算与离线计算的区别和联系/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1612,155 +1763,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/02/05/记一次排查Spark thrift server OOM错误的经历/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="Paul Lin">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/img/me.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="时间与精神的小屋">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h2 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/02/05/记一次排查Spark thrift server OOM错误的经历/" itemprop="url">记一次排查Spark thrift server OOM错误的经历</a></h2>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-02-05T22:17:32+08:00">
-                2017-02-05
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Spark/" itemprop="url" rel="index">
-                    <span itemprop="name">Spark</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2017/02/05/记一次排查Spark thrift server OOM错误的经历/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2017/02/05/记一次排查Spark thrift server OOM错误的经历/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>平时spark thrift server多用来做探索性的查询，比如验证下数据格式或count一下某天数据数量，都是轻量级的查询，查询效率也比较满意。没想到最近要真正用起来的时候，却遭遇各种瓶颈。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2017/02/05/记一次排查Spark thrift server OOM错误的经历/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1810,7 +1812,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">44</span>
+                <span class="site-state-item-count">45</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
