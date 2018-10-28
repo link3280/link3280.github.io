@@ -97,7 +97,7 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算">
 <meta property="og:image" content="https://link3280.github.io/img/watermark-in-paralle-stream.png">
-<meta property="og:updated_time" content="2018-10-28T14:37:42.501Z">
+<meta property="og:updated_time" content="2018-10-28T15:02:07.371Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink Event Time 倾斜">
 <meta name="twitter:description" content="数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算">
@@ -371,7 +371,7 @@
       
 
       
-        <p>数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算系统里面，数据倾斜有了新的表现形式，即 even time 倾斜（event time skew），不同数据流的 event time 存在差异。</p>
+        <p>数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算系统里面，数据倾斜有了新的表现形式，即 event time 倾斜（event time skew），不同数据流的 event time 存在差异。</p>
 <a id="more"></a>
 <h2 id="并行数据流中的-watermark"><a href="#并行数据流中的-watermark" class="headerlink" title="并行数据流中的 watermark"></a>并行数据流中的 watermark</h2><p>首先来简单回顾下 Flink 的 watermark 机制，如果读者已经比较熟悉可以跳过这一节。在存在多并行度 Source 的 Flink 作业中，每个 Soure 实例（准确来说应该是 watermark assigner）会独立产生 watermark。watermark 会以广播的形式传播到下游，下游算子的每个实例收到后更新自己的 low watermark，并将自己的 low watermark 作为新的 watermark 广播给下游。如果一个算子实例有多个输入数据流，它的 low watermark 会以最小的一个为准。</p>
 <center><img src="/img/watermark-in-paralle-stream.png" alt="并行视图的watermak" title="并行视图的watermak"></center>

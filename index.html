@@ -373,7 +373,7 @@
 
       
         
-          <p>数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算系统里面，数据倾斜有了新的表现形式，即 even time 倾斜（event time skew），不同数据流的 event time 存在差异。</p>
+          <p>数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算系统里面，数据倾斜有了新的表现形式，即 event time 倾斜（event time skew），不同数据流的 event time 存在差异。</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2018/10/28/Flink-Event-Time-倾斜/#more" rel="contents">
