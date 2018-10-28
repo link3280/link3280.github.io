@@ -97,7 +97,7 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算">
 <meta property="og:image" content="https://link3280.github.io/img/watermark-in-paralle-stream.png">
-<meta property="og:updated_time" content="2018-10-28T14:33:34.759Z">
+<meta property="og:updated_time" content="2018-10-28T14:37:42.501Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink Event Time 倾斜">
 <meta name="twitter:description" content="数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算">
@@ -378,7 +378,7 @@
 
 <p>如图 1 所示，算子实例右上角的黄色框数字表示算子实例的 low watermark，数据管道末端的黄色框数字表示该数据管道的 low watermark，数据管道中的白色框表示 (id|timestamp) 形式的数据元素，数据管道中的虚线段表示 watermark 元素。在 map 算子后面接着一个 keyBy 操作，因此下游的 window 算子的实例会接受上游多个输入数据流。</p>
 <p>可以看到 Source(1) 的 watermark 提升得比较快已经达到 33（到达 window 算子的为29），但受限于 Source(2) 的 watermark 还在 17（到达 window 算子的为14），最下游 window 实例的 low watermark 均为 14。顺带一提，window 算子实例的 low watermark 总是相同的，因为如果是 keyed window 每个实例的 low watermark 均取上游算子实例 low watermark 最小的一个；如果是 all window 则该算子只有一个实例。</p>
-<h2 id="Even-Time-倾斜"><a href="#Even-Time-倾斜" class="headerlink" title="Even Time 倾斜"></a>Even Time 倾斜</h2><p>在读取历史数据时，比如从某个 Kafka topic 的最早 offset 开始读，各个 partition 的event time 很可能是不同的。如果有一个 partition 的 event time 明显比其他 partition 慢，那么下游所以算子的 low watermark 都会被其拖慢，而其他 partition 的新数据又会一直读入，这对于部分依赖 event time 进行计算的算子来说会造成不必要的数据缓存。</p>
+<h2 id="Event-Time-倾斜"><a href="#Event-Time-倾斜" class="headerlink" title="Event Time 倾斜"></a>Event Time 倾斜</h2><p>在读取历史数据时，比如从某个 Kafka topic 的最早 offset 开始读，各个 partition 的event time 很可能是不同的。如果有一个 partition 的 event time 明显比其他 partition 慢，那么下游所以算子的 low watermark 都会被其拖慢，而其他 partition 的新数据又会一直读入，这对于部分依赖 event time 进行计算的算子来说会造成不必要的数据缓存。</p>
 <p>比如对于使用了低级 API ProcessingFunction 的 event time window 算子，它的触发条件是 low watermark 达到某个值，在此之前它会缓存该窗口内的所有数据。在 event time 倾斜的情况下，它一直得不到触发，但又要一直摄入新数据导致 State 不断增长。这会给内存和 checkpoint 机制带来很大的压力，使得作业的可能最终因 OOM 崩溃并且重启恢复需要的时间也异常地长。</p>
 <p>比起传统的数据倾斜，event time 数据倾斜更加难以预料和处理。从原因来说，数据倾斜是逻辑上的分布不均匀，常常是由于业务的流量分布造成的，比如微博大 V 用户和普通用户的访问流量肯定不在一个等级，这种分布是比较容易提前预计的和稳定的；而 event time 数据倾斜通常和数据的物理存储相关，更加底层，因此原因也更动态和多样。比如 Kafka topic 扩容时新增的 partiton，从 earliest 消费得到的 event time 可能是更新的。再比如在一个公用的 topic 下，以游戏代号作为 key 写入 partition，如果某个游戏搞活动，流量在一小段时间内增加，那么这段时间这个 partition 的 event time 就比其他 partition 要慢。从处理的办法来说，数据倾斜主要是在业务层，用户可以在计算时再 re-partition 处理，而 event time 倾斜发生在数据摄入阶段，用户的控制权比较少，更多是需要计算框架层面的支持。</p>
 <h2 id="应对方案"><a href="#应对方案" class="headerlink" title="应对方案"></a>应对方案</h2><p>Flink 社区对于 event time 倾斜问题的重要性已经达成共识，在应对方案上也有了基础的思路。最基本的思路就是，既然拉取更多的其他 partition 的数据并不能提升下游的 low watermark，为什么不减缓或者阻塞他们的消费呢？最好的情况下，Source 实例的 watermark 可以像 checkpoint 一样校准。</p>
@@ -593,7 +593,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#并行数据流中的-watermark"><span class="nav-number">1.</span> <span class="nav-text">并行数据流中的 watermark</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Even-Time-倾斜"><span class="nav-number">2.</span> <span class="nav-text">Even Time 倾斜</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#应对方案"><span class="nav-number">3.</span> <span class="nav-text">应对方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文献"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#并行数据流中的-watermark"><span class="nav-number">1.</span> <span class="nav-text">并行数据流中的 watermark</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Event-Time-倾斜"><span class="nav-number">2.</span> <span class="nav-text">Event Time 倾斜</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#应对方案"><span class="nav-number">3.</span> <span class="nav-text">应对方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文献"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
             
 
           </div>
