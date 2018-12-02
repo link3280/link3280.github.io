@@ -90,17 +90,17 @@
 
 
 
-<meta name="description" content="自 feature freezed 以后经过近一个月的努力，Flink 社区在 12 月前的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做">
+<meta name="description" content="自 feature freezed 以后经过近一个月的努力，Flink 社区在十一月的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Flink 1.7 Release 解读">
 <meta property="og:url" content="https://link3280.github.io/2018/12/02/Flink-1-7-Release-解读/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="自 feature freezed 以后经过近一个月的努力，Flink 社区在 12 月前的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做">
+<meta property="og:description" content="自 feature freezed 以后经过近一个月的努力，Flink 社区在十一月的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的">
 <meta property="og:image" content="https://link3280.github.io/img/Flink-1.7-release-announcement-blog-1-768x591.png">
-<meta property="og:updated_time" content="2018-12-02T05:20:15.000Z">
+<meta property="og:updated_time" content="2018-12-02T13:43:47.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 1.7 Release 解读">
-<meta name="twitter:description" content="自 feature freezed 以后经过近一个月的努力，Flink 社区在 12 月前的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做">
+<meta name="twitter:description" content="自 feature freezed 以后经过近一个月的努力，Flink 社区在十一月的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的">
 <meta name="twitter:image" content="https://link3280.github.io/img/Flink-1.7-release-announcement-blog-1-768x591.png">
 
 
@@ -373,9 +373,9 @@
       
         <center><p><img src="/img/Flink-1.7-release-announcement-blog-1-768x591.png" alt="Flink 1.7 Release"></p></center>
 
-<p>自 feature freezed 以后经过近一个月的努力，Flink 社区在 12 月前的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的开发。</p>
+<p>自 feature freezed 以后经过近一个月的努力，Flink 社区在十一月的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的开发。</p>
 <a id="more"></a>
-<p>下文将选取一些笔者认为重要的新特性、improvement 和 bugfix 进行解读，详细的改动请参照 release notes[1]。</p>
+<p>下文将选取一些笔者认为重要的新特性、improvement 和 bugfix 进行解读，详细的改动请参照 release notes<a href="https://issues.apache.org/jira/secure/ReleaseNote.jspa?projectId=12315522&amp;version=12343585" target="_blank" rel="external">1</a>。</p>
 <h2 id="SQL-模块"><a href="#SQL-模块" class="headerlink" title="SQL 模块"></a>SQL 模块</h2><h3 id="CEP-与-SQL-的集成"><a href="#CEP-与-SQL-的集成" class="headerlink" title="CEP 与 SQL 的集成"></a>CEP 与 SQL 的集成</h3><p>CEP (Complex Event Processing) 是 Flink 常见的使用场景，其 DSL 语法与 SQL 类似但仍需要以编程 API 的方式调用。因此在 SQL 里支持 CEP 将大大降低使用门槛，对于用户来说仅需学习一个新的 SQL 函数。在 2016 年年底国际标准组织(IOS)发布了 <a href="https://standards.iso.org/ittf/PubliclyAvailableStandards/c065143_ISO_IEC_TR_19075-5_2016.zip" target="_blank" rel="external">Row Pattern Recognition in SQL [3]</a>，这为在 SQL 中实现 CEP 奠定了基础。 </p>
 <p>Flink CEP 的 SQL 支持是基于 Apache Calcite 的新函数 <code>MATCH_RECOGNIZE</code> 实现的，具体语法见下面的案例。场景是检测某个商品最近一次连续降价的开始时间和结束时间，给定输入为:</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">// 输入</div><div class="line">symbol         rowtime         price    tax</div><div class="line">======  ====================  ======= =======</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:00&apos;   12      1</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:01&apos;   17      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:02&apos;   19      1</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:03&apos;   21      3</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:04&apos;   25      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:05&apos;   18      1</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:06&apos;   15      1</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:07&apos;   14      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:08&apos;   24      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:09&apos;   25      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:10&apos;   19      1</div></pre></td></tr></table></figure>
@@ -453,7 +453,7 @@
 <p>State Evolution 的目的在于封装整个流程，只暴露简单接口给用户。因为步骤 2 根据不同的序列号器/反序列化器不同而不同，所以目前限制了 State Evolution 只对方便灵活改变 Schema 的 Avro 类型的 State 有效，不过之后会拓展到更多的 State 类型。</p>
 <h3 id="Local-Recovery"><a href="#Local-Recovery" class="headerlink" title="Local Recovery"></a>Local Recovery</h3><p>Flink 1.7.0 加入了 State 的 Local Recovery 特性，即每次 checkpoint 时 TaskManager 都会本地保存一份本地的 State，当作业重启恢复时 Flink 调度器会优先考虑将 Task State 的本地性，这样可以减少网络流量提高恢复的效率，对于并行度较高的作业来说是十分重要的。</p>
 <p>值得注意的是在 1.7.0 版本 Flink 的 failover strategy 因为重大的 bug 被暂时移除了<a href="RestartPipelinedRegionStrategy does not restore state">[6]</a>。因此基本所有的 Flink 都是全局恢复模式，一个 task 的失败会导致全部 task 的重新调度，Local Recovery 在这种场景下可以大大减少恢复时长和减缓网络压力。</p>
-<h3 id="修复-Cancel-with-Savepoint-连接过早关闭的问题"><a href="#修复-Cancel-with-Savepoint-连接过早关闭的问题" class="headerlink" title="修复 Cancel with Savepoint 连接过早关闭的问题"></a>修复 Cancel with Savepoint 连接过早关闭的问题</h3><p>这是由于在 per-job cluster 模式下，cancel with savepoint 会导致 cluster 在取消作业后马上关闭，但这是 Flink Client 可能还处在轮询 savepoint 路径的过程中。这会导致 <code>java.net.ConnectException</code>，并且 Client 端无法得到 savepoint 的路径。这也是我们在做 Flink 作业平台时遇到的一个问题，并在内部分支的 1.5.3 版本和 1.6.0 版本用 <code>closeTimeWait</code> 的方式来简单修复。Flink 1.7 的实现会更加优雅: 用 CompletableFuture 确保 REST Server 在处理完所有的 pending 请求后再关闭，以保证 Client 在 Cluster 关闭前可以轮询到 Savepoint 路径。详情可见 [FLINK-10309]<a href="https://issues.apache.org/jira/browse/FLINK-10309" target="_blank" rel="external">8</a></p>
+<h3 id="修复-Cancel-with-Savepoint-连接过早关闭的问题"><a href="#修复-Cancel-with-Savepoint-连接过早关闭的问题" class="headerlink" title="修复 Cancel with Savepoint 连接过早关闭的问题"></a>修复 Cancel with Savepoint 连接过早关闭的问题</h3><p>这是由于在 per-job cluster 模式下，cancel with savepoint 会导致 cluster 在取消作业后马上关闭，但这是 Flink Client 可能还处在轮询 savepoint 路径的过程中。这会导致 <code>java.net.ConnectException</code>，并且 Client 端无法得到 savepoint 的路径。这也是我们在做 Flink 作业平台时遇到的一个问题，并在内部分支的 1.5.3 版本和 1.6.0 版本用 <code>closeTimeWait</code> 的方式来简单修复。Flink 1.7 的实现会更加优雅: 用 CompletableFuture 确保 REST Server 在处理完所有的 pending 请求后再关闭，以保证 Client 在 Cluster 关闭前可以轮询到 Savepoint 路径。详情可见 [FLINK-10309]<a href="https://issues.apache.org/jira/browse/FLINK-10309" target="_blank" rel="external">[8]</a></p>
 <h2 id="Connector-模块"><a href="#Connector-模块" class="headerlink" title="Connector 模块"></a>Connector 模块</h2><h3 id="Exactly-once-S3-StreamingFileSink"><a href="#Exactly-once-S3-StreamingFileSink" class="headerlink" title="Exactly-once S3 StreamingFileSink"></a>Exactly-once S3 StreamingFileSink</h3><p>自 Flink 1.6 引入的 StreamingFileSink 现在新增了 S3 的 exactly-once 支持。此前用户需要使用 BucketingFileSink 来写 S3，而 BucketingFileSink 并不支持 Flink FileSystem，因此许多 Flink 层面的支持都没有办法使用，而现在用户可以安全地迁移到 StreamingFileSink 上。</p>
 <h3 id="Kafka-2-0-Connector"><a href="#Kafka-2-0-Connector" class="headerlink" title="Kafka 2.0 Connector"></a>Kafka 2.0 Connector</h3><p>Flink 1.7 将抛弃掉针对每个版本 Kafka 定制 connector 的模式，转而提供新的 Kafka connector (modern Kafka connector) 来支持 1.0+ 版本的 Kafka <a href="https://blog.csdn.net/yanghua_kobe/article/details/83210897" target="_blank" rel="external">[7]</a>。新 connector 由腾讯的工程师团队贡献，对不同版本的 Kafka Client 实现了一个统一的 Facade，可以自动适配不同版本的 Kafka broker。不过由于兼容性问题，1.0 以下版本的 Kafka client 并不在支持列表内，而对应的 connector 也将一直保留。</p>
 <h2 id="Scala-2-12-支持"><a href="#Scala-2-12-支持" class="headerlink" title="Scala 2.12 支持"></a>Scala 2.12 支持</h2><p>Flink 1.7 全面支持了 Scala 2.12，但由于 Scala 2.12 与 Scala 2.11 的语法有不兼容，所以部分 Public API 的一致性会被破坏，迁移到新版本的 Scala 用户要注意。</p>
@@ -468,7 +468,7 @@
 <li><a href="https://issues.apache.org/jira/browse/FLINK-10309" target="_blank" rel="external">FLINK-10309 Cancel with savepoint fails with java.net.ConnectException when using the per job-mode
 </a></li>
 </ol>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/12/02/Flink-1.7-Release-解读/" target="_blank" rel="external">时间与精神的小屋 - Flink 1.7 Release 解读</a></em></font>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/12/02/Flink-1-7-Release-解读/" target="_blank" rel="external">时间与精神的小屋 - Flink 1.7 Release 解读</a></em></font>
       
     </div>
 
