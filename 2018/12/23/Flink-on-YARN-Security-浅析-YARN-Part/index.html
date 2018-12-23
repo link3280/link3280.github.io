@@ -1,0 +1,803 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="YARN,Flink," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="自我们将作业迁移到 Kerberized 的 YARN 新集群后，运行中的作业有一定几率出现出现认证失败，其中失败有 AMRMToken 过期导致 AM 无法与 RM 通信而被 kill 掉和 AM 申请的新 container 启动时报缺少 credential 两种表现。出现了这个问题后只能重启作业解决，这严重影响了平台的稳定性，因此笔者前后投入了接近两周的时间去研究这个问题，最后定位到问题在">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink on YARN Security 浅析 (YARN Part)">
+<meta property="og:url" content="https://link3280.github.io/2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="自我们将作业迁移到 Kerberized 的 YARN 新集群后，运行中的作业有一定几率出现出现认证失败，其中失败有 AMRMToken 过期导致 AM 无法与 RM 通信而被 kill 掉和 AM 申请的新 container 启动时报缺少 credential 两种表现。出现了这个问题后只能重启作业解决，这严重影响了平台的稳定性，因此笔者前后投入了接近两周的时间去研究这个问题，最后定位到问题在">
+<meta property="og:image" content="https://link3280.github.io/img/hadoop-authentication.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink-job-submission.png">
+<meta property="og:updated_time" content="2018-12-23T02:40:53.660Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink on YARN Security 浅析 (YARN Part)">
+<meta name="twitter:description" content="自我们将作业迁移到 Kerberized 的 YARN 新集群后，运行中的作业有一定几率出现出现认证失败，其中失败有 AMRMToken 过期导致 AM 无法与 RM 通信而被 kill 掉和 AM 申请的新 container 启动时报缺少 credential 两种表现。出现了这个问题后只能重启作业解决，这严重影响了平台的稳定性，因此笔者前后投入了接近两周的时间去研究这个问题，最后定位到问题在">
+<meta name="twitter:image" content="https://link3280.github.io/img/hadoop-authentication.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/"/>
+
+
+
+
+
+  <title>Flink on YARN Security 浅析 (YARN Part) | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink on YARN Security 浅析 (YARN Part)</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-12-23T10:32:43+08:00">
+                2018-12-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>自我们将作业迁移到 Kerberized 的 YARN 新集群后，运行中的作业有一定几率出现出现认证失败，其中失败有 AMRMToken 过期导致 AM 无法与 RM 通信而被 kill 掉和 AM 申请的新 container 启动时报缺少 credential 两种表现。出现了这个问题后只能重启作业解决，这严重影响了平台的稳定性，因此笔者前后投入了接近两周的时间去研究这个问题，最后定位到问题在于 RM 刷新 viewfs token 时只会刷新第一个挂载的 FS 的 token。另一方面，笔者对于 YARN Security 和 Flink 与 YARN 在安全机制上的集成已经有了一定的积累，所以先记录并分享出来，以便后续有需要时检索（retrive）和与其他同学讨论交流。</p>
+<a id="more"></a>
+<p>下文将先解释 Hadoop delegation token 的作用和种类，然后介绍 YARN Application 是如何应用这些 token 的，最后再解析 Flink 如何使用 YARN 的 API 来完成安全认证。值得注意的是，YARN 框架的系统级认证和 Application 的用户级认证是有所不同的。前者是 YARN 如何代表用户完成系统级的工作（下载所需资源、以用户身份启动进程等），更侧重于 YARN，后者是用户应用自身的安全操作（以什么身份访问 Hive、Hbase 等)，更侧重于 Application（Flink）。本文将主要关注前者，而关于 Flink on YARN 应用安全机制的内容将留到下一篇博客。</p>
+<h2 id="Hadoop-Delegation-Token"><a href="#Hadoop-Delegation-Token" class="headerlink" title="Hadoop Delegation Token"></a>Hadoop Delegation Token</h2><p>关于 Hadoop delegation token 的背景和实现，Cloudera 有一篇很棒博客<a href="https://blog.cloudera.com/blog/2017/12/hadoop-delegation-tokens-explained/" target="_blank" rel="external">[1]</a>，这里简单总结下。</p>
+<p>Delegatin token 是 Hadoop 生态圈广泛使用的一种认证机制，包括 HDFS、YARN、HBase 等都支持 delegation token。Delegation token 机制基于 Kerberos，类似于 Kerberos TGT （Ticket Granting Ticket）。区别在于 TGT 的 renewal 需要请求 KDC 完成，是个三方协议，而 delegation token 的 renewal 只涉及到用户和服务，是个两方协议，这样的好处是避免了集群上所有机器初始化作业或后续 renew TGT 对 KDC 造成的巨大请求量。另外由于 delegation token 是服务级别并且由相应的服务管理，delegation token 的泄漏只会造成对应服务在 token 有效期（3-7天）内的不安全，相比分发 keytab 或者 TGT 到机器上更加安全。</p>
+<center><p><img src="/img/hadoop-authentication.png" alt="Hadoop 安全认证" title="Hadoop 安全认证"></p></center>
+
+<p>Delegation token 的工作方式是（见图一）: 用户先通过 Kerberos 认证并向需要访问的服务（比如 NameNode、ResourceManager）申请 delegation token，在提交作业时将这些 token 一并附上，然后作业被分发到集群机器上后自动通过附带的 token 来认证。</p>
+<p>在 Hadoop 内部 delegation token 有很多种，HDFS 使用的 token 主要是 HDFS delegation token，YARN 使用的 token 可参见董西成的一篇博客<a href="http://dongxicheng.org/mapreduce-nextgen/hadoop-yarn-security/" target="_blank" rel="external">[2]</a>（版本是较老的 Hadoop 2.0 ，但 2.x 系列变动不大）。下文会主要围绕开发 YARN application 涉及到的最基础的两个 token，即 HDFS delegation token 和 AMRMToken 展开。</p>
+<h2 id="YARN-Application-的认证方式"><a href="#YARN-Application-的认证方式" class="headerlink" title="YARN Application 的认证方式"></a>YARN Application 的认证方式</h2><p>YARN Security 在官网<a href="https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html" target="_blank" rel="external">[3]</a>有详细的描述，这里结合我们的应用场景简单总结下。</p>
+<h3 id="Application-首次运行的认证"><a href="#Application-首次运行的认证" class="headerlink" title="Application 首次运行的认证"></a>Application 首次运行的认证</h3><p>在提交作业时，YARN client 需要获取作业运行时用到的所有 delegation token 并设置到 ApplicationSubmissionContext 里面。其中的 token 可以分为两类，一是系统 token，包括 HDFS delegation token 和 AMRMToken，二是用户 token，包括访问 HBase 或其他服务的 token。两者的区别在于系统 token 是 YARN 内部使用并负责管理的，而用户 token 则是可选的。</p>
+<p>HDFS delegation token 是 NameNode 赋予的访问 HDFS 的凭证。YARN Client 提交作业前需要先向 NameNode 申请 HDFS delegation token，将作业所需资源上传到 HDFS，然后将 token 设置到 ApplicationSubmissionContext 里。对于 YARN 来说 HDFS delegation token 主要用在两个地方: log aggregation 和 container localization。log aggregation 是指收集用户作业日志上传到 HDFS；container localization 是指在 container 启动前将用户指定的资源从 HDFS 上下载到本地。两者都发生在 container 启动前，但 log aggregation 的失败不会影响 container 的启动，而 localization 则是必须的。</p>
+<p>AMRMToken 是 ApplicationMaster 与 ResourceManager 通信的凭证。YARN Client 提交作业后会收到 ResourceManager 生成的 AMRMToken，这个 token 会被设置到 ApplicationSubmissionContext 里面传递给 AM 用于后续的通信。此后每次 AM 和 RM 的心跳或者其他通信，AM 都要附上 AMRMToken。</p>
+<h3 id="Application-后续运行的凭证刷新"><a href="#Application-后续运行的凭证刷新" class="headerlink" title="Application 后续运行的凭证刷新"></a>Application 后续运行的凭证刷新</h3><p>虽然首次运行没有问题，但随着作业运行时间变长 token 会失效，因此需要相应的 token 刷新机制来保证作业认证凭证的有效性。HDFS delegation token 和 AMRMToken 均属于系统 token，因此都由 YARN 来刷新。</p>
+<p>对于 HDFS delegation token，YARN 在 [YARN-2704]<a href="http://dongxicheng.org/mapreduce-nextgen/hadoop-yarn-security/" target="_blank" rel="external">[2]</a> 引入了 proxy-user 的功能，即 YARN RM 可以代替用户刷新 HDFS delegation token。这里的刷新有两种方式，一是 renew，即在 HDFS delegation token 失效前向 RM 续订（默认 1 天），延长 token 的有效期；二是当 token 达到最大生命周期（默认 7 天）后不能再被续订，此时需要申请一个新的 token 来代替旧 token。</p>
+<p>对于 AMRMToken，RM 会每天刷新一次，刷新的方式是更新用于生成 AMRMToken 的 master key。在准备启用新 master key 的一个窗口内（默认 15 分钟），当 RM 发现 AM 心跳使用的是旧 master key，就会返回新的 master key 给 AM 通知它更新。过了这个更新窗口，AM 再使用旧 master key 生成的 token 通信，就会得到 Invalid Token 的报错。</p>
+<h2 id="Flink-on-YARN-作业提交时认证"><a href="#Flink-on-YARN-作业提交时认证" class="headerlink" title="Flink on YARN 作业提交时认证"></a>Flink on YARN 作业提交时认证</h2><center><p><img src="/img/flink-job-submission.png" alt="Flink on YARN 作业提交流程" title="Flink on YARN 作业提交流程"></p></center>
+
+<p>Flink on YARN 的 Application 提交流程如下<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.7/ops/deployment/yarn_setup.html" target="_blank" rel="external">[4]</a>:</p>
+<ol>
+<li>Flink client（同时也是 YARN client）会先通过 Kerberos 认证，向 Namenode 申请 HDFS delegation token 并上传作业依赖到 HDFS。  </li>
+<li>Flink client 将相应的资源和 token 设置到 ApplicationSubmissionContext 里面，提交 Application。</li>
+<li>YARN RM 收到提交作业请求后记录下 Application 对应的 token ，并分配一个 container 启动 ApplicationMaster，其中包括了 Flink JobManager。  </li>
+<li>JobManager 启动后会将自己的 HDFS delegation token 和 TaskManager 启动的资源设置到 ContainerLaunchContext 里面，然后提交给 YARN RM。RM 收到请求后分配 container token 给 AM，AM 再凭借这个 token 向 NodeManager 要求并启动 container。</li>
+</ol>
+<p>其中每个 container （包括 AM container 和一般 container）启动前 RM 会将这个 Application 的 token 发送给 NodeManager，因此 NodeManager 能以用户的身份完成 container 启动的前置工作以及最终启动 container。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>YARN Security 的设计思想在于用户在 Client 端先通过 Kerberos 认证获取基本服务(YARN、HDFS)的 delegation token，并作为 Application Submission Context 的凭证提交给 RM。如果 Application 可以成功运行则证明了用户凭证的有效性，token 后续的刷新和重新获取都由 RM 来负责。不过新 token 仅限 YARN 内部使用，用户应用本身的 token 失效问题仍需要用户自己处理。</p>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>1.<a href="https://blog.cloudera.com/blog/2017/12/hadoop-delegation-tokens-explained/" target="_blank" rel="external">Hadoop Delegation Tokens Explained</a><br>2.<a href="http://dongxicheng.org/mapreduce-nextgen/hadoop-yarn-security/" target="_blank" rel="external">Hadoop 2.0（YARN）中的安全机制概述</a><br>3.<a href="https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html" target="_blank" rel="external">Apache Hadoop 官方文档: YARN Security</a><br>4.<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.7/ops/deployment/yarn_setup.html" target="_blank" rel="external">Apache Flink 官方文档: on YARN 模式</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/" target="_blank" rel="external">时间与精神的小屋 - Flink on YARN Security 浅析 (YARN Part)</a></em></font>
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/YARN/" rel="tag"># YARN</a>
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/02/Flink-1-7-Release-解读/" rel="next" title="Flink 1.7 Release 解读">
+                <i class="fa fa-chevron-left"></i> Flink 1.7 Release 解读
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">47</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">37</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Hadoop-Delegation-Token"><span class="nav-number">1.</span> <span class="nav-text">Hadoop Delegation Token</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-Application-的认证方式"><span class="nav-number">2.</span> <span class="nav-text">YARN Application 的认证方式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Application-首次运行的认证"><span class="nav-number">2.1.</span> <span class="nav-text">Application 首次运行的认证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Application-后续运行的凭证刷新"><span class="nav-number">2.2.</span> <span class="nav-text">Application 后续运行的凭证刷新</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Flink-on-YARN-作业提交时认证"><span class="nav-number">3.</span> <span class="nav-text">Flink on YARN 作业提交时认证</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文献"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2018</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/';
+          this.page.identifier = '2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/';
+          this.page.title = 'Flink on YARN Security 浅析 (YARN Part)';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
