@@ -92,14 +92,14 @@
 
 <meta name="description" content="随着近来越来越多的业务迁移到 Flink 上，对 Flink 作业的准确性要求也随之进一步提高，其中最为关键的是如何在不同业务场景下保证 exactly-once 的投递语义。虽然不少实时系统（e.g. 实时计算/消息队列）都宣称支持 exactly-once，exactly-once 投递似乎是一个已被解决的问题，但是其实它们更多是针对内部模块之间的信息投递，比如 Kafka 生产（produc">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Flink Exactly Once 投递实现浅析">
+<meta property="og:title" content="Flink Exactly-Once 投递实现浅析">
 <meta property="og:url" content="https://link3280.github.io/2018/10/16/Flink-Exactly-Once-投递实现浅析/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="随着近来越来越多的业务迁移到 Flink 上，对 Flink 作业的准确性要求也随之进一步提高，其中最为关键的是如何在不同业务场景下保证 exactly-once 的投递语义。虽然不少实时系统（e.g. 实时计算/消息队列）都宣称支持 exactly-once，exactly-once 投递似乎是一个已被解决的问题，但是其实它们更多是针对内部模块之间的信息投递，比如 Kafka 生产（produc">
 <meta property="og:image" content="https://link3280.github.io/img/bucketing-file-sink.png">
-<meta property="og:updated_time" content="2019-02-01T16:08:03.545Z">
+<meta property="og:updated_time" content="2019-02-01T16:10:35.276Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Flink Exactly Once 投递实现浅析">
+<meta name="twitter:title" content="Flink Exactly-Once 投递实现浅析">
 <meta name="twitter:description" content="随着近来越来越多的业务迁移到 Flink 上，对 Flink 作业的准确性要求也随之进一步提高，其中最为关键的是如何在不同业务场景下保证 exactly-once 的投递语义。虽然不少实时系统（e.g. 实时计算/消息队列）都宣称支持 exactly-once，exactly-once 投递似乎是一个已被解决的问题，但是其实它们更多是针对内部模块之间的信息投递，比如 Kafka 生产（produc">
 <meta name="twitter:image" content="https://link3280.github.io/img/bucketing-file-sink.png">
 
@@ -135,7 +135,7 @@
 
 
 
-  <title>Flink Exactly Once 投递实现浅析 | 时间与精神的小屋</title>
+  <title>Flink Exactly-Once 投递实现浅析 | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -291,7 +291,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">Flink Exactly Once 投递实现浅析</h2>
+          <h2 class="post-title" itemprop="name headline">Flink Exactly-Once 投递实现浅析</h2>
         
 
         <div class="post-meta">
@@ -748,7 +748,7 @@
         var disqus_config = function () {
           this.page.url = 'https://link3280.github.io/2018/10/16/Flink-Exactly-Once-投递实现浅析/';
           this.page.identifier = '2018/10/16/Flink-Exactly-Once-投递实现浅析/';
-          this.page.title = 'Flink Exactly Once 投递实现浅析';
+          this.page.title = 'Flink Exactly-Once 投递实现浅析';
         };
         var d = document, s = d.createElement('script');
         s.src = 'https://whitewood.disqus.com/embed.js';
