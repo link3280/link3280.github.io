@@ -107,7 +107,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/network-stack/buffer-builder-consumer.png">
 <meta property="og:image" content="https://link3280.github.io/img/network-stack/rework-performance.png">
 <meta property="og:image" content="https://link3280.github.io/img/network-stack/object-reuse.png">
-<meta property="og:updated_time" content="2019-04-03T12:47:54.635Z">
+<meta property="og:updated_time" content="2019-04-03T12:54:35.288Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 网络传输优化技术">
 <meta name="twitter:description" content="作为工业级的流计算框架，Flink 被设计为可以每天处理 TB 甚至 PB 级别的数据，所以如何高吞吐低延迟并且可靠地在算子间传输数据是一个非常重要的课题。此外，Flink 的数据传输还需要支持框架本身的特性，例如反压和用于测量延迟的 latency marker。在社区不断的迭代中，Flink 逐渐积累了一套值得研究的网络栈（Network Stack），本文将详细介绍 Flink Networ">
@@ -400,7 +400,7 @@
 <p><center><p><img src="/img/network-stack/credit-based-flow-control.png" alt="图5.Credit-based 流控制" title="图5.Credit-based 流控制"></p></center></p><p></p>
 <p>当一条 Channel 发送端的 Announced Credit 与 接收端的 Unannounced Credit 之和不小于 Blacklog Size 时，该 Channel 处于正常状态，否则处于反压状态。</p>
 <p>从总体上讲，Credit-based 数据流控制避免了阻塞 TCP 连接，使得资源可以更加充分地被利用，另外通过动态分配 Buffer 和拓展队列长度，可以更好地适应生产环境中的不断变化的数据分布及其带来的 Channel 状态抖动，也有利于缓减部分 Subtask 遇到错误或者处理速率降低造成的木桶效应。然而这个新的机制也会引入额外的成本，即每传输一个 Buffer 要额外一轮 Announce Credit 请求来协商资源，不过从官方的测试来看，整体性能是有显著提升的。</p>
-<p><center><p><img src="/img/network-stack/ccfc-performance.png" alt="图6.Credit-based 流控制性能提升" title="Credit-based 流控制性能提升"></p></center></p><p></p>
+<p><center><p><img src="/img/network-stack/ccfc-performance.png" alt="图6.Credit-based 流控制性能提升" title="图6.Credit-based 流控制性能提升"></p></center></p><p></p>
 <h2 id="重构-Task-Thread-和-IO-Thread-的协作模型"><a href="#重构-Task-Thread-和-IO-Thread-的协作模型" class="headerlink" title="重构 Task Thread 和 IO Thread 的协作模型"></a>重构 Task Thread 和 IO Thread 的协作模型</h2><p>熟悉网络传输的同学应该对高吞吐和低延迟两者的 trade-off 十分熟悉。网络是以 batch 的形式来传输数据的，而每个 batch 都会带来额外的空间开销（header 等元数据）和时间开销（发送延迟、序列化反序列化延等），因此 batch size 越大则传输的开销越小，但是这也会导致延时更高，因为数据需要在缓存中等待的时间越久。对于实时类应用来说，我们通常希望延迟可以被限定在一个合理的范围内，因此业界大多数的做法是设置一个 batch timeout 来强制发送低于 batch size 的数据 batch，这通常需要额外设置设置一个线程来实现。</p>
 <p>Flink 也不例外。在上图的 TCP 连接发送端是 Netty Server，而接收端是 Netty Client，两者都会有 event loop 不断处理网络 IO。以实时作业为例子，与 Netty 组件直接交互的是 StreamRecordWriter 和 StreamRecordReader (现已被 StreamWriter 和 StreamInputProcessor 代替)，前者负责将 Subtask 最终输出的用 StreamRecord 包装的数据序列化为字节数组并交给 Netty Server，后者负责从 Netty Client 读取数据并反序列化为 StreamRecord。</p>
 <p><center><p><img src="/img/network-stack/record-writer.png" alt="图7.StreamRecordWriter" title="图7.StreamRecordWriter"></p></center></p><p></p>
