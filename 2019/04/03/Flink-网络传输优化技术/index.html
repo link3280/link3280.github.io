@@ -107,7 +107,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/network-stack/buffer-builder-consumer.png">
 <meta property="og:image" content="https://link3280.github.io/img/network-stack/rework-performance.png">
 <meta property="og:image" content="https://link3280.github.io/img/network-stack/object-reuse.png">
-<meta property="og:updated_time" content="2019-04-03T12:54:35.288Z">
+<meta property="og:updated_time" content="2019-04-14T13:02:28.734Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 网络传输优化技术">
 <meta name="twitter:description" content="作为工业级的流计算框架，Flink 被设计为可以每天处理 TB 甚至 PB 级别的数据，所以如何高吞吐低延迟并且可靠地在算子间传输数据是一个非常重要的课题。此外，Flink 的数据传输还需要支持框架本身的特性，例如反压和用于测量延迟的 latency marker。在社区不断的迭代中，Flink 逐渐积累了一套值得研究的网络栈（Network Stack），本文将详细介绍 Flink Networ">
@@ -419,7 +419,6 @@
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>在版本迭代中，Network Stack 一直在不断改进来适应新的特性或者提高性能。其中在 1.5 版本进行了比较多的改进，包括最重要的 Credit-based 流控制和重构 Task Thread 和 IO Thread 的协作模型。</p>
 <p>作为底层基础架构，Network Stack 设计的好坏很大程度上决定了一个计算框架的性能上限，其重要性对于 Flink 开发者或者有意贡献代码的用户而言不必多说。而对于 Flink 用户而言，熟悉 Network Stack 也可以让你在开发阶段提前预计或者部署后及时发现应用的瓶颈，从而在应对生产环境的部署复杂性时更加游刃有余。</p>
 <h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p>1.<a href="https://www.ververica.com/flink-forward-berlin/resources/improving-throughput-and-latency-with-flinks-network-stack" target="_blank" rel="external">Improving throughput and latency with Flink’s network stack</a><br>2.<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.7/dev/batch/#operating-on-data-objects-in-functions" target="_blank" rel="external">Operating on data objects in functions</a><br>3.<a href="https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=71012982" target="_blank" rel="external">FLIP-21 - Improve object Copying/Reuse Mode for Streaming Runtime</a><br>4.<a href="https://issues.apache.org/jira/browse/FLINK-9913" target="_blank" rel="external">FLINK-9913 - Improve output serialization only once in RecordWriter</a><br>4.<a href="https://hello-scala.com/405-pure-functions.html" target="_blank" rel="external">Pure Functions</a></p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2019/04/03/Flink-网络传输优化技术/" target="_blank" rel="external">时间与精神的小屋 - Flink 网络传输优化技术</a></em></font>
 
       
     </div>
@@ -450,7 +449,7 @@
     
       <ul class="post-copyright">
         <li class="post-copyright-author">
-          <strong>本文作者：Paul Lam</strong>
+          <strong>本文作者：Paul Lin</strong>
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>

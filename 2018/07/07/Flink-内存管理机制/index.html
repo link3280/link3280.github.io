@@ -101,7 +101,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink-memory-management/data-serialization.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-memory-management/GC_Pools.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-memory-management/GC-performance.png">
-<meta property="og:updated_time" content="2018-07-07T03:44:34.573Z">
+<meta property="og:updated_time" content="2019-04-14T13:05:26.808Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 内存管理机制">
 <meta name="twitter:description" content="Flink 作为一个基于内存的分布式计算引擎，其内存管理模块很大程度上决定了系统的效率和稳定性，尤其对于实时流式计算，JVM GC 带来的微小延迟也有可能被业务感知到。针对这个问题，Flink 实现了一套较为优雅的内存管理机制，可以在引入小量访问成本的情况下提高内存的使用效率并显著降低 GC 成本和 OOM 风险，令用户可以通过少量的简单配置即可建立一个健壮的数据处理系统。">
@@ -438,7 +438,7 @@
 <p>显而易见，使用显式内存管理可以显著地减少 GC 频率。在 Object-on-Heap 的测试中，GC 频繁地被触发并导致 CPU 峰值达到90%。在测试中使用的8核机器上单线程的作业最多只占用12.5%的 CPU ，机器花费在 GC 的成本显然超过了实际运行作业的成本。而在另外两个依赖显式内存管理和序列化的测试中，GC 很少被触发，CPU 使用率也一直稳定在较低的水平。</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Flink 在内存管理上较大程度上借鉴了 Spark 的方案，包括存储不足时的溢写机制和内存区域的划分。不过 Flink 的管理粒度更细更精确，最为典型的一点是 Spark 的序列化存储是以 RDD 的一个 Partiton 为单位，而 Flink 的序列化则是以消息记录为单位，这也体现了两者最大的区别： Spark 的哲学是将 Streaming 视作 Batch 的特例 (micro batch) ，相反地，Flink 的哲学是将 Batch 视作 Streaming 的特例。</p>
 <h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>1.<a href="http://flink.apache.org/news/2015/05/11/Juggling-with-Bits-and-Bytes.html" target="_blank" rel="external">Juggling-with-Bits-and-Bytes</a><br>2.<a href="https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=53741525" target="_blank" rel="external">Memory Management (Batch API)</a><br>3.<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.5/dev/types_serialization.html#flinks-typeinformation-class" target="_blank" rel="external">flinks-typeinformation-class</a><br>4.<a href="http://wuchong.me/blog/2016/04/29/flink-internals-memory-manage/" target="_blank" rel="external">Flink 原理与实现：内存管理</a><br>5.<a href="https://www.ibm.com/developerworks/cn/analytics/library/ba-cn-apache-spark-memory-management/index.html" target="_blank" rel="external">Apache Spark 内存管理详解</a><br>6.<a href="http://hbasefly.com/2016/04/08/hbase-blockcache-1/" target="_blank" rel="external">HBase BlockCache系列 – 走进BlockCache</a></p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/07/07/Flink-内存管理机制/" target="_blank" rel="external">时间与精神的小屋 - Flink 内存管理机制</a></em></font>
+
       
     </div>
 
@@ -468,7 +468,7 @@
     
       <ul class="post-copyright">
         <li class="post-copyright-author">
-          <strong>本文作者：Paul Lam</strong>
+          <strong>本文作者：Paul Lin</strong>
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>

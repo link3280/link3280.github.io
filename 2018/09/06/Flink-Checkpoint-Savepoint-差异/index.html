@@ -97,7 +97,7 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="Flink 为作业的容错提供 Checkpoint 和 Savepoint 两种机制，而这两者在无论在命名还是使用上都十分相似，很容易令用户混淆，因此 Checkpoint 和 Savepoint 有何区别也是 Flink 社区常见的问题之一。除开生产环境不常见的内存 Checkpoint，External Checkpoint 和 Savepoint 都是作业状态（State）的持久化副本，也理">
 <meta property="og:image" content="https://link3280.github.io/img/flink-fault-tolerance/flink-fault-tolerance-4_savepoint-and-checkpoint.png">
-<meta property="og:updated_time" content="2018-09-06T11:58:12.016Z">
+<meta property="og:updated_time" content="2019-04-14T13:05:18.365Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink Checkpoint/Savepoint 差异">
 <meta name="twitter:description" content="Flink 为作业的容错提供 Checkpoint 和 Savepoint 两种机制，而这两者在无论在命名还是使用上都十分相似，很容易令用户混淆，因此 Checkpoint 和 Savepoint 有何区别也是 Flink 社区常见的问题之一。除开生产环境不常见的内存 Checkpoint，External Checkpoint 和 Savepoint 都是作业状态（State）的持久化副本，也理">
@@ -386,7 +386,7 @@
 <p>首先最容易注意到的是 Savepoint 是一种特殊的 Checkpoint，实际上它们的存储格式也是一致的，它们主要的不同在于定位。Checkpoint 机制的目标在于保证 Flink 作业意外崩溃重启不影响 exactly once 准确性，通常是配合作业重启策略使用的。而 Savepoint 的目的在于在 Flink 作业维护（比如更新作业代码）时将作业状态写到外部系统，以便维护结束后重新提交作业可以到恢复原本的状态。换句话讲，Checkpoint 是为 Flink runtime 准备的，Savepoint 是为 Flink 用户准备的。因此 Checkpoint 是由 Flink runtime 定时触发并根据运行配置自动清理的，一般不需要用户介入，而 Savepoint 的触发和清理都由用户掌控。</p>
 <p>其次，由于 Checkpoint 的频率远远大于 Savepoint，Flink 对 Checkpoint 格式进行了针对不同 StateBackend 的优化，因此它在底层储存效率更高，而代价是耦合性更强，比如不保证 rescaling （即改变作业并行度）的特性和跨版本兼容。这里说”不保证”而不是”不支持”，原因是实际上 RocksDB 的 Checkpoint 是支持 rescaling 的，”不保证”更多是从系统设计出发而言。跨版本兼容性也同理。</p>
 <p>最后，Savepoint 的定义有提及它是 non-incremental 的，这是相对于 incremental Checkpoint 来说。因为 Checkpoint 是秒级频繁触发的，两个连续 Checkpoint 通常高度相似，因此对于 State 特别大的作业来说，每次 Checkpoint 只增量地补充 diff 可以大大地节约成本，这就是 incremental Checkpoint 的由来。而 Savepoint 并不会连续地触发，而且比起效率，Savepoint 更关注的是可移植性和版本兼容性，所以不支持 incremental 也是理所当然。</p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/09/06/Flink-Checkpoint/Savepoint-差异/" target="_blank" rel="external">时间与精神的小屋 - Flink Checkpoint/Savepoint 差异</a></em></font>
+
       
     </div>
 
@@ -416,7 +416,7 @@
     
       <ul class="post-copyright">
         <li class="post-copyright-author">
-          <strong>本文作者：Paul Lam</strong>
+          <strong>本文作者：Paul Lin</strong>
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>

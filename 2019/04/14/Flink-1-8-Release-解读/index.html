@@ -90,17 +90,17 @@
 
 
 
-<meta name="description" content="在距离上个 feature 版本发布近四个月之后， 近日 Apache Flink 发布了 1.8 版本。该版本处理了 420 个 issue，其中新 feature 及改进主要集中在 State、Connector 和 Table API 三者上，并 fix 了一些在生产部署中较为常见的问题。">
+<meta name="description" content="在距离上个 feature 版本发布近四个月之后， 近日 Apache Flink 发布了 1.8 版本。该版本处理了 420 个 issue，其中新 feature 及改进主要集中在 State、Connector 和 Table API 三者上，并 fix 了一些在生产部署中较为常见的问题。下文将选取一些笔者认为重要的新特性、improvement 和 bugfix 进行解读，详细的改动请参">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Flink 1.8 Release 解读">
 <meta property="og:url" content="https://link3280.github.io/2019/04/14/Flink-1-8-Release-解读/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="在距离上个 feature 版本发布近四个月之后， 近日 Apache Flink 发布了 1.8 版本。该版本处理了 420 个 issue，其中新 feature 及改进主要集中在 State、Connector 和 Table API 三者上，并 fix 了一些在生产部署中较为常见的问题。">
+<meta property="og:description" content="在距离上个 feature 版本发布近四个月之后， 近日 Apache Flink 发布了 1.8 版本。该版本处理了 420 个 issue，其中新 feature 及改进主要集中在 State、Connector 和 Table API 三者上，并 fix 了一些在生产部署中较为常见的问题。下文将选取一些笔者认为重要的新特性、improvement 和 bugfix 进行解读，详细的改动请参">
 <meta property="og:image" content="https://link3280.github.io/img/Flink-1.8.png">
-<meta property="og:updated_time" content="2019-04-14T12:03:45.663Z">
+<meta property="og:updated_time" content="2019-04-14T12:28:28.939Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 1.8 Release 解读">
-<meta name="twitter:description" content="在距离上个 feature 版本发布近四个月之后， 近日 Apache Flink 发布了 1.8 版本。该版本处理了 420 个 issue，其中新 feature 及改进主要集中在 State、Connector 和 Table API 三者上，并 fix 了一些在生产部署中较为常见的问题。">
+<meta name="twitter:description" content="在距离上个 feature 版本发布近四个月之后， 近日 Apache Flink 发布了 1.8 版本。该版本处理了 420 个 issue，其中新 feature 及改进主要集中在 State、Connector 和 Table API 三者上，并 fix 了一些在生产部署中较为常见的问题。下文将选取一些笔者认为重要的新特性、improvement 和 bugfix 进行解读，详细的改动请参">
 <meta name="twitter:image" content="https://link3280.github.io/img/Flink-1.8.png">
 
 
@@ -372,9 +372,8 @@
 
       
         <p><center><p><img src="/img/Flink-1.8.png" alt="Flink 1.8"></p></center></p><p></p>
-<p>在距离上个 feature 版本发布近四个月之后， 近日 Apache Flink 发布了 1.8 版本。该版本处理了 420 个 issue，其中新 feature 及改进主要集中在 State、Connector 和 Table API 三者上，并 fix 了一些在生产部署中较为常见的问题。</p>
+<p>在距离上个 feature 版本发布近四个月之后， 近日 Apache Flink 发布了 1.8 版本。该版本处理了 420 个 issue，其中新 feature 及改进主要集中在 State、Connector 和 Table API 三者上，并 fix 了一些在生产部署中较为常见的问题。下文将选取一些笔者认为重要的新特性、improvement 和 bugfix 进行解读，详细的改动请参照 release notes <a href="https://flink.apache.org/news/2019/04/09/release-1.8.0.html" target="_blank" rel="external">[1]</a>。</p>
 <a id="more"></a>
-<p>下文将选取一些笔者认为重要的新特性、improvement 和 bugfix 进行解读，详细的改动请参照 release notes <a href="https://flink.apache.org/news/2019/04/09/release-1.8.0.html" target="_blank" rel="external">[1]</a>。</p>
 <h2 id="State"><a href="#State" class="headerlink" title="State"></a>State</h2><h3 id="State-Schema-Evolution-新增对内置序列化器的支持"><a href="#State-Schema-Evolution-新增对内置序列化器的支持" class="headerlink" title="State Schema Evolution 新增对内置序列化器的支持"></a>State Schema Evolution 新增对内置序列化器的支持</h3><p>Flink 1.7 版本新增 State Schema Evolution 的特性，可以在支持 State POJO 随业务逻辑演变（见之前一篇博客<a href="http://www.whitewood.me/2019/03/17/%E4%BB%80%E4%B9%88%E6%98%AF-Flink-State-Evolution/" target="_blank" rel="external">[9]</a>），但要求序列化器向后兼容，而当时 Flink 内置的 POJOSerializer 并不能做到这点，因此 1.7 版本只提供了 AvroSerializer 的 State Schema Evolution。1.8 版本修复了这个尴尬的情况，现在用户新增或者移除 POJO 的任意字段不会不破坏 Savepoint 兼容性。</p>
 <h3 id="State-支持基于-TTL-的持续增量清理"><a href="#State-支持基于-TTL-的持续增量清理" class="headerlink" title="State 支持基于 TTL 的持续增量清理"></a>State 支持基于 TTL 的持续增量清理</h3><p>Flink 自 1.6 版本提供的 State TTL 现已被广泛使用，但是用户经常反馈的一个痛点是 Keyed State 在一个 key 过期之后，只有被再次访问后才会被发现，然后通过后台线程物理上清理掉。这会造成一个问题是有的 key 只是在一段时期内出现，如果依赖 State TTL 的话它可能永远不会被发现和清理，造成 State size 可能一直增长，因此在实践中用户常常还要通过设置各种 Timer 来手动清理不会再出现的 key 的 State。</p>
 <p>Flink 1.8 实现了 State 的持续增量清理（continuous cleanup），即每次 full snapshot（即一般 checkpoint/savepoint，或者 incremental checkpoint 的 full snapshot 运行周期）的时候扫描全部的 entry 来检查和清理其中过期的部分，不过代价也是显而易见的更长的 checkpoint 时间。</p>
@@ -446,7 +445,7 @@
     
       <ul class="post-copyright">
         <li class="post-copyright-author">
-          <strong>本文作者：Paul Lam</strong>
+          <strong>本文作者：Paul Lin</strong>
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>

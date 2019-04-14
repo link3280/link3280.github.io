@@ -100,7 +100,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink-on-yarn-security/Approach2-distribute-via-YARN.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-on-yarn-security/Approach3-am-generates-token.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-on-yarn-security/Approach4-client-generates-token.png">
-<meta property="og:updated_time" content="2019-01-07T13:49:22.081Z">
+<meta property="og:updated_time" content="2019-04-14T13:03:26.497Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink on YARN Security 浅析(Flink Part)">
 <meta name="twitter:description" content="在上篇关于 YARN 系统 Security 的博客，我们解析了通过 YARN 提供的 Security API，Application 已经在 RM 注册并且可以顺利地申请到 container，但 YARN 对 container 后续的凭证刷新（reacquire）并不能作用到已经在运行的 Application 进程，因此对于长期运行的 Application 而言要开发者自己实现认证和后">
@@ -414,7 +414,7 @@
 <p>要实现超级用户 Impersonation 首先要设置一个用户，比如 flink，为 Hadoop 的超级用户，这样他就可以申请到其他用户的 delagtion token，因此 flink 用户不需要访问一般用户joe 的 keytab 就可以通过 delegation token 来提交作业。后续 Flink 需要使用上述 Application 认证方式的第三或者第四种来持续刷新 delegation tokem，所以提案第一点支持多种 YARN Application 认证方式也是第二点 Impersonation 的前置条件。</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>YARN 原本不是为长时间运行的实时应用设计的，尤其是在安全认证这块尤为明显，因此各种实时计算框架的 on YARN 认证都是神仙过海各显神通，没有统一的方式。Flink on YARN Security 目前已经比较稳定但是仍然不够灵活，导致在其上构建平台的企业级用户多少有些束手束脚的感觉。Uber 的提案是目前看上去是比较合理的，期待 Uber 这个提案可以顺利实现并被社区接受。</p>
 <h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>1.<a href="https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html" target="_blank" rel="external">Hadoop 官方文档: YARN Security</a><br>2.<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.7/ops/security-kerberos.html" target="_blank" rel="external">Flink 官方文档: Kerberos Authentication Setup and Configuration</a><br>3.<a href="https://docs.google.com/document/d/1rBLCpyQKg6Ld2P0DEgv4VIOMTwv4sitd7h7P5r202IE/edit#heading=h.vcblrwijpe4n" target="_blank" rel="external">Flink Kerberos Improvement Design</a><br>4.<a href="https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Superusers.html" target="_blank" rel="external">Hadoop 官方文档: Proxy User</a><br>5.<a href="https://docs.google.com/document/d/10V7LiNlUJKeKZ58mkR7oVv1t6BrC6TZi3FGf2Dm6-i8/edit#heading=h.jxspj25an0dn" target="_blank" rel="external">Flink Security Improvements</a></p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/" target="_blank" rel="external">时间与精神的小屋 - Flink on YARN Security 浅析 (Flink Part)</a></em></font>
+
       
     </div>
 
@@ -444,7 +444,7 @@
     
       <ul class="post-copyright">
         <li class="post-copyright-author">
-          <strong>本文作者：Paul Lam</strong>
+          <strong>本文作者：Paul Lin</strong>
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>

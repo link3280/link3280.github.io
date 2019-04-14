@@ -97,7 +97,7 @@
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="Flink 为实时计算提供了三种时间，即事件时间（event time）、摄入时间（ingestion time）和处理时间（processing time）。在进行 window 计算时，使用摄入时间或处理时间的消息都是以系统的墙上时间（wall clocks）为标准，因此事件都是按序到达的。然而如果使用更为有意义的事件时间则会需要面对乱序事件问题（out-of-order events）和迟到">
 <meta property="og:image" content="https://link3280.github.io/img/flink/watermark.png">
-<meta property="og:updated_time" content="2018-06-01T16:12:04.235Z">
+<meta property="og:updated_time" content="2019-04-14T13:05:50.520Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink Watermark 机制浅析">
 <meta name="twitter:description" content="Flink 为实时计算提供了三种时间，即事件时间（event time）、摄入时间（ingestion time）和处理时间（processing time）。在进行 window 计算时，使用摄入时间或处理时间的消息都是以系统的墙上时间（wall clocks）为标准，因此事件都是按序到达的。然而如果使用更为有意义的事件时间则会需要面对乱序事件问题（out-of-order events）和迟到">
@@ -397,7 +397,7 @@
 <p><code>Side Output</code>机制可以将迟到事件单独放入一个数据流分支，这会作为 window 计算结果的副产品，以便用户获取并对其进行特殊处理。</p>
 <p><code>Allowed Lateness</code>机制允许用户设置一个允许的最大迟到时长。Flink 会再窗口关闭后一直保存窗口的状态直至超过允许迟到时长，这期间的迟到事件不会被丢弃，而是默认会触发窗口重新计算。因为保存窗口状态需要额外内存，并且如果窗口计算使用了 <code>ProcessWindowFunction</code> API 还可能使得每个迟到事件触发一次窗口的全量计算，代价比较大，所以允许迟到时长不宜设得太长，迟到事件也不宜过多，否则应该考虑降低水位线提高的速度或者调整算法。</p>
 <h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>1.<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.5/dev/event_timestamps_watermarks.html" target="_blank" rel="external">Flink 官方文档 - Event Time</a><br>2.<a href="http://www.cnblogs.com/fxjwind/p/7657058.html" target="_blank" rel="external">Flink – process watermark</a></p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/06/01/Flink-Watermark-机制浅析/" target="_blank" rel="external">时间与精神的小屋 - Flink Watermark 机制浅析</a></em></font>
+
       
     </div>
 
@@ -427,7 +427,7 @@
     
       <ul class="post-copyright">
         <li class="post-copyright-author">
-          <strong>本文作者：Paul Lam</strong>
+          <strong>本文作者：Paul Lin</strong>
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>

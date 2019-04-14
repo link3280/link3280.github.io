@@ -98,7 +98,7 @@
 <meta property="og:description" content="自我们将作业迁移到 Kerberized 的 YARN 新集群后，运行中的作业有一定几率出现出现认证失败，其中失败有 AMRMToken 过期导致 AM 无法与 RM 通信而被 kill 掉和 AM 申请的新 container 启动时报缺少 credential 两种表现。出现了这个问题后只能重启作业解决，这严重影响了平台的稳定性，因此笔者前后投入了接近两周的时间去研究这个问题，最后定位到问题在">
 <meta property="og:image" content="https://link3280.github.io/img/hadoop-authentication.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-job-submission.png">
-<meta property="og:updated_time" content="2018-12-23T02:40:53.660Z">
+<meta property="og:updated_time" content="2019-04-14T13:03:37.015Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink on YARN Security 浅析 (YARN Part)">
 <meta name="twitter:description" content="自我们将作业迁移到 Kerberized 的 YARN 新集群后，运行中的作业有一定几率出现出现认证失败，其中失败有 AMRMToken 过期导致 AM 无法与 RM 通信而被 kill 掉和 AM 申请的新 container 启动时报缺少 credential 两种表现。出现了这个问题后只能重启作业解决，这严重影响了平台的稳定性，因此笔者前后投入了接近两周的时间去研究这个问题，最后定位到问题在">
@@ -400,7 +400,7 @@
 <p>其中每个 container （包括 AM container 和一般 container）启动前 RM 会将这个 Application 的 token 发送给 NodeManager，因此 NodeManager 能以用户的身份完成 container 启动的前置工作以及最终启动 container。</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>YARN Security 的设计思想在于用户在 Client 端先通过 Kerberos 认证获取基本服务(YARN、HDFS)的 delegation token，并作为 Application Submission Context 的凭证提交给 RM。如果 Application 可以成功运行则证明了用户凭证的有效性，token 后续的刷新和重新获取都由 RM 来负责。不过新 token 仅限 YARN 内部使用，用户应用本身的 token 失效问题仍需要用户自己处理。</p>
 <h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>1.<a href="https://blog.cloudera.com/blog/2017/12/hadoop-delegation-tokens-explained/" target="_blank" rel="external">Hadoop Delegation Tokens Explained</a><br>2.<a href="http://dongxicheng.org/mapreduce-nextgen/hadoop-yarn-security/" target="_blank" rel="external">Hadoop 2.0（YARN）中的安全机制概述</a><br>3.<a href="https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html" target="_blank" rel="external">Apache Hadoop 官方文档: YARN Security</a><br>4.<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.7/ops/deployment/yarn_setup.html" target="_blank" rel="external">Apache Flink 官方文档: on YARN 模式</a></p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/" target="_blank" rel="external">时间与精神的小屋 - Flink on YARN Security 浅析 (YARN Part)</a></em></font>
+
       
     </div>
 
@@ -430,7 +430,7 @@
     
       <ul class="post-copyright">
         <li class="post-copyright-author">
-          <strong>本文作者：Paul Lam</strong>
+          <strong>本文作者：Paul Lin</strong>
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>

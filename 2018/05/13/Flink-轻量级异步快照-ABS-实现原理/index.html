@@ -99,7 +99,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink/stream-barrier.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink/stream-aligning.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink/cyclic-dataflow.png">
-<meta property="og:updated_time" content="2018-05-13T11:38:25.010Z">
+<meta property="og:updated_time" content="2019-04-14T13:06:00.919Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 轻量级异步快照 ABS 实现原理">
 <meta name="twitter:description" content="准确一次(exactly once)的送达保证是实时计算的关键特性之一，这要求作业从失败恢复后的状态以及管道中的数据流要和失败时一致，通常这是通过定期对作业状态和数据流进行快照实现的。然而这种方式主要有两点不足：首先，快照进行期间常常要暂停数据流的摄入，造成额外延迟和吞吐量下降；其次，快照会过度谨慎地将管道里正在计算的数据也随着状态保存下来，导致快照过于庞大。针对以上两个问题，Apache Fli">
@@ -414,7 +414,7 @@
 <li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.4/internals/stream_checkpointing.html" target="_blank" rel="external">Flink Documentation - Stream Checkpointing</a></li>
 <li><a href="https://www.slideshare.net/sbaltagi/unified-batch-and-realtime-stream-processing-using-apache-flink" target="_blank" rel="external">Unified Batch and Real-Time Stream Processing Using Apache Flink</a></li>
 </ol>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/05/13/Flink-轻量级异步快照-ABS-实现原理/" target="_blank" rel="external">时间与精神的小屋 - Flink 轻量级异步快照 ABS 实现原理</a></em></font>
+
       
     </div>
 
@@ -444,7 +444,7 @@
     
       <ul class="post-copyright">
         <li class="post-copyright-author">
-          <strong>本文作者：Paul Lam</strong>
+          <strong>本文作者：Paul Lin</strong>
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>

@@ -99,7 +99,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/streaming-watermark/streaming-system-watermark.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-watermark/data-latency-of-servers.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-watermark/watermark-implemented.png">
-<meta property="og:updated_time" content="2019-03-17T07:48:53.532Z">
+<meta property="og:updated_time" content="2019-04-14T13:02:44.833Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="深入理解流计算中的 Watermark">
 <meta name="twitter:description" content="近年来流计算技术发展迅猛，甚至有后来居上一统原本批处理主导的分布式计算之势，其中 Watermark 机制作为流计算结果准确性和延迟的桥梁扮演着不可或缺的角色。然而由于缺乏高质量的学习资源加上计算 Watermark 确实不是一件容易的事情，不少有着批处理计算背景的用户在流计算作业的开发中可能并不理解 Watermark 的重要意义，从而多走了很多弯路。为此，本文将基于笔者的学习积累和开发经验，谈">
@@ -414,7 +414,7 @@
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">public class WatermarkProcessor implements AssignerWithPeriodicWatermarks&lt;UserLogin&gt; &#123;</div><div class="line"></div><div class="line">    private static final long ALLOWED_EVENT_TIME_SKEW = 1000L;</div><div class="line">    private static final Map&lt;String, Long&gt; maxTimestampPerServer = new HashMap&lt;&gt;(3);</div><div class="line"></div><div class="line">    @Nullable</div><div class="line">    public Watermark getCurrentWatermark() &#123;</div><div class="line">        Optional&lt;Long&gt; maxTimestamp  = maxTimestampPerServer.values().stream()</div><div class="line">                .min(Comparator.comparingLong(Long::valueOf));</div><div class="line">        if (maxTimestamp.isPresent()) &#123;</div><div class="line">            return new Watermark(maxTimestamp.get() - ALLOWED_EVENT_TIME_SKEW);</div><div class="line">        &#125; else&#123;</div><div class="line">            return null;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    public long extractTimestamp(UserLogin userLogin, long previousElementTimestamp) &#123;</div><div class="line">        String server = userLogin.getServer();</div><div class="line">        long eventTime = userLogin.getEventTime();</div><div class="line">        if (!maxTimestampPerServer.containsKey(server) || </div><div class="line">                userLogin.getEventTime() &gt; maxTimestampPerServer.get(server)) &#123;</div><div class="line">            maxTimestampPerServer.put(server, eventTime);</div><div class="line">        &#125;</div><div class="line">        return eventTime;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
 <h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>流计算和批处理谁是表达能力更强的计算模式，这个问题或许还将继续被争论下去，不过根据 The Dataflow Model 我们已经有足够的理论支撑来开发低延迟高准确并且可容错的流计算应用。其中流计算的准确性很大程度上决定于数据流时间的乱序程度，因此我们在开发实时流计算应用时，比起开发离线批处理应用，很大的一个不同是要考虑数据是以什么顺序到达，并针对性地设计 Watermark 算法来处理数据流时间的乱序。Watermark 算法需要平衡低延迟和高准确性两者，在引入最低延迟成本的情况下准确判断窗口的计算和输出结果的时机，通常可以从 processing lag 和 event time skew 两者的容忍阈值入手。</p>
 <h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>1.<a href="http://nathanmarz.com/blog/how-to-beat-the-cap-theorem.html" target="_blank" rel="external">How to beat the CAP theorem</a><br>2.<a href="https://www.vldb.org/pvldb/vol8/p1792-Akidau.pdf" target="_blank" rel="external">The Dataflow Model: A Practical Approach to Balancing Correctness, Latency, and Cost in Massive Scale, Unbounded, Out of Order Data Processing</a><br>3.<a href="https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-102" target="_blank" rel="external">Streaming 102: The world beyond batch</a><br>4.Tyler AkidauSlava, Chernyak, Reuven Lax. (2018). Streaming Systems.  </p>
-<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2019/02/24/深入理解流计算中的-Watermark/" target="_blank" rel="external">时间与精神的小屋 - 深入理解流计算中的 Watermark</a></em></font>
+
       
     </div>
 
@@ -444,7 +444,7 @@
     
       <ul class="post-copyright">
         <li class="post-copyright-author">
-          <strong>本文作者：Paul Lam</strong>
+          <strong>本文作者：Paul Lin</strong>
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>
