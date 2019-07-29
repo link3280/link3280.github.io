@@ -100,7 +100,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink-recovery/img2.fault-tolerance-overview.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-recovery/img3.task-failover-strategies.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-recovery/img4.flip-6-architecture.png">
-<meta property="og:updated_time" content="2019-07-29T13:25:01.231Z">
+<meta property="og:updated_time" content="2019-07-29T13:28:56.119Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="深入理解 Flink 容错机制">
 <meta name="twitter:description" content="作为分布式系统，尤其是对延迟敏感的实时计算引擎，Apache Flink 需要有强大的容错机制，以确保在出现机器故障或网络分区等不可预知的问题时可以快速自动恢复并依旧能产生准确的计算结果。事实上，Flink 有一套先进的快照机制来持久化作业状态[1]，确保中间数据不会丢失，这通常需要和错误恢复机制（作业重启策略或 failover 策略）配合使用。在遇到错误时，Flink 作业会根据重启策略自动重">
@@ -378,7 +378,7 @@
 <a id="more"></a>
 <p>Flink 容错机制主要有作业执行的容错以及守护进程的容错两方面，前者包括 Flink runtime 的 ExecutionGraph 和 Execution 的容错，后者则包括 JobManager 和 TaskManager 的容错。</p>
 <h1 id="作业执行容错"><a href="#作业执行容错" class="headerlink" title="作业执行容错"></a>作业执行容错</h1><p>众所周知，用户使用 Flink 编程 API（DataStream/DataSet/Table/SQL）编写的作业最终会被翻译为 JobGraph 对象再提交给 JobManager 去执行，而后者会将 JobGraph 结合其他配置生成具体的 Task 调度到 TaskManager 上执行。</p>
-<p>相信不少读者应该见过来自官网文档的这张架构图，它清晰地描绘了作业的分布式执行机制: 一个作业有多个 Operator，相互没有数据 shuffle 、并行度相同且符合其他优化条件的相邻 Operator 可以合并成 OperatorChain，然后每个 Operator 或者 OperatorChain 称为一个 JobVertex；在分布式执行时，每个 JobVertex 会作为一个 Task，每个 Task 有其并行度数目的 SubTask，而这些 SubTask 则是作业调度的最小逻辑单元。</p>
+<p>相信不少读者应该见过来自官网文档的这张架构图（图1），它清晰地描绘了作业的分布式执行机制: 一个作业有多个 Operator，相互没有数据 shuffle 、并行度相同且符合其他优化条件的相邻 Operator 可以合并成 OperatorChain，然后每个 Operator 或者 OperatorChain 称为一个 JobVertex；在分布式执行时，每个 JobVertex 会作为一个 Task，每个 Task 有其并行度数目的 SubTask，而这些 SubTask 则是作业调度的最小逻辑单元。</p>
 <center><p><img src="/img/flink-recovery/img1.distributed-dataflow.png" alt="图1. 作业的分布式执行" title="图1. 作业的分布式执行"></p></center>
 
 <p>该图主要从 TaskManager 角度出发，而其实在 JobManager 端也存在一个核心的数据结构来映射作业的分布式执行，即 ExecutionGraph。ExecutionGraph 类似于图中并行视角的 Streaming Dataflow，它代表了 Job 的一次执行。从某种意义上讲，如果 JobGraph 是一个类的话，ExecutionGraph 则是它的一个实例。ExecutionGraph 中包含的节点称为 ExecutionJobVertex，对应 JobGrap 的一个 JobVertex 或者说图中的一个 Task。ExecutionJobVertex 可以有多个并行实例，即 ExecutionVertex，对应图中的一个 SubTask。在一个 ExecutionGraph 的生命周期中，一个 ExecutionVertex 可以被执行（重启）多次，每次则称为一个 Execution。小结一下，ExecutionGraph 对应 Flink Job 的一次执行，Execution 对应 SubTask 的一次执行。</p>
