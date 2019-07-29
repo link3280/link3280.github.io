@@ -90,20 +90,20 @@
 
 
 
-<meta name="description" content="作为分布式系统，尤其是对延迟敏感的实时计算引擎，Apache Flink 需要有强大的容错机制，以确保在出现机器错误等不可预知的问题时可以快速自动恢复并依旧能产生准确的计算结果。事实上，Flink 有一套先进的快照机制来持久化作业状态[1]，确保中间数据不会丢失，这通常需要和错误恢复机制（自动重启策略或 failover 策略）配合使用。在遇到错误时，Flink 作业会根据重启策略自动重启并从最近">
+<meta name="description" content="作为分布式系统，尤其是对延迟敏感的实时计算引擎，Apache Flink 需要有强大的容错机制，以确保在出现机器故障或网络分区等不可预知的问题时可以快速自动恢复并依旧能产生准确的计算结果。事实上，Flink 有一套先进的快照机制来持久化作业状态[1]，确保中间数据不会丢失，这通常需要和错误恢复机制（作业重启策略或 failover 策略）配合使用。在遇到错误时，Flink 作业会根据重启策略自动重">
 <meta property="og:type" content="article">
 <meta property="og:title" content="深入理解 Flink 容错机制">
 <meta property="og:url" content="https://link3280.github.io/2019/07/28/深入理解-Flink-容错机制/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="作为分布式系统，尤其是对延迟敏感的实时计算引擎，Apache Flink 需要有强大的容错机制，以确保在出现机器错误等不可预知的问题时可以快速自动恢复并依旧能产生准确的计算结果。事实上，Flink 有一套先进的快照机制来持久化作业状态[1]，确保中间数据不会丢失，这通常需要和错误恢复机制（自动重启策略或 failover 策略）配合使用。在遇到错误时，Flink 作业会根据重启策略自动重启并从最近">
+<meta property="og:description" content="作为分布式系统，尤其是对延迟敏感的实时计算引擎，Apache Flink 需要有强大的容错机制，以确保在出现机器故障或网络分区等不可预知的问题时可以快速自动恢复并依旧能产生准确的计算结果。事实上，Flink 有一套先进的快照机制来持久化作业状态[1]，确保中间数据不会丢失，这通常需要和错误恢复机制（作业重启策略或 failover 策略）配合使用。在遇到错误时，Flink 作业会根据重启策略自动重">
 <meta property="og:image" content="https://link3280.github.io/img/flink-recovery/img1.distributed-dataflow.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-recovery/img2.fault-tolerance-overview.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-recovery/img3.task-failover-strategies.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-recovery/img4.flip-6-architecture.png">
-<meta property="og:updated_time" content="2019-07-28T01:31:52.880Z">
+<meta property="og:updated_time" content="2019-07-29T13:25:01.231Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="深入理解 Flink 容错机制">
-<meta name="twitter:description" content="作为分布式系统，尤其是对延迟敏感的实时计算引擎，Apache Flink 需要有强大的容错机制，以确保在出现机器错误等不可预知的问题时可以快速自动恢复并依旧能产生准确的计算结果。事实上，Flink 有一套先进的快照机制来持久化作业状态[1]，确保中间数据不会丢失，这通常需要和错误恢复机制（自动重启策略或 failover 策略）配合使用。在遇到错误时，Flink 作业会根据重启策略自动重启并从最近">
+<meta name="twitter:description" content="作为分布式系统，尤其是对延迟敏感的实时计算引擎，Apache Flink 需要有强大的容错机制，以确保在出现机器故障或网络分区等不可预知的问题时可以快速自动恢复并依旧能产生准确的计算结果。事实上，Flink 有一套先进的快照机制来持久化作业状态[1]，确保中间数据不会丢失，这通常需要和错误恢复机制（作业重启策略或 failover 策略）配合使用。在遇到错误时，Flink 作业会根据重启策略自动重">
 <meta name="twitter:image" content="https://link3280.github.io/img/flink-recovery/img1.distributed-dataflow.png">
 
 
@@ -374,7 +374,7 @@
       
 
       
-        <p>作为分布式系统，尤其是对延迟敏感的实时计算引擎，Apache Flink 需要有强大的容错机制，以确保在出现机器错误等不可预知的问题时可以快速自动恢复并依旧能产生准确的计算结果。事实上，Flink 有一套先进的快照机制来持久化作业状态[1]，确保中间数据不会丢失，这通常需要和错误恢复机制（自动重启策略或 failover 策略）配合使用。在遇到错误时，Flink 作业会根据重启策略自动重启并从最近一个成功的快照（checkpoint）恢复状态。合适的重启策略可以减少作业不可用时间和避免人工介入处理故障的运维成本，因此对于 Flink 作业稳定性来说有着举足轻重的作用。下文就将详细解读 Flink 的错误恢复机制。</p>
+        <p>作为分布式系统，尤其是对延迟敏感的实时计算引擎，Apache Flink 需要有强大的容错机制，以确保在出现机器故障或网络分区等不可预知的问题时可以快速自动恢复并依旧能产生准确的计算结果。事实上，Flink 有一套先进的快照机制来持久化作业状态[1]，确保中间数据不会丢失，这通常需要和错误恢复机制（作业重启策略或 failover 策略）配合使用。在遇到错误时，Flink 作业会根据重启策略自动重启并从最近一个成功的快照（checkpoint）恢复状态。合适的重启策略可以减少作业不可用时间和避免人工介入处理故障的运维成本，因此对于 Flink 作业稳定性来说有着举足轻重的作用。下文就将详细解读 Flink 的错误恢复机制。</p>
 <a id="more"></a>
 <p>Flink 容错机制主要有作业执行的容错以及守护进程的容错两方面，前者包括 Flink runtime 的 ExecutionGraph 和 Execution 的容错，后者则包括 JobManager 和 TaskManager 的容错。</p>
 <h1 id="作业执行容错"><a href="#作业执行容错" class="headerlink" title="作业执行容错"></a>作业执行容错</h1><p>众所周知，用户使用 Flink 编程 API（DataStream/DataSet/Table/SQL）编写的作业最终会被翻译为 JobGraph 对象再提交给 JobManager 去执行，而后者会将 JobGraph 结合其他配置生成具体的 Task 调度到 TaskManager 上执行。</p>
@@ -386,9 +386,9 @@
 <p><img src="/img/flink-recovery/img2.fault-tolerance-overview.png" alt="图2. 作业执行容错" title="图2. 作业执行容错"><br>当 Task 发生错误，TaskManager 会通过 RPC 通知 JobManager，后者将对应 Execution 的状态转为 <code>failed</code> 并触发 Failover 策略。如果符合 Failover 策略，JobManager 会重启 Execution，否则升级为 ExecutionGraph 的失败。ExecutionGraph 失败则进入 <code>failing</code> 的状态，由 Restart 策略决定其重启（<code>restarting</code> 状态）还是异常退出（<code>failed</code> 状态）。</p>
 <p>下面分别分析两个错误恢复策略的场景及实现。</p>
 <h2 id="Task-Failover-策略"><a href="#Task-Failover-策略" class="headerlink" title="Task Failover 策略"></a>Task Failover 策略</h2><p>作为计算的最小执行单位，Task 错误是十分常见的，比如机器故障、用户代码抛出错误或者网络故障等等都可能造成 Task 错误。对于分布式系统来说，通常单个 Task 错误的处理方式是将这个 Task 重新调度至新的 worker 上，不影响其他 Task 和整体 Job 的运行，然而这个方式对于流处理的 Flink 来说并不可用。</p>
-<p>Flink 的容错机制主要分为从 checkpoint 恢复状态和重流数据两步，这也是为什么 Flink 通常要求数据源的数据是可以重复读取的。对于重启后的新 Task 来说，它可以通过读取 checkpoint 很容易地恢复状态信息，但是却不能独立地重流数据，因为 checkpoint 是不包含数据的，要重流数据只可以要求依赖到的全部上游 Task 重新计算，通常来说会一直追溯到数据源 Task。熟悉 Spark 的同学大概会联想到 Spark 的血缘机制。简单来说，Spark 依据是否需要 shuffle 将作业分划为多个 Stage，每个 Stage 的计算都是独立的 Task，其结果可以被缓存起来。如果某个 Task 执行失败，那么它只要重读上个 Stage 的计算缓存结果即可，不影响其他 Task 的计算。Spark 可以独立地恢复一个 Task，很大程度上是因为它的批处理特性，这允许了作业通过缓存中间计算结果来解耦上下游 Task 的联系。而 Flink 作为流计算引擎，很明显是无法做到这点的。</p>
+<p>Flink 的容错机制主要分为从 checkpoint 恢复状态和重流数据两步，这也是为什么 Flink 通常要求数据源的数据是可以重复读取的。对于重启后的新 Task 来说，它可以通过读取 checkpoint 很容易地恢复状态信息，但是却不能独立地重流数据，因为 checkpoint 是不包含数据的，要重流数据只可以要求依赖到的全部上游 Task 重新计算，通常来说会一直追溯到数据源 Task。熟悉 Spark 的同学大概会联想到 Spark 的血缘机制。简单来说，Spark 依据是否需要 shuffle 将作业分划为多个 Stage，每个 Stage 的计算都是独立的 Task，其结果可以被缓存起来。如果某个 Task 执行失败，那么它只要重读上个 Stage 的计算缓存结果即可，不影响其他 Task 的计算。Spark 可以独立地恢复一个 Task，很大程度上是因为它的批处理特性，这允许了作业通过缓存中间计算结果来解耦上下游 Task 的联系。而 Flink 作为流计算引擎，显然是无法简单做到这点的。</p>
 <p>要做到细粒度的错误恢复机制，减小单个 Task 错误对于整体作业的影响，Flink 需要实现一套更加复杂的算法，也就是 FLIP-1 [2] 引入的 Task Failover 策略。Task Failover 策略目前有三个，分别是<br><code>RestartAll</code>、<code>RestartIndividualStrategy</code> 和 <code>RestartPipelinedRegionStrategy</code>。</p>
-<center><p><img src="/img/flink-recovery/img3.task-failover-strategies.png" alt="图3. RestartAll 与 Restart Region" title="图3. RestartAll 与 Restart Region"></p></center>
+<center><p><img src="/img/flink-recovery/img3.task-failover-strategies.png" alt="图3. Restart Region 策略重启有数据交换的 Task" title="图3. Restart Region 策略重启有数据交换的 Task"></p></center>
 
 <ul>
 <li>RestartAll: 重启全部 Task，是恢复作业一致性的最安全策略，会在其他 Failover 策略失败时作为保底策略使用。目前是默认的 Task Failover 策略。</li>
