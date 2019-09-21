@@ -1,0 +1,868 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Flink," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="距离上个发行版近 4 个月后，不久前 Apache Flink 发行了 1.9 系列的首个版本。Flink 1.9 是个有重要意义的版本，它初步合并了 Blink 的大部分新特性（虽然是预览特性），其中包括 Blink planner、Hive 集成、Python Table API 和新版 Web UI。此外，1.9 版本正式引入了 Savepoint Processor 来提供离线访问和修改">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink 1.9 Release 解读">
+<meta property="og:url" content="https://link3280.github.io/2019/09/21/Flink-1-9-Release-解读/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="距离上个发行版近 4 个月后，不久前 Apache Flink 发行了 1.9 系列的首个版本。Flink 1.9 是个有重要意义的版本，它初步合并了 Blink 的大部分新特性（虽然是预览特性），其中包括 Blink planner、Hive 集成、Python Table API 和新版 Web UI。此外，1.9 版本正式引入了 Savepoint Processor 来提供离线访问和修改">
+<meta property="og:image" content="https://link3280.github.io/img/flink-1.9-release/planner-architecture.jpeg">
+<meta property="og:image" content="https://link3280.github.io/img/flink-1.9-release/new-stop-properties.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink-1.9-release/blink-webui-logs.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink-1.9-release/blink-webui-operators.png">
+<meta property="og:updated_time" content="2019-09-21T03:02:57.160Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink 1.9 Release 解读">
+<meta name="twitter:description" content="距离上个发行版近 4 个月后，不久前 Apache Flink 发行了 1.9 系列的首个版本。Flink 1.9 是个有重要意义的版本，它初步合并了 Blink 的大部分新特性（虽然是预览特性），其中包括 Blink planner、Hive 集成、Python Table API 和新版 Web UI。此外，1.9 版本正式引入了 Savepoint Processor 来提供离线访问和修改">
+<meta name="twitter:image" content="https://link3280.github.io/img/flink-1.9-release/planner-architecture.jpeg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2019/09/21/Flink-1-9-Release-解读/"/>
+
+
+
+
+
+  <title>Flink 1.9 Release 解读 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2019/09/21/Flink-1-9-Release-解读/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink 1.9 Release 解读</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-09-21T11:00:41+08:00">
+                2019-09-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/09/21/Flink-1-9-Release-解读/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2019/09/21/Flink-1-9-Release-解读/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>距离上个发行版近 4 个月后，不久前 Apache Flink 发行了 1.9 系列的首个版本。Flink 1.9 是个有重要意义的版本，它初步合并了 Blink 的大部分新特性（虽然是预览特性），其中包括 Blink planner、Hive 集成、Python Table API 和新版 Web UI。此外，1.9 版本正式引入了 Savepoint Processor 来提供离线访问和修改 State 的能力，这也是社区呼声比较高的一个特性。下文将选取一些笔者认为比较重要的特性、improvement 和 bugfix 进行解读（主要集中在实时场景），详细的变动进参考 [1]。</p>
+<a id="more"></a>
+<h1 id="Blink-Planner"><a href="#Blink-Planner" class="headerlink" title="Blink Planner"></a>Blink Planner</h1><p>在阿里巴巴内部，Table API 和 SQL API 是开发 Flink 应用使用得最多的 API，因此阿里巴巴也花费了大量的精力在这两个 API 的优化上，其中最重要的一个便是 Blink Planner。Planner 是 SQL/Table API 和 runtime 的桥梁，它负责将 SQL/Table API 翻译为物理执行计划，也就是 runtime 的 operator。</p>
+<p><center><img src="/img/flink-1.9-release/planner-architecture.jpeg" alt="图一. Planner 架构" title="图一. Planner 架构"></center></p>
+
+<p>比起 Flink 原生的 Planner，Blink Planner 主要有以下的优势: </p>
+<ol>
+<li>流批统一。无论是 Stream 作业还是 Batch 作业都会直接被翻译为 StreamGraph，也就是常说的将批处理作为流处理的特例。</li>
+<li>解耦 SQL/Table API 和 DataStream/DataSet API。这与流批统一是紧密联系的，因为 DataStream/DataSet 两者是独立的，基于它们很难建立简洁的流批统一架构。</li>
+<li>建立统一的 Table/SQL 入口，简化当前多个 *Environment 的复杂 API 设计。</li>
+<li>更多的 SQL 优化规则，比如 Join 的谓词下推和多余的 aggregate 移除。</li>
+</ol>
+<p>Blink Planner 作为预览功能在 1.9 版本发布，用户可以通过引入依赖:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">&lt;dependency&gt;</div><div class="line">&lt;groupId&gt;org.apache.flink&lt;/groupId&gt;</div><div class="line">&lt;artifactId&gt;flink-table-api-scala-bridge_2.11&lt;/artifactId&gt;</div><div class="line">&lt;version&gt;1.9.0&lt;/version&gt;</div><div class="line">&lt;/dependency&gt;</div><div class="line"></div><div class="line">&lt;dependency&gt;</div><div class="line">&lt;groupId&gt;org.apache.flink&lt;/groupId&gt;</div><div class="line">&lt;artifactId&gt;flink-table-planner-blink_2.11&lt;/artifactId&gt;</div><div class="line">&lt;version&gt;1.9.0&lt;/version&gt;</div><div class="line">&lt;/dependency&gt;</div></pre></td></tr></table></figure>
+<p>并在 main 函数中设置:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">EnvironmentSettings.useBlinkPlanner();</div></pre></td></tr></table></figure>
+<p>来启用 Blink Planner。但值得注意的是目前 Blink Planner 仍有些未解决的 issue，比如不能在同一个 TableEnvironment 执行多条 SQL 语句，所以并不推荐在生产中使用。</p>
+<h1 id="SQL-DDL"><a href="#SQL-DDL" class="headerlink" title="SQL DDL"></a>SQL DDL</h1><p>在以往版本，Flink SQL 只提供了 DSL 和 DML，而缺少了 DDL，这意味着我们不能在 SQL Client 或者其他 Flink SQL 程序中持久化创建的表。这个问题在 1.9 版本得到改善。1.9 支持了可用于 Batch 场景的标准 SQL DDL [2]，但因为 Stream 场景的 DDL 要求定义时间属性（Time Characteristic）、 Watermark 算法和 append mode 等额外的参数，需要进一步考虑实现细节，则预计在 1.10 版本再支持。尽管两种 DDL 要求的信息略有不同，但最终的目标是提供统一的语法，换句话说用户不需要区分定义的 Table 是基于无边界还有有边界的数据集，Flink 会自动根据上下文来判断。</p>
+<h1 id="Hive-集成"><a href="#Hive-集成" class="headerlink" title="Hive 集成"></a>Hive 集成</h1><p>目前 Flink 主要作为实时计算引擎，在与离线数据仓库组件 Hive 的集成方面做得并不足够，但随着流批统一的大趋势，Flink 在批处理方面的潜力也会逐渐被挖掘，比如在阿里巴巴 Flink 已经被引用于大部分的批处理场景。在与 Hive 的集成方面，我们可以看到另一个主流分布式计算引擎 Apache Spark 做得很好，而 Flink 的 Hive 集成也会主要参考 SparkSQL 的特性，其中比较重要的比如打通 Flink Table/SQL API 和 Hive Metasstaore、支持 Flink 作为 Hive 的计算引擎。</p>
+<p>整体工作会分为三个步骤来完成[3]：</p>
+<ol>
+<li><p>Flink SQL 基础集成<br>这包括在 Flink SQL API 集成 Hive 的基本功能，比如通过 Hive Connector 读写 Hive 表、支持 Hive 的数据类型（Timestamp/String 等）、可以在 Flink SQL 中使用 Hive 的内置函数和在 Flink SQL 中支持 Hive 的 DDL/DML 操作。这部分工作在 1.9 版本基本得到实现，主要的功能通过 HiveCatalog 封装的形式暴露给用户。顺带一提，为了支持 HiveCatalog，原本 Table API 的 Catalag 接口也进行了大量的重构。</p>
+</li>
+<li><p>Hive 兼容性<br>这部分可以概括为充分利用 Hive 的高级特性，其中包括完整的 Hive 数据类型支持、Thrift Server（类似于 Spark SQL Thrift Server）、在 Beeline 中支持 Flink 作为计算引擎、JDBC/ODBC 驱动支持、支持多种 Hive SerDe 等等。这部分的内容较多，将在后续版本逐步实现。</p>
+</li>
+<li><p>Flink SQL 优化<br>SQL 优化是 SQL 计算引擎老生常谈的课题，在 Hive on Flink SQL 上，可预见的优化工作当然也不少。这里的内容可以细分为三个方面：SQL 优化规则、Query metric（包括资源消耗、执行时间等）以及 Flink runtime 的 Task 调度和容错。</p>
+</li>
+</ol>
+<p>总而言之，Flink 和 Hive 集成将极大地提升 Flink SQL 在 Batch 场景的应用能力，同时随着流批统一，尤其是 SQL 的流批统一，Streaming SQL 也将从中受益。</p>
+<h1 id="终止-暂停作业"><a href="#终止-暂停作业" class="headerlink" title="终止/暂停作业"></a>终止/暂停作业</h1><p>目前 Flink 提供了 <code>cancel-with-savepoint</code> 的选项以方便用户在停止作业时持久化作业状态，在底层它会分为两步: 1. 触发 Savepoint 快照；2. Savepoint 完成后 cancel 作业。这会主要带来三个数据一致性上的问题。</p>
+<p>首先，Flink 依靠两步提交（Tow-Phase Commit）来确保 Exactly-Once，简单来说 Operator 收到 checkpoint barrier 时进行 State 快照，等全部 Operator 都完成快照后再统一由 JobManager 通知 commit。这里的 commit 是一个 best-efford 的操作，不保证每次成功，而是依靠失败状况下的重试保证最终成功（eventually succeed）。如果一次 checkpoint 顺利完成，但某个 Operator commit 时失败了，Flink 作业会重启并从这次成功的 checkpoint 恢复，恢复完毕后再次触发 JobManager 的 checkpoint 完成通知。问题在于在 <code>cancel-with-savepoint</code> 场景，savepoint 完成之后 Task 立刻被取消，这很可能发生在 Operator 进行 commit 之前，导致 commit 被跳过。</p>
+<p>其次，checkpoint/savepoint 过程并不阻止 source 摄入数据，在 <code>cancel-with-savepoint</code> 取消作业时作业通常会多处理一部分数据，如果使用 At-Least-Once 的 sink 则会造成数据的重复。</p>
+<p>最后，在 event-time 窗口统计的业务场景下，窗口数据的输出依赖于 watermark 的提升，如果用户希望在停止作业时输出目前的结果，比如作业准备下线需要保存最新的计算结果，则无法简单地做到这点，也就是说停止作业时总是得不到最新数据。</p>
+<p>FLIP-34[4] 通过重构作业停止的流程设计解决了以上的问题。第一个问题根源在于 cancel 命令应该在 Task commit 之后再执行；第二个问题根源在于 Savepoint 设计上不能阻止消费，因为 Savepoint 可能被简单用于保存某个时间点的状态，之后并不一定会 cancel 作业；第三个问题类似于第二个问题，没有区分是要临时停止还是完全下线。</p>
+<p>针对第二、第三点，FLIP-34 引入 <code>TERMINATE</code> 和 <code>SUSPEND</code> 两种停止作业的方式，前者表示完全下线希望全部提交中间状态，后者表示临时下线，比如维护升级等。两者都会触发 Source 发出 EOS (End of Stream)的信号，令 Task 变为 <code>FINISHED</code> 状态（目前停止作业后 Task 是 <code>CANCELED</code> 状态）。此外 <code>TERMINATE</code> 停止还会令 Source 额外发出一个 LONG 最大值的 Watermak，这会强制触发所有基于 event time 的操作，比如 event time 的窗口统计。</p>
+<p><center><img src="/img/flink-1.9-release/new-stop-properties.png" alt="图二. TERMINATE/SUSPEND 总览" title="图二. TERMINATE/SUSPEND 总览"></center></p>
+
+<p>针对第一点，Savepoint 由默认的异步执行改为同步执行，因此 Task 的 commit 会阻塞其他操作，包括 cancel 命令，保证 Task 的 commit 总是能保证被执行。</p>
+<p>重构之后停止作业的流程如下:</p>
+<ol>
+<li>JobManager 从 Source 端开始触发同步的 Savepoint（包括 <code>TERMINATE</code> 或 <code>SUSPEND</code>）。</li>
+<li>如果是 <code>TERMINATE</code> 停止，Source 会额外发出 MAX_WATERMARK。</li>
+<li>TaskManager 收到 Savepoint barrier 之后执行同步的 Savepoint 快照，这会阻塞数据处理以及其他控制命令，直到快照结束。</li>
+<li>TaskManager 向 JobManager 确认 Savepoint 成功。</li>
+<li>JobManager     确认 Savepoint 完成并通知 TaskManager 进行第二阶段的 commit。</li>
+<li>TaskManager 进行 commit，并移除阻塞状态。</li>
+<li>Source 发出 EOS 信号，接受到信号的 TaskManager 依次关闭 Task。</li>
+<li>JobManager 会在等待所有 Task 和 Job 变为 FINISHED 后关闭。</li>
+</ol>
+<p>在 CLI 端，Flink 新增了 <code>stop</code> 命令，其用法示例如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">./bin/flink stop [-p targetDirectory] [-d] &lt;jobID&gt;</div></pre></td></tr></table></figure>
+<p>其中 <code>-p</code> 指定 Savepoint 的存储路径，<code>-d</code> 表示 <code>TERMINATE</code> 类型 stop。</p>
+<h1 id="重构-WebUI"><a href="#重构-WebUI" class="headerlink" title="重构 WebUI"></a>重构 WebUI</h1><p>1.9 版本合并了 Blink 的新 WebUI。新的 WebUI 从风格来说更加明亮简洁，交互也更加友好。此外之前版本的 WebUI 对日志的支持比较糟糕，是直接拉取机器上的日志文件展示在页面上，这在日志比较大的时候很卡并容易导致标签页崩溃。</p>
+<p>新版的 WebUI 提供分页并有一个类似 IDE 的全局缩略图，可以很容易定位到某个位置（似乎就是通过 VS Code 的库，所以也附送了语法高亮的特性）。</p>
+<p><center><img src="/img/flink-1.9-release/blink-webui-logs.png" alt="图三. 新 WebUI 日志页面" title="图三. 新 WebUI 日志页面"></center></p>
+
+<p>此外在 JobGraph 上也提供了更多的监控信息，比如 InQueue 和 OutQueue 被暴露到 Operator 上，方面用户排查作业瓶颈。</p>
+<p><center><img src="/img/flink-1.9-release/blink-webui-operators.png" alt="图四. 新 WebUI Operators" title="图四. 新 WebUI Operators"></center></p>
+
+<h1 id="Failover-策略"><a href="#Failover-策略" class="headerlink" title="Failover 策略"></a>Failover 策略</h1><p>在 1.9 以前 Flink 遇到 Task 错误的默认行为是重启整个 Job，在作业比较大的情况下可能会带来很高的 downtime 成本。针对这个问题 FLIP1[5] 提出了细粒度的容错机制，提供 RestartRegion 的 Failover 策略，使得只有与错误 Task 有数据联系的 Task 会被重启。RestartRegion 其实并不是在 1.9 版本才用，但在之前存在一个严重的 bug 导致使用 RestartRegion 并不会恢复作业状态，因此应用范围很有限。1.9 版本修复了这个问题，并且将 RestartRegion 设为默认的策略。</p>
+<h1 id="Runtime-稳定性"><a href="#Runtime-稳定性" class="headerlink" title="Runtime 稳定性"></a>Runtime 稳定性</h1><p>1.9 版本修复了几个 Flink runtime 比较严重的 bug，将在这里统一整理。</p>
+<h2 id="Per-job-集群在-job-失败后没有自动退出"><a href="#Per-job-集群在-job-失败后没有自动退出" class="headerlink" title="Per-job 集群在 job 失败后没有自动退出"></a>Per-job 集群在 job 失败后没有自动退出</h2><p>相信不少 Flink 用户都遇到过的一个问题是以 detached 模式，即 per-job cluster，运行作业时，作业失败后有一定几率出现 Yarn application 仍没有退出，变成类似一个没有作业的 session cluster。根据 FLINK-12219[6] 这个问题在于 JobManager 在退出先需要将作业的归档信息持久化（给 HistoryServer 用），但这个过程没有异常处理，如果出现出错将导致 JobManager 不执行关闭的命令。</p>
+<h2 id="单-Task-包含多个-Stateful-Operator-时-RocksDB-StateBackend-会丢失数据"><a href="#单-Task-包含多个-Stateful-Operator-时-RocksDB-StateBackend-会丢失数据" class="headerlink" title="单 Task 包含多个 Stateful Operator 时 RocksDB StateBackend 会丢失数据"></a>单 Task 包含多个 Stateful Operator 时 RocksDB StateBackend 会丢失数据</h2><p>这个问题在于 RocksDBStateBackend 使用的本地快照目录以 VertexID 而不是 Operator 作为生成目录的参数，当多个 Stateful Operator 被 chained 到一起时它们的本地快照目录会冲突，此时 RocksDB 会前一个 Operator 的状态会被后一个覆盖，导致状态丢失。FLINK-12296[7] 通过重构 RocksDB 本地快照目录的生成规则来解决了这个问题。</p>
+<h2 id="已取消-Checkpoint-可能造成作业失败"><a href="#已取消-Checkpoint-可能造成作业失败" class="headerlink" title="已取消 Checkpoint 可能造成作业失败"></a>已取消 Checkpoint 可能造成作业失败</h2><p>当一个 checkpoint 被取消时，其 checkpoint 目录（比如常见的 HDFS 目录）会被删除，但 Task 本地仍有可能会访问这个被删除的目录，此时会抛出 <code>org.apache.hadoop.ipc.RemoteException: java.io.IOException: Path doesn&#39;t exist</code> 的异常，导致作业失败。FLINK-11662[8] 通过忽略已取消的 checkpoint 抛出的异常来修复了这个问题。</p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
+<li><a href="https://issues.apache.org/jira/secure/ReleaseNote.jspa?projectId=12315522&amp;version=12344601" target="_blank" rel="external">Flink 1.9 Release Changelog</a></li>
+<li><a href="https://issues.apache.org/jira/browse/FLINK-6962" target="_blank" rel="external">[FLINK-6962] Add a create table SQL DDL</a></li>
+<li><a href="https://issues.apache.org/jira/browse/FLINK-10556" target="_blank" rel="external">[FLINK-10556] Integration with Apache Hive</a></li>
+<li><a href="https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=103090212" target="_blank" rel="external">FLIP-34: Terminate/Suspend Job with Savepoint</a></li>
+<li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-1+%3A+Fine+Grained+Recovery+from+Task+Failures" target="_blank" rel="external">FLIP-1 : Fine Grained Recovery from Task Failures</a></li>
+<li><a href="https://issues.apache.org/jira/browse/FLINK-12219" target="_blank" rel="external">[FLINK-12219] Yarn application can’t stop when flink job failed in per-job yarn cluster mode</a></li>
+<li><a href="https://issues.apache.org/jira/browse/FLINK-12296" target="_blank" rel="external">[FLINK-12296] Data loss silently in RocksDBStateBackend when more than one operator(has states) chained in a single task</a></li>
+<li><a href="https://issues.apache.org/jira/browse/FLINK-11662" target="_blank" rel="external">[FLINK-11662] Discarded checkpoint can cause Tasks to fail</a></li>
+<li><a href="https://ververica.cn/developers/flink1-9-hive/" target="_blank" rel="external">如何在 Flink 1.9 中使用 Hive？</a></li>
+</ol>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：Paul Lin</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2019/09/21/Flink-1-9-Release-解读/" title="Flink 1.9 Release 解读">2019/09/21/Flink-1-9-Release-解读/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/07/28/深入理解-Flink-容错机制/" rel="next" title="深入理解 Flink 容错机制">
+                <i class="fa fa-chevron-left"></i> 深入理解 Flink 容错机制
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">56</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">37</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Blink-Planner"><span class="nav-number">1.</span> <span class="nav-text">Blink Planner</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SQL-DDL"><span class="nav-number">2.</span> <span class="nav-text">SQL DDL</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Hive-集成"><span class="nav-number">3.</span> <span class="nav-text">Hive 集成</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#终止-暂停作业"><span class="nav-number">4.</span> <span class="nav-text">终止/暂停作业</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#重构-WebUI"><span class="nav-number">5.</span> <span class="nav-text">重构 WebUI</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Failover-策略"><span class="nav-number">6.</span> <span class="nav-text">Failover 策略</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Runtime-稳定性"><span class="nav-number">7.</span> <span class="nav-text">Runtime 稳定性</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Per-job-集群在-job-失败后没有自动退出"><span class="nav-number">7.1.</span> <span class="nav-text">Per-job 集群在 job 失败后没有自动退出</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#单-Task-包含多个-Stateful-Operator-时-RocksDB-StateBackend-会丢失数据"><span class="nav-number">7.2.</span> <span class="nav-text">单 Task 包含多个 Stateful Operator 时 RocksDB StateBackend 会丢失数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#已取消-Checkpoint-可能造成作业失败"><span class="nav-number">7.3.</span> <span class="nav-text">已取消 Checkpoint 可能造成作业失败</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">8.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2019/09/21/Flink-1-9-Release-解读/';
+          this.page.identifier = '2019/09/21/Flink-1-9-Release-解读/';
+          this.page.title = 'Flink 1.9 Release 解读';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
