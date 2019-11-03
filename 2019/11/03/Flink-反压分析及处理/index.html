@@ -80,6 +80,8 @@
 
 
 
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
 
 
 
@@ -90,23 +92,20 @@
 
 
 
-<meta name="description" content="反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。
-关于 Flink">
+<meta name="description" content="反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="如何分析及处理 Flink 反压">
 <meta property="og:url" content="https://link3280.github.io/2019/11/03/Flink-反压分析及处理/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。
-关于 Flink">
+<meta property="og:description" content="反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。">
 <meta property="og:image" content="https://link3280.github.io/img/flink-backpressure-handling/back-pressure-sampling-high.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-backpressure-handling/credit-based-network.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-backpressure-handling/1.8-backpressure-table.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-backpressure-handling/1.9-backpressure-table.png">
-<meta property="og:updated_time" content="2019-11-03T11:58:42.794Z">
+<meta property="og:updated_time" content="2019-11-03T12:06:04.979Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="如何分析及处理 Flink 反压">
-<meta name="twitter:description" content="反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。
-关于 Flink">
+<meta name="twitter:description" content="反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。">
 <meta name="twitter:image" content="https://link3280.github.io/img/flink-backpressure-handling/back-pressure-sampling-high.png">
 
 
@@ -378,8 +377,8 @@
 
       
         <p>反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。</p>
-<p>关于 Flink 的反压机制，网上已经有不少博客介绍，中文博客推荐这两篇[1][2]。简单来说，Flink 拓扑中每个节点（Task）间的数据都以阻塞队列的方式传输，下游来不及消费导致队列被占满后，上游的生产也会被阻塞，最终导致数据源的摄入被阻塞。而本文将着重结合官方的博客[4]分享笔者在实践中分析和处理 Flink 反压的经验。</p>
 <a id="more"></a>
+<p>关于 Flink 的反压机制，网上已经有不少博客介绍，中文博客推荐这两篇[1][2]。简单来说，Flink 拓扑中每个节点（Task）间的数据都以阻塞队列的方式传输，下游来不及消费导致队列被占满后，上游的生产也会被阻塞，最终导致数据源的摄入被阻塞。而本文将着重结合官方的博客[4]分享笔者在实践中分析和处理 Flink 反压的经验。</p>
 <h2 id="反压的影响"><a href="#反压的影响" class="headerlink" title="反压的影响"></a>反压的影响</h2><p>反压并不会直接影响作业的可用性，它表明作业处于亚健康的状态，有潜在的性能瓶颈并可能导致更大的数据处理延迟。通常来说，对于一些对延迟要求不太高或者数据量比较小的应用来说，反压的影响可能并不明显，然而对于规模比较大的 Flink 作业来说反压可能会导致严重的问题。</p>
 <p>这是因为 Flink 的 checkpoint 机制，反压还会影响到两项指标: checkpoint 时长和 state 大小。前者是因为 checkpoint barrier 是不会越过普通数据的，数据处理被阻塞也会导致 checkpoint barrier 流经整个数据管道的时长变长，因而 checkpoint 总体时间（End to End Duration）变长。后者是因为为保证 EOS（Exactly-Once-Semantics，准确一次），对于有两个以上输入管道的 Operator，checkpoint barrier 需要对齐（Alignment），接受到较快的输入管道的 barrier 后，它后面数据会被缓存起来但不处理，直到较慢的输入管道的 barrier 也到达，这些被缓存的数据会被放到state 里面，导致 checkpoint 变大。这两个影响对于生产环境的作业来说是十分危险的，因为 checkpoint 是保证数据一致性的关键，checkpoint 时间变长有可能导致 checkpoint 超时失败，而 state 大小同样可能拖慢 checkpoint 甚至导致 OOM （使用 Heap-based StateBackend）或者物理内存使用超出容器资源（使用 RocksDBStateBackend）的稳定性问题。因此，我们在生产中要尽量避免出现反压的情况（顺带一提，为了缓解反压给 checkpoint 造成的压力，社区提出了 FLIP-76: Unaligned Checkpoints[4] 来解耦反压和 checkpoint）。</p>
 <h2 id="定位反压节点"><a href="#定位反压节点" class="headerlink" title="定位反压节点"></a>定位反压节点</h2><p>要解决反压首先要做的是定位到造成反压的节点，这主要有两种办法: 1.通过 Flink Web UI 自带的反压监控面板；2.通过 Flink Task Metrics。前者比较容易上手，适合简单分析，后者则提供了更加丰富的信息，适合用于监控系统。因为反压会向上游传导，这两种方式都要求我们从 Source 节点到 Sink 的逐一排查，直到找到造成反压的根源原因[4]。下面分别介绍这两种办法。</p>
@@ -617,6 +616,13 @@
 
         </nav>
 
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
         
 
         <div class="links-of-author motion-element">
