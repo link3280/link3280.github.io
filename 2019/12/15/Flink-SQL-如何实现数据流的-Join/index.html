@@ -98,19 +98,19 @@
 <meta property="og:url" content="https://link3280.github.io/2019/12/15/Flink-SQL-如何实现数据流的-Join/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="无论在 OLAP 还是 OLTP 领域，Join 都是业务常会涉及到且优化规则比较复杂的 SQL 语句。对于离线计算而言，经过数据库领域多年的积累 Join 的语义以及实现已经十分成熟，然而对于近年来刚兴起的 Streaming SQL 来说 Join 却处于刚起步的状态。其中最为关键的问题在于 Join 的实现依赖于缓存整个数据集，而 Streaming SQL Join 的对象却是无限的数据流">
-<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img1.join-in-continuous-query-1">
-<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img2.join-in-continuous-query-2">
-<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img3.join-in-continuous-query-3">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img1.join-in-continuous-query-1.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img2.join-in-continuous-query-2.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img3.join-in-continuous-query-3.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-join/img4.time-window-orders-lower-bound.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-join/img5.time-window-shipment-lower-bound.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-join/img6.temporal-table-join-example.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-join/img7.temporal-table-registration.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-join/img8.temporal-table-content.png">
-<meta property="og:updated_time" content="2019-12-15T09:06:36.984Z">
+<meta property="og:updated_time" content="2019-12-15T09:13:53.662Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink SQL 如何实现数据流的 Join">
 <meta name="twitter:description" content="无论在 OLAP 还是 OLTP 领域，Join 都是业务常会涉及到且优化规则比较复杂的 SQL 语句。对于离线计算而言，经过数据库领域多年的积累 Join 的语义以及实现已经十分成熟，然而对于近年来刚兴起的 Streaming SQL 来说 Join 却处于刚起步的状态。其中最为关键的问题在于 Join 的实现依赖于缓存整个数据集，而 Streaming SQL Join 的对象却是无限的数据流">
-<meta name="twitter:image" content="https://link3280.github.io/img/streaming-join/img1.join-in-continuous-query-1">
+<meta name="twitter:image" content="https://link3280.github.io/img/streaming-join/img1.join-in-continuous-query-1.png">
 
 
 
@@ -387,14 +387,14 @@
 <p>Sort-Merge Join 顾名思义，分为两个 Sort 和 Merge 阶段。首先将两个数据集进行分别排序，然后对两个有序数据集分别进行遍历和匹配，类似于归并排序的合并。值得注意的是，Sort-Merge 只适用于 Equi-Join（Join 条件均使用等于作为比较算子）。Sort-Merge Join 要求对两个数据集进行排序，成本很高，通常作为输入本就是有序数据集的情况下的优化方案。</p>
 <p>Hash Join 同样分为两个阶段，首先将一个数据集转换为 Hash Table，然后遍历另外一个数据集元素并与 Hash Table 内的元素进行匹配。第一阶段和第一个数据集分别称为 build 阶段和 build table，第二个阶段和第二个数据集分别称为 probe 阶段和 probe table。Hash Join 效率较高但对空间要求较大，通常是作为 Join 其中一个表为适合放入内存的小表的情况下的优化方案。和 Sort-Merge Join 类似，Hash Join 也只适用于 Equi-Join。</p>
 <h1 id="实时-Streaming-SQL-Join"><a href="#实时-Streaming-SQL-Join" class="headerlink" title="实时 Streaming SQL Join"></a>实时 Streaming SQL Join</h1><p>相对于离线的 Join，实时 Streaming SQL（面向无界数据集的 SQL）无法缓存所有数据，因此 Sort-Merge Join 要求的对数据集进行排序基本是无法做到的，而 Nested-loop Join 和 Hash Join 经过一定的改良则可以满足实时 SQL 的要求。</p>
-<p>我们通过例子来看基本的 Nested Join 在实时 Streaming SQL 的基础实现（案例及图来自 Piotr Nowojski 在 Flink Forward Francisco 的分享[2]）。</p>
-<p><center><p><img src="/img/streaming-join/img1.join-in-continuous-query-1" alt="图1. Join-in-continuous-query-1" title="图1. Join-in-continuous-query-1"></p></center></p><p></p>
+<p>我们通过例子来看基本的 Nested Join 在实时 Streaming SQL 的基础实现（案例及图来自 Piotr Nowojski 在 Flink Forward San Francisco 的分享[2]）。</p>
+<p><center><p><img src="/img/streaming-join/img1.join-in-continuous-query-1.png" alt="图1. Join-in-continuous-query-1" title="图1. Join-in-continuous-query-1"></p></center></p><p></p>
 <p>Table A 有 <code>1</code>、<code>42</code> 两个元素，Table B 有 <code>42</code> 一个元素，所以此时的 Join 结果会输出 42。</p>
-<p><center><p><img src="/img/streaming-join/img2.join-in-continuous-query-2" alt="图2. Join-in-continuous-query-2" title="图2. Join-in-continuous-query-2"></p></center></p><p></p>
+<p><center><p><img src="/img/streaming-join/img2.join-in-continuous-query-2.png" alt="图2. Join-in-continuous-query-2" title="图2. Join-in-continuous-query-2"></p></center></p><p></p>
 <p>接着 Table B 依次接受到三个新的元素，分别是 <code>7</code>、<code>3</code>、<code>1</code>。因为 <code>1</code> 匹配到 Table A 的元素，因此结果表再输出一个元素 <code>1</code>。</p>
-<p><center><p><img src="/img/streaming-join/img3.join-in-continuous-query-3" alt="图3. Join-in-continuous-query-3" title="图3. Join-in-continuous-query-3"></p></center></p><p></p>
+<p><center><p><img src="/img/streaming-join/img3.join-in-continuous-query-3.png" alt="图3. Join-in-continuous-query-3" title="图3. Join-in-continuous-query-3"></p></center></p><p></p>
 <p>随后 Table A 出现新的输入 <code>2</code>、<code>3</code>、<code>6</code>，<code>3</code> 匹配到 Table B 的元素，因此再输出 <code>3</code> 到结果表。</p>
-<p>可以看到在 Nested-join 中我们需要保存两个输入表，随着时间的增长 Table A 和 Table B 需要保存的历史数据无止境地增长，导致很不合理的内存磁盘资源占用，而且单个元素的匹配效率也会越来越低。类似的问题也存在于 Hash Join 中。</p>
+<p>可以看到在 Nested-Loop Join 中我们需要保存两个输入表的内容，而随着时间的增长 Table A 和 Table B 需要保存的历史数据无止境地增长，导致很不合理的内存磁盘资源占用，而且单个元素的匹配效率也会越来越低。类似的问题也存在于 Hash Join 中。</p>
 <p>那么有没有可能设置一个缓存剔除策略，将不必要的历史数据及时清理呢？答案是肯定的，关键在于缓存剔除策略如何实现，这也是 Flink SQL 提供的三种 Join 的主要区别。</p>
 <h1 id="Flink-SQL-的-Join"><a href="#Flink-SQL-的-Join" class="headerlink" title="Flink SQL 的 Join"></a>Flink SQL 的 Join</h1><h2 id="Regular-Join"><a href="#Regular-Join" class="headerlink" title="Regular Join"></a>Regular Join</h2><p>Regular Join 是最为基础的没有缓存剔除策略的 Join。Regular Join 中两个表的输入和更新都会对全局可见，影响之后所有的 Join 结果。举例，在一个如下的 Join 查询里，Orders 表的新纪录会和 Product 表所有历史纪录以及未来的纪录进行匹配。</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">SELECT * FROM Orders</div><div class="line">INNER JOIN Product</div><div class="line">ON Orders.productId = Product.id</div></pre></td></tr></table></figure>
