@@ -106,7 +106,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/streaming-join/img6.temporal-table-join-example.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-join/img7.temporal-table-registration.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-join/img8.temporal-table-content.png">
-<meta property="og:updated_time" content="2019-12-15T09:13:53.662Z">
+<meta property="og:updated_time" content="2019-12-17T13:34:58.666Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink SQL 如何实现数据流的 Join">
 <meta name="twitter:description" content="无论在 OLAP 还是 OLTP 领域，Join 都是业务常会涉及到且优化规则比较复杂的 SQL 语句。对于离线计算而言，经过数据库领域多年的积累 Join 的语义以及实现已经十分成熟，然而对于近年来刚兴起的 Streaming SQL 来说 Join 却处于刚起步的状态。其中最为关键的问题在于 Join 的实现依赖于缓存整个数据集，而 Streaming SQL Join 的对象却是无限的数据流">
@@ -399,12 +399,12 @@
 <h1 id="Flink-SQL-的-Join"><a href="#Flink-SQL-的-Join" class="headerlink" title="Flink SQL 的 Join"></a>Flink SQL 的 Join</h1><h2 id="Regular-Join"><a href="#Regular-Join" class="headerlink" title="Regular Join"></a>Regular Join</h2><p>Regular Join 是最为基础的没有缓存剔除策略的 Join。Regular Join 中两个表的输入和更新都会对全局可见，影响之后所有的 Join 结果。举例，在一个如下的 Join 查询里，Orders 表的新纪录会和 Product 表所有历史纪录以及未来的纪录进行匹配。</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">SELECT * FROM Orders</div><div class="line">INNER JOIN Product</div><div class="line">ON Orders.productId = Product.id</div></pre></td></tr></table></figure>
 <p>因为历史数据不会被清理，所以 Regular Join 允许对输入表进行任意种类的更新操作（insert、update、delete）。然而因为资源问题 Regular Join 通常是不可持续的，一般只用做有界数据流的 Join。</p>
-<h2 id="Time-Windowed-Join"><a href="#Time-Windowed-Join" class="headerlink" title="Time-Windowed Join"></a>Time-Windowed Join</h2><p>Time-Windowed Join 利用窗口的给两个输入表设定一个 Join 的时间界限，超出时间范围的数据则对 JOIN 不可见并可以被清理掉。值得注意的是，这里涉及到的一个问题是时间的语义，时间可以是指计算发生的系统时间（即 Processing Time），也可以是指从数据本身的时间字段提取的 Event Time。如果是 Processing Time，Flink 根据系统时间自动划分 Join 的时间窗口并定时清理数据；如果是 EventTime，Flink 分配 Event Time 窗口并依据 Watermark 来清理数据。</p>
-<p>以更常用的 EventTime Windowed Join 为例，一个将 Orders 订单表和 Shipments 运输单表依据订单时间和运输时间 Join 的查询如下:</p>
+<h2 id="Time-Windowed-Join"><a href="#Time-Windowed-Join" class="headerlink" title="Time-Windowed Join"></a>Time-Windowed Join</h2><p>Time-Windowed Join 利用窗口的给两个输入表设定一个 Join 的时间界限，超出时间范围的数据则对 JOIN 不可见并可以被清理掉。值得注意的是，这里涉及到的一个问题是时间的语义，时间可以是指计算发生的系统时间（即 Processing Time），也可以是指从数据本身的时间字段提取的 Event Time。如果是 Processing Time，Flink 根据系统时间自动划分 Join 的时间窗口并定时清理数据；如果是 Event Time，Flink 分配 Event Time 窗口并依据 Watermark 来清理数据。</p>
+<p>以更常用的 Event Time Windowed Join 为例，一个将 Orders 订单表和 Shipments 运输单表依据订单时间和运输时间 Join 的查询如下:</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">SELECT *</div><div class="line">FROM </div><div class="line">	Orders o, </div><div class="line">	Shipments s</div><div class="line">WHERE </div><div class="line">	o.id = s.orderId AND</div><div class="line">	s.shiptime BETWEEN o.ordertime AND o.ordertime + INTERVAL &apos;4&apos; HOUR</div></pre></td></tr></table></figure>
-<p>这个查询会为 Orders 表设置了 `o.ordertime &gt; s.shiptime- INTERVAL ‘4’ 的时间下界（图4），</p>
+<p>这个查询会为 Orders 表设置了 <code>o.ordertime &gt; s.shiptime- INTERVAL &#39;4&#39;HOUR</code> 的时间下界（图4），</p>
 <p><center><p><img src="/img/streaming-join/img4.time-window-orders-lower-bound.png" alt="图4. Time-Windowed Join 的时间下界 - Orders 表" title="图4. Time-Windowed Join 的时间下界 - Orders 表"></p></center></p><p></p>
-<p>并为 Shipmenets 表设置了 HOUR<code>`s.shiptime &gt;= o.ordertime</code> 的时间下界（图5）。</p>
+<p>并为 Shipmenets 表设置了 <code>s.shiptime &gt;= o.ordertime</code> 的时间下界（图5）。</p>
 <p><center><p><img src="/img/streaming-join/img5.time-window-shipment-lower-bound.png" alt="图5. Time-Windowed Join 的时间下界 - Shipment 表" title="图5. Time-Windowed Join 的时间下界 - Shipment 表"></p></center></p><p></p>
 <p>因此两个输入表都只需要缓存在时间下界以上的数据，将空间占用维持在合理的范围。</p>
 <p>不过虽然底层实现上没有问题，但如何通过 SQL 语法定义时间仍是难点。尽管在实时计算领域 Event Time、Processing Time、Watermark 这些概念已经成为业界共识，但在 SQL 领域对时间数据类型的支持仍比较弱[4]。因此，定义 Watermark 和时间语义都需要通过编程 API 的方式完成，比如从 DataStream 转换至 Table 时定义，而不能单纯靠 SQL 完成。这方面的支持 Flink 社区计划通过拓展 SQL 方言来完成，感兴趣的读者可以通过 FLIP-66[7] 来追踪进度。</p>
@@ -418,7 +418,7 @@
 <p><center><p><img src="/img/streaming-join/img8.temporal-table-content.png" alt="图8. Temporal Table Content" title="图8. Temporal Table Content]"></p></center></p><p></p>
 <p>在 Rates 的帮助下，我们可以将业务逻辑用以下的查询来表达:</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">SELECT </div><div class="line">	o.amount * r.rate</div><div class="line">FROM</div><div class="line">	Orders o,</div><div class="line">	LATERAL Table(Rates(o.time)) r</div><div class="line">WHERE</div><div class="line">	o.currency = r.currency</div></pre></td></tr></table></figure>
-<p>值得注意的是，不同于在 Regular Join 和 Time-Windowed Join 中两个表是平等的，任意一个表的新记录都会与另一表的历史记录进行匹配，在 Temporal Table Join 中，Temoparal Table 的更新对另一表在该时间节点以前的记录是不可见的。这意味着我们只需要保存 Build Side 的记录直到 Watermark 超过记录的版本字段。因为 Probe Side 的输入理论上不会再有早于 Watermark 的记录，这些版本的数据可以安全地被清理掉。</p>
+<p>值得注意的是，不同于在 Regular Join 和 Time-Windowed Join 中两个表是平等的，任意一个表的新记录都可以与另一表的历史记录进行匹配，在 Temporal Table Join 中，Temoparal Table 的更新对另一表在该时间节点以前的记录是不可见的。这意味着我们只需要保存 Build Side 的记录直到 Watermark 超过记录的版本字段。因为 Probe Side 的输入理论上不会再有早于 Watermark 的记录，这些版本的数据可以安全地被清理掉。</p>
 <h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>实时领域 Streaming SQL 中的 Join 与离线 Batch SQL 中的 Join 最大不同点在于无法缓存完整数据集，而是要给缓存设定基于时间的清理条件以限制 Join 涉及的数据范围。根据清理策略的不同，Flink SQL 分别提供了 Regular Join、Time-Windowed Join 和 Temporal Table Join 来应对不同业务场景。</p>
 <p>另外，尽管在实时计算领域 Join 可以灵活地用底层编程 API 来实现，但在 Streaming SQL 中 Join 的发展仍处于比较初级的阶段，其中关键点在于如何将时间属性合适地融入 SQL 中，这点 ISO SQL 委员会制定的 SQL 标准并没有给出完整的答案。或者从另外一个角度来讲，作为 Streaming SQL 最早的开拓者之一，Flink 社区很适合探索出一套合理的 SQL 语法反过来贡献给 ISO。</p>
 <h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
