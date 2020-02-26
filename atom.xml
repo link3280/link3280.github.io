@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://link3280.github.io/"/>
-  <updated>2020-02-11T12:27:30.984Z</updated>
+  <updated>2020-02-26T13:25:34.037Z</updated>
   <id>https://link3280.github.io/</id>
   
   <author>
@@ -15,6 +15,29 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Flink Table 的三种 Sink 模式</title>
+    <link href="https://link3280.github.io/2020/02/26/Flink-Table-%E7%9A%84%E4%B8%89%E7%A7%8D-Sink-%E6%A8%A1%E5%BC%8F/"/>
+    <id>https://link3280.github.io/2020/02/26/Flink-Table-的三种-Sink-模式/</id>
+    <published>2020-02-26T13:19:52.000Z</published>
+    <updated>2020-02-26T13:25:34.037Z</updated>
+    
+    <content type="html"><![CDATA[<p>作为计算引擎 Flink 应用的计算结果总要以某种方式输出，比如调试阶段的打印到控制台或者生产阶段的写到数据库。而对于本来就需要在 Flink 内存保存中间及最终计算结果的应用来说，比如进行聚合统计的应用，输出结果便是将内存中的结果同步到外部。就 Flink Table/SQL API 而言，这里的同步会有三种模式，分别是 Append、Upsert 和 Retract。实际上这些输出计算结果的模式并不限于某个计算框架，比如 Storm、Spark 或者 Flink DataStream 都可以应用这些模式，不过 Flink Table/SQL 已有完整的概念和内置实现，更方便讨论。</p><a id="more"></a><h1 id="基础原理"><a href="#基础原理" class="headerlink" title="基础原理"></a>基础原理</h1><p>相信接触过 Streaming SQL 的同学都有了解或者听过流表二象性，简单来说流和表是同一事实的不同表现，是可以相互转换的。流和表的表述在业界不尽相同，笔者比较喜欢的一种是: 流体现事实在时间维度上的变化，而表则体现事实在某个时间点的视图。如果将流比作水管中流动的水，那么表将是杯子里静止的水。</p><p>将流转换为表的方法对于大多数读者都不陌生，只需将聚合统计函数应用到流上，流很自然就变为表（值得注意的是，Flink 的 Dynamic Table 和表的定义有细微不同，这将在下文讲述）。比如对于一个计算 PV 的简单流计算作业，将用户浏览日志数据流安 url 分类统计，变成 <code>(url, views)</code> 这样的一个表。然而对于如何将表转换成流，读者则未必有这么清晰的概念。</p><p>假设一个典型的实时流计算应用的工作流程可以被简化为下图:</p><center><p><img src="/img/flink-sink-pattern/img1.programing-model.png" alt="图1. Flink 编程模型"></p></center><p>其中很关键的一点是 Transformation 是否聚合类型的计算。若否，则输出结果依然是流，可以很自然地使用原本流处理的 Sink（与外部系统的连接器）；若是，则流会转换为表，那么输出的结果将是表，而一个表的输出通常是批处理的概念，不能直接简单地用流处理的 Sink 来表达。</p><p>这时有个很朴素的想法是，我们能不能避免批处理那种全量的输出，每次只输出表的 diff，也就是 changelog。这也是表转化为流的方法: 持续观察表的变化，并将每个变化记录成日志输出。因此，流和表的转换可以以下图表示:</p><center><p><img src="/img/flink-sink-pattern/img2.stream-table-conversion.png" alt="图2. Flink 编程模型"></p></center><p>其中表的变化具体可以分为 <code>INSERT</code>、<code>UPDATE</code> 和 <code>DELETE</code> 三类，而 Flink 根据这些变化类型分别总结了三种结果的输出模式。</p><table><thead><tr><th>模式</th><th>INSERT</th><th>UPDATE</th><th>DELETE</th></tr></thead><tbody><tr><td>Append</td><td>支持</td><td>不支持</td><td>不支持</td></tr><tr><td>Upsert</td><td>支持</td><td>支持</td><td>支持</td></tr><tr><td>Retract</td><td>支持</td><td>支持</td><td>支持</td></tr></tbody></table><p>通常来说 Append 是最容易实现但功能最弱的，Retract 是最难实现而功能最强的。下文分别谈谈三种模式的特点和应用场景。</p><h1 id="Append-输出模式"><a href="#Append-输出模式" class="headerlink" title="Append 输出模式"></a>Append 输出模式</h1><p>Append 是最为简单的输出模式，只支持追加结果记录的操作。因为结果一旦输出以后便不会再有变更，Append 输出模式的最大特性是不可变性（immutability），而不可变性最令人向往的优势便是安全，比如线程安全或者 Event Sourcing 的可恢复性，不过同时也会给业务操作带来限制。通常来说，Append 模式会用于写入不方便做撤回或者删除操作的存储系统的场景，比如 Kafka 等 MQ 或者打印到控制台。</p><p>在实时聚合统计中，聚合统计的结果输出是由 Trigger 决定的，而 Append-Only 则意味着对于每个窗口实例（Pane，窗格）Trigger 只能触发一次，则就导致无法在迟到数据到达时再刷新结果。通常来说，我们可以给 Watermark 设置一个较大的延迟容忍阈值来避免这种刷新（再有迟到数据则丢弃），但代价是却会引入较大的延迟。</p><p>不过对于不涉及聚合的 Table 来说，Append 输出模式是非常好用的，因为这类 Table 只是将数据流的记录按时间顺序排在一起，每条记录间的计算都是独立的。值得注意的是，从 DataFlow Model 的角度来看未做聚合操作的流不应当称为表，但是在 Flink 的概念里所有的流都可以称为 Dynamic Table。笔者认为这个设计也有一定的道理，原因是从流中截取一段出来依然可以满足表的定义，即”某个时间点的视图”，而且我们可以争辩说<code>不聚合</code>也是一种聚合函数。</p><h1 id="Upsert-输出模式"><a href="#Upsert-输出模式" class="headerlink" title="Upsert 输出模式"></a>Upsert 输出模式</h1><p>Upsert 是 Append 模式的升级版，支持 Append-Only 的操作和在有主键的前提下的 UPDATE 和 DELETE 操作。Upsert 模式依赖业务主键来实现输出结果的更新和删除，因此非常适合 KV 数据库，比如<br>HBase、JDBC 的 TableSink 都使用了这种方式。</p><p>在底层，Upsert 模式下的结果更新会被翻译为 (Boolean, ROW) 的二元组。其中第一个元素表示操作类型，<code>true</code> 对应 <code>UPSERT</code> 操作（不存在该元素则 <code>INSERT</code>，存在则 <code>UPDATE</code>），<code>false</code> 对应 <code>DELETE</code> 操作，第二个元素则是操作对应的记录。如果结果表本身是 Append-Only 的，第一个元素会全部为 <code>true</code>，而且也无需提供业务主键。</p><p>Upsert 模式是目前来说比较实用的模式，因为大部分业务都会提供原子或复合类型的主键，而在支持 KV 的存储系统也非常多，但要注意的是不要变更主键，具体原因会在下一节谈到。</p><h1 id="Retract-输出模式"><a href="#Retract-输出模式" class="headerlink" title="Retract 输出模式"></a>Retract 输出模式</h1><p>Retract 是三种输出模式中功能最强大但实现也最复杂的一种，它要求目标存储系统可以追踪每个条记录，而且这些记录至少在一定时间内都是可以撤回的，因此通常来说它会自带系统主键，不必依赖于业务主键。然而由于大数据存储系统很少有可以精确到一条记录的更新操作，因此目前来说至少在 Flink 原生的 TableSink 中还没有能在生产环境中满足这个要求的。</p><p>不同于 Upsert 模式更新时会将整条记录重新输出，Retract 模式会将更新分成两条表示增减量的消息，一条是 <code>(false, OldRow)</code> 的撤回（Retract）操作，一条是 <code>(true, NewRow)</code> 的积累（Accumulate）操作。这样的好处是，在主键出现变化的情况下，<code>Upsert</code> 输出模式无法撤回旧主键的记录，导致数据不准确，而 <code>Retract</code> 模式则不存在这个问题。</p><p>举个例子，假设我们将电商订单按照承运快递公司进行分类计数，有如下的结果表。</p><table><thead><tr><th>公司</th><th>订单数</th></tr></thead><tbody><tr><td>中通</td><td>2</td></tr><tr><td>圆通</td><td>1</td></tr><tr><td>顺丰</td><td>3</td></tr></tbody></table><p>那么如果原本一单为中通的快递，后续更新为用顺丰发货，对于 Upsert 模式会产生 <code>(true, (顺丰, 4))</code> 这样一条 changelog，但中通的订单数没有被修正。相比之下，Retract 模式产出 <code>(false, (中通, 1))</code> 和 <code>(true, (顺丰, 1))</code> 两条数据，则可以正确地更新数据。</p><h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>Flink Table Sink 的三种模式本质上是如何监控结果表并产生 changelog，这可以应用于所有需要将表转为流的场景，包括同一个 Flink 应用的不同表间的联动。三种模式中 Append 模式只支持表的 <code>INSERT</code>，最为简单；Upsert 模式依赖业务主键提供 <code>INSERT</code>、<code>UPDATE</code> 和 <code>DELETE</code> 全部三类变更，比较实用；Retract 模式同样支持三类变更且不要求业务主键，但会将 <code>UPDATE</code> 翻译为旧数据的撤回和新数据的累加，实现上比较复杂。</p><h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol><li><a href="https://www.confluent.io/blog/making-sense-of-stream-processing/" target="_blank" rel="external">Stream Processing, Event Sourcing, and Data Streaming Explained</a></li><li><a href="https://www.confluent.io/blog/introducing-kafka-streams-stream-processing-made-simple/" target="_blank" rel="external">Introducing Kafka Streams: Stream Processing Made Simple</a></li><li><a href="https://ci.apache.org/projects/flink/flink-docs-stable/dev/table/streaming/dynamic_tables.html" target="_blank" rel="external">Dynamic Tables</a></li><li><a href="https://blog.jrwang.me/2019/2019-10-16-flink-sourcecode-stream-and-dynamic-table/" target="_blank" rel="external">Flink 源码阅读笔记（18）- Flink SQL 中的流和动态表</a></li></ol>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;作为计算引擎 Flink 应用的计算结果总要以某种方式输出，比如调试阶段的打印到控制台或者生产阶段的写到数据库。而对于本来就需要在 Flink 内存保存中间及最终计算结果的应用来说，比如进行聚合统计的应用，输出结果便是将内存中的结果同步到外部。就 Flink Table/SQL API 而言，这里的同步会有三种模式，分别是 Append、Upsert 和 Retract。实际上这些输出计算结果的模式并不限于某个计算框架，比如 Storm、Spark 或者 Flink DataStream 都可以应用这些模式，不过 Flink Table/SQL 已有完整的概念和内置实现，更方便讨论。&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="Flink" scheme="https://link3280.github.io/categories/Flink/"/>
+    
+    
+      <category term="Flink" scheme="https://link3280.github.io/tags/Flink/"/>
+    
+  </entry>
   
   <entry>
     <title>漫谈 Flink Source 接口重构</title>
@@ -363,9 +386,9 @@
       <category term="Flink" scheme="https://link3280.github.io/categories/Flink/"/>
     
     
-      <category term="YARN" scheme="https://link3280.github.io/tags/YARN/"/>
-    
       <category term="Flink" scheme="https://link3280.github.io/tags/Flink/"/>
+    
+      <category term="YARN" scheme="https://link3280.github.io/tags/YARN/"/>
     
   </entry>
   
@@ -458,35 +481,6 @@
     
       <category term="Flink" scheme="https://link3280.github.io/categories/Flink/"/>
     
-    
-      <category term="Flink" scheme="https://link3280.github.io/tags/Flink/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Flink/Spark 如何实现动态更新作业配置</title>
-    <link href="https://link3280.github.io/2018/08/19/Flink-Spark-%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E5%8A%A8%E6%80%81%E6%9B%B4%E6%96%B0%E4%BD%9C%E4%B8%9A%E5%8F%98%E9%87%8F/"/>
-    <id>https://link3280.github.io/2018/08/19/Flink-Spark-如何实现动态更新作业变量/</id>
-    <published>2018-08-19T12:47:21.000Z</published>
-    <updated>2019-04-14T13:05:07.105Z</updated>
-    
-    <content type="html"><![CDATA[<p>由于实时场景对可用性十分敏感，实时作业通常需要避免频繁重启，因此动态加载作业配置（变量）是实时计算里十分常见的需求，比如通常复杂事件处理 (CEP) 的规则或者在线机器学习的模型。尽管常见，实现起来却并没有那么简单，其中最难点在于如何确保节点状态在变更期间的一致性。目前来说一般有两种实现方式：</p><ul><li>轮询拉取方式，即作业算子定时检测在外部系统的配置是否有变更，若有则同步配置。</li><li>控制流方式，即作业除了用于计算的一个或多个普通数据流以外，还有提供一个用于改变作业算子状态的元数据流，也就是控制流。</li></ul><a id="more"></a><p>轮询拉取方式基于 pull 模式，一般实现是用户在 Stateful 算子(比如 RichMap)里实现后台线程定时从外部系统同步变量。这种方式对于一般作业或许足够，但存在两个缺点分别限制了作业的实时性和准确性的进一步提高：首先，轮询总是有一定的延迟，因此变量的变更不能第一时间生效；其次，这种方式依赖于节点本地时间来进行校准。如果在同一时间有的节点已经检测到变更并更新状态，而有的节点还没有检测到或者还未更新，就会造成短时间内的不一致。</p><p>控制流方式基于 push 模式，变更的检测和节点更新的一致性都由计算框架负责，从用户视角看只需要定义如何更新算子状态并负责将控制事件丢入控制流，后续工作计算框架会自动处理。控制流不同于其他普通数据流的地方在于控制流是以广播形式流动的，否则在有 Keyby 或者 rebalance 等提高并行度分流的算子的情况下就无法将控制事件传达给所有的算子。</p><p>以目前最流行的两个实时计算框架 Spark Streaming 和 Flink 来说，前者是以类似轮询的方式来实现实时作业的更新，而后者则是基于控制流的方式。</p><h2 id="Spark-Streaming-Broadcast-Variable"><a href="#Spark-Streaming-Broadcast-Variable" class="headerlink" title="Spark Streaming Broadcast Variable"></a>Spark Streaming Broadcast Variable</h2><p>Spark Streaming 为用户提供了 Broadcast Varialbe，可以用于节点算子状态的初始化和后续更新。Broacast Variable 是一组只读的变量，它在作业初始化时由 Spark Driver 生成并广播到每个 Executor 节点，随后该节点的 Task 可以复用同一份变量。</p><p>Broadcast Variable 的设计初衷是为了避免大文件，比如 NLP 常用的分词词典，随序列化后的作业对象一起分发，造成重复分发的网络资源浪费和启动时间延长。这类文件的更新频率是相对低的，扮演的角色类似于只读缓存，通过设置 TTL 来定时更新，缓存过期之后 Executor 节点会重新向 Driver 请求最新的变量。</p><p>Broadcast Variable 并不是从设计理念上就支持低延迟的作业状态更新，因此用户想出了不少 Hack 的方法，其中最为常见的方式是：一方面在 Driver 实现后台线程不断更新 Broadcast Variavle，另一方面在作业运行时通过显式地删除 Broadcast Variable 来迫使 Executor 重新从 Driver 拉取最新的 Broadcast Variable。这个过程会发生在两个 micro batch 计算之间，以确保每个 micro batch 计算过程中状态是一致的。</p><p>比起用户在算子内访问外部系统实现更新变量，这种方式的优点在于一致性更有保证。因为 Broadcast Variable 是统一由 Driver 更新并推到 Executor 的，这就保证不同节点的更新时间是一致的。然而相对地，缺点是会给 Driver 带来比较大的负担，因为需要不断分发全量的 Broadcast Variable (试想下一个巨大的 Map，每次只会更新少数 Entry，却要整个 Map 重新分发)。在 Spark 2.0 版本以后，Broadcast Variable 的分发已经从 Driver 单点改为基于 BitTorrent 的 P2P 分发，这一定程度上缓解了随着集群规模提升 Driver 分发变量的压力，但我个人对这种方式能支持到多大规模的部署还是持怀疑态度。另外一点是重新分发 Broadcast Variable 需要阻塞作业进行，这也会使作业的吞吐量和延迟受到比较大的影响。</p><h2 id="Flink-Broadcast-State-amp-Stream"><a href="#Flink-Broadcast-State-amp-Stream" class="headerlink" title="Flink Broadcast State &amp; Stream"></a>Flink Broadcast State &amp; Stream</h2><p>Broadcast Stream 是 Flink 1.5.0 发布的新特性，基于控制流的方式实现了实时作业的状态更新。Broadcast Stream 的创建方式与普通数据流相同，例如从 Kafka Topic 读取，特别之处在于它承载的是控制事件流，会以广播形式将数据发给下游算子的每个实例。Broadcast Stream 需要在作业拓扑的某个节点和普通数据流 (Main Stream) join 到一起。</p><p><img src="/img/control-stream.png" alt="Control Stream Topo"></p><p>该节点的算子需要同时处理普通数据流和控制流：一方面它需要读取控制流以更新本地状态 (Broadcast State)，另外一方面需要读取 Main Stream 并根据 Broadcast State 来进行数据转换。由于每个算子实例读到的控制流都是相同的，它们生成的 Broadcast State 也是相同的，从而达到通过控制消息来更新所有算子实例的效果。</p><p>目前 Flink 的 Broadcast Stream 从效果上实现了控制流的作业状态更新，不过在编程模型上有点和一般直觉不同。原因主要在于 Flink 对控制流的处理方式和普通数据流保持了一致，最为明显的一点是控制流除了改变本地 State 还可以产生 output，这很大程度上影响了 Broadcast Stream 的使用方式。Broadcast Stream 的使用方式与普通的 DataStream 差别比较大，即需要和 DataStream 连接成为 BroadcastConnectedStream 后，再通过特殊的 BroadcastProcessFunction 来处理，而 BroadcastProcessFunction 目前只支持 类似于 RichCoFlatMap 效果的操作。RichCoFlatMap 可以间接实现对 Main Stream 的 Map 转换（返回一只有一个元素的集合）和 Filter 转换（返回空集合），但无法实现 Window 类计算。这意味着如果用户希望改变 Window 算子的状态，那么需要将状态管理提前到上游的 BroadcastProcessFunction，然后再通过 BroadcastProcessFunction 的输出来将影响下游 Window 算子的行为。</p><h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>实时作业运行时动态加载变量可以令大大提升实时作业的灵活性和适应更多应用场景，目前无论是 Flink 还是 Spark Streaming 对动态加载变量的支持都不是特别完美。Spark Streaming 受限于 Micro Batch 的计算模型（虽然现在 2.3 版本引入 Continuous Streaming 来支持流式处理，但离成熟还需要一定时间），将作业变量作为一致性和实时性要求相对低的节点本地缓存，并不支持低延迟地、低成本地更新作业变量。Flink 将变量更新视为特殊的控制事件流，符合 Even Driven 的流式计算框架定位，目前在业界已有比较成熟的应用。不过美中不足的是编程模型的易用性上有提高空间：控制流目前只能用于和数据流的 join，这意味着下游节点无法继续访问控制流或者需要把控制流数据插入到数据流中（这种方式并不优雅），从而降低了编程模型的灵活性。个人认为最好的情况是大部分的算子都可以被拓展为具有 BroadcastOperator，就像 RichFunction 一样，它们可以接收一个数据流和一个至多个控制流，并维护对应的 BroadcastState，这样控制流的接入成本将显著下降。</p><h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>1.<a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-17+Side+Inputs+for+DataStream+API" target="_blank" rel="external">FLIP-17 Side Inputs for DataStream API</a><br>2.<a href="https://data-artisans.com/blog/bettercloud-dynamic-alerting-apache-flink" target="_blank" rel="external">Dynamically Configured Stream Processing: How BetterCloud Built an Alerting System with Apache Flink®</a><br>3.<a href="https://mux.com/blog/using-control-streams-to-manage-apache-flink-applications/" target="_blank" rel="external">Using Control Streams to Manage Apache Flink Applications</a><br>4.<a href="https://stackoverflow.com/questions/33372264/how-can-i-update-a-broadcast-variable-in-spark-streaming" target="_blank" rel="external">StackOverFlow - ow can I update a broadcast variable in spark streaming?</a></p>]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;由于实时场景对可用性十分敏感，实时作业通常需要避免频繁重启，因此动态加载作业配置（变量）是实时计算里十分常见的需求，比如通常复杂事件处理 (CEP) 的规则或者在线机器学习的模型。尽管常见，实现起来却并没有那么简单，其中最难点在于如何确保节点状态在变更期间的一致性。目前来说一般有两种实现方式：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;轮询拉取方式，即作业算子定时检测在外部系统的配置是否有变更，若有则同步配置。&lt;/li&gt;
-&lt;li&gt;控制流方式，即作业除了用于计算的一个或多个普通数据流以外，还有提供一个用于改变作业算子状态的元数据流，也就是控制流。&lt;/li&gt;
-&lt;/ul&gt;
-    
-    </summary>
-    
-    
-      <category term="Flink" scheme="https://link3280.github.io/categories/Flink/"/>
-    
-    
-      <category term="Spark" scheme="https://link3280.github.io/tags/Spark/"/>
     
       <category term="Flink" scheme="https://link3280.github.io/tags/Flink/"/>
     
