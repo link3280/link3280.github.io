@@ -106,7 +106,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img6.blink-planner-architecture.png">
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img7.source-thread-model.png">
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img8.join-batch-optimization.png">
-<meta property="og:updated_time" content="2020-03-31T11:28:49.084Z">
+<meta property="og:updated_time" content="2020-03-31T11:54:04.124Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 流批一体的实践与探索">
 <meta name="twitter:description" content="自 Google Dataflow 模型被提出以来，流批一体就成为分布式计算引擎最为主流的发展趋势。流批一体意味着计算引擎同时具备流计算的低延迟和批计算的高吞吐高稳定性，提供统一编程接口开发两种场景的应用并保证它们的底层执行逻辑是一致的。对用户来说流批一体很大程度上减少了开发维护的成本，但同时这对计算引擎来说是一个很大的挑战。作为 Dataflow 模型的最早采用者之一，Apache Flink">
@@ -407,7 +407,8 @@
 <p>因为 Batch SQL 与 Streaming SQL 在大部分语法及语义上是一致的，不同点在于 Streaming SQL 另有拓展语法的来支持 Watermark、Time Characteristic 等流处理领域的特性，因此 SQL parser 是 Batch/Stream 共用的。关键点在于对于关系代数 RelNode 的翻译上。</p>
 <center><p><img src="/img/unified-stream-batch/img5.relnode-uml.png" alt="图5. Flink RelNode 类图" title="图5. Flink RelNode 类图"></p></center>
 
-<p>一个 RelNode 表示逻辑关系代数节点，在 SQL 优化过程中被翻译为 Flink 的物理关系代数节点。BatchTableEnvironment 将使用 BatchOptimizer 将 RelNode 转化为 DateSetRel，同时进行基于 Calcite Rule 的优化，而 StreamTableEnvironment 将 RelNode 转化为 DataStreamRel，并使用 StreamOptimizer 进行优化。比如 TableScan 这样一个 RelNode，在 Batch 环境下被翻译为 BatchTableSourceScan，在 Stream 环境下被翻译为 StreamTableSourceScan，而这两类物理关系代数节点将可以直接映射到 DataSet 的 Operator 或 DataStream 的 Transformation 上。至此，SQL 到 DataSet/DataStream 的翻译就完成了。</p>
+<p>Flink 基于 Calcite RelNode 拓展了自己的 FlinkRelNode，FlinkRelNode 有三个子类 FlinkLogicalRel、DataSetRel 和 DataStreamRel。FlinkLogicalRel 表示逻辑的关系代数节点，比如常见的 Map 函数对应的 FlinkLogicalRel 是 DataStreamCalc。DataSetRel 和 DataStreamRel 则分别表示 FlinkLogicalRel 在批处理和流处理下各自的物理执行计算。</p>
+<p>在 SQL 优化过程中，根据编程入口的不同 FlinkLogicalRel 被转化为 DataSetRel 或 DataStreamRel。BatchTableEnvironment 使用 BatchOptimizer 基于 Calcite Rule 的优化，而 StreamTableEnvironment 使用 StreamOptimizer 进行优化。比如 TableScan 这样一个 RelNode，在 Batch 环境下被翻译为 BatchTableSourceScan，在 Stream 环境下被翻译为 StreamTableSourceScan，而这两类物理关系代数节点将可以直接映射到 DataSet 的 Operator 或 DataStream 的 Transformation 上。</p>
 <p>上述的方式最大的问题在于 Calcite 的优化规则无法复用，比如对数据源进行过滤器下推的优化，那么需要给 DateSetRel 和 DataStreamRel 分别做一套，而且 DataSet 和 DataStream 层的算子也要分别进行相应的修改，开发维护成本很高，而这也是 Blink Planner 推动流批一体的主要动力。</p>
 <p>如上文所说，Blink Planner 做的最重要的一点就是废弃了 DataSet 相关的翻译途径，将 DateSetRel 也移植到 DataStream 之上，那么前提当然是 DataStream 要可以表达 DataSet 的语义。熟悉批处理的同学可能会有疑问: 批处理特有的排序等算子，在 DataStream 中是没有的，这将如何表达？事实上 Blink Planner 广泛采用了动态代码生成，很多算子是在关系代数翻译时才生成的，并不一定需要 DataStream 有现成的算子，因此使用 Blink Planner 的 Table API 与 DataStream API 的关系更多是并列的关系。这也是 FLIP-32[5] 所提到的解耦 Table API 和 DataStream/DataSet API 的意思:</p>
 <blockquote>
@@ -416,7 +417,7 @@
 <p>Table 改造完成后整个 API 架构如下，这也是目前 1.10 版本已经实现的架构:</p>
 <center><p><img src="/img/unified-stream-batch/img6.blink-planner-architecture.png" alt="图6. Blink Planner 架构" title="图6. Blink Planner 架构"></p></center>
 
-<p>事实上，早前版本的 DataStream 对批作业的支持并不是太好，为了支持 Blink Planner 的 Batch on Stream，DataStream 方面也先做了不少的优化。这些优化是对于 Table API 是必要的，因此在 Blink Planner 合并到 Flink master 时就完成了，将和 DataStream 还未完成的改进一起放在下文分析。</p>
+<p>事实上，早前版本的 DataStream 对批作业的支持并不是太好，为了支持 Blink Planner 的 Batch on Stream，DataStream 方面也先做了不少的优化。这些优化是对于 Table API 是必要的，因此在 Blink Planner 合并到 Flink master 的前置工作，这将和 DataStream 还未完成的改进一起放在下文分析。</p>
 <h1 id="DataStream-API-的改进"><a href="#DataStream-API-的改进" class="headerlink" title="DataStream API 的改进"></a>DataStream API 的改进</h1><p>在 DataStream API 方面，虽然目前的 DataStream API 已经可以支持有界数据流，但这个支持并不完整且效率上比起 DataSet API 仍有差距。为了实现完全的流批一体，Flink 社区准备在 DataStream 引入 BoundedStream 的概念来表示有界的数据流，完全从各种意义上代替 DataSet。BoundedStream 将是 DataStream 的特例，同样使用 Transformation 和 StreamOperator，且同时需要继承 DataSet 的批处理优化。这些优化可以分为 Task 线程模式、调度策略及容错和计算模型及算法这几部分。</p>
 <h2 id="Task-线程模型"><a href="#Task-线程模型" class="headerlink" title="Task 线程模型"></a>Task 线程模型</h2><p>批处理业务场景通常更重视高吞吐，出于这点考虑，Batch Task 是 pull-based 的，方便 Task 批量拉取数据。Task 启动后会主动通过 DataSet 的 Source API InputFormat 来读取外部数据源，每个 Task 同时只读取和处理一个 Split。</p>
 <p>相比之下，一般流处理业务场景则更注重延迟，因此 Stream Task 是 push-based 的。DataStream 的 Source API SourceFunction 会被独立的 Source Thread 执行，并一直读取外部数据，源源不断地将数据 push 给 Stream Task。每个 Source Thread 可以并发读取一个到多个 Split/Partition/Shard。</p>
@@ -424,8 +425,7 @@
 
 <p>为了解决 Task 线程模型上的差异，Flink 社区计划重构 Source API 来统一不同外部存储和业务场景下的 Task 线程模型。总体的思路是新增一套新的 Source API，可以支持多种线程模型，覆盖流批两种业务需求，具体可见 FLIP-27[6] 或笔者早前的一篇博客[7]。目前 FLIP-27 仍处于初步的开发阶段。</p>
 <h2 id="调度策略及容错"><a href="#调度策略及容错" class="headerlink" title="调度策略及容错"></a>调度策略及容错</h2><p>众所周知，批处理作业和流处理作业在 Task 调度上是很不同的。批处理作业的多个 Task 并不需要同时在线，可以根据依赖关系先调度一批 Task，等它们结束后再运行另一批。相反地，流作业的所有 Task 需要在作业启动的时候就全部被调度，然后才可以开始处理数据。前一种调度策略通常称为懒调度（Lazy Scheduling），后一种通常称为激进调度（Eager Scheduling）。为了实现流批一体，Flink 需要在 StreamGraph 中同时支持这两种调度模式，也就是说新增懒调度。</p>
-<p>使用懒调度的基础是，Task 计算的中间结果需要保存在某个高可用的存储中，然后下个 Task 启动后才能去获取。而在 1.9 版本以前， Flink 是直接使用 Netty 来传输数据，并使用 TaskManager 内存缓存中间结果。这就导致了如果该 TaskManager 崩溃，中间结果会丢失，整个作业需要从头读取数据或者从 checkpoint 来恢复。</p>
-<p>然而对于批处理作业来说，并没有 checkpoint 这个概念。批处理通常依赖中间结果的持久化来减少需要恢复的 Task 范围，因此 Flink 社区引入了可插拔的 Shuffle Service 来提供更粒度的容错恢复，具体可见 FLIP-31[8]。</p>
+<p>随调度而来的问题还有容错，这并不难理解，因为 Task 出现错误后需要重新调度来恢复。而懒调度的一大特点是，Task 计算的中间结果需要保存在某个高可用的存储中，然后下个 Task 启动后才能去获取。而在 1.9 版本以前，Flink 并没有持久化中间结果。这就导致了如果该 TaskManager 崩溃，中间结果会丢失，整个作业需要从头读取数据或者从 checkpoint 来恢复。这对于实时流处理来说是很正常的，然而批处理作业并没有 checkpoint 这个概念，批处理通常依赖中间结果的持久化来减小需要重算的 Task 范围，因此 Flink 社区引入了可插拔的 Shuffle Service 来提供 Suffle 数据的持久化以支持细粒度的容错恢复，具体可见 FLIP-31[8]。</p>
 <h2 id="计算模型及算法"><a href="#计算模型及算法" class="headerlink" title="计算模型及算法"></a>计算模型及算法</h2><p>与 Table API 相似，同一种计算在流处理和批处理中的算法可能是不同的。典型的一个例子是 Join: 它在流处理中表现为两个流的元素的持续关联，任何一方的有新的输入都需要跟另外一方的全部元素进行关联操作，也就是最基础的 Nested-Loop Join；而在批处理中，Flink 可以将它优化为 Hash Join，即先读取一方的全部数据构建 Hash Table，再读取另外一方进行和 Hash Table 进行关联（见图8）。</p>
 <center><p><img src="/img/unified-stream-batch/img8.join-batch-optimization.png" alt="图8. Join 批处理优化" title="图8. Join 批处理优化"></p></center>
 
