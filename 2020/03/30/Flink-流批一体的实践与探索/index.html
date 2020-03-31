@@ -106,7 +106,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img6.blink-planner-architecture.png">
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img7.source-thread-model.png">
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img8.join-batch-optimization.png">
-<meta property="og:updated_time" content="2020-03-30T15:56:36.990Z">
+<meta property="og:updated_time" content="2020-03-31T11:28:49.084Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 流批一体的实践与探索">
 <meta name="twitter:description" content="自 Google Dataflow 模型被提出以来，流批一体就成为分布式计算引擎最为主流的发展趋势。流批一体意味着计算引擎同时具备流计算的低延迟和批计算的高吞吐高稳定性，提供统一编程接口开发两种场景的应用并保证它们的底层执行逻辑是一致的。对用户来说流批一体很大程度上减少了开发维护的成本，但同时这对计算引擎来说是一个很大的挑战。作为 Dataflow 模型的最早采用者之一，Apache Flink">
@@ -385,16 +385,16 @@
 <h1 id="概况"><a href="#概况" class="headerlink" title="概况"></a>概况</h1><p>相信不少读者都知道，Flink 遵循 Dataflow 模型的理念: 批处理是流处理的特例。不过出于批处理场景的执行效率、资源需求和复杂度各方面的考虑，在 Flink 设计之初流处理应用和批处理应用尽管底层都是流处理，但在编程 API 上是分开的。这允许 Flink 在执行层面仍沿用批处理的优化技术，并简化掉架构移除掉不需要的 watermark、checkpoint 等特性。</p>
 <center><p><img src="/img/unified-stream-batch/img1.old_architecture.png" alt="图1. Flink 经典架构" title="图1. Flink 经典架构"></p></center>
 
-<p>在 Flink 架构上，负责物理执行环境的 Runtime 层是统一的流处理，上面分别有独立的 DataStream 和 DataSet 两个 API，两者基于不同的任务类型（Stream Task/Batch Task）和 UDF 接口（Transformation/Operator）。而更上层基于关系代数的 Table API 和 SQL API 虽然表面上是统一的，但实际上编程入口（Environment）是分开的，且内部将流批作业翻译到 DataStream API 和 DataSet API 的逻辑也是不一致的。</p>
-<p>因此，要实现真正的流批一体，Flink 需完成 Table/SQL API 的和 DataStream/DataSet API 两层的改造，将批处理完全移植到流处理之上，并且需要兼顾效率、稳定性。目前流批一体也是 Flink 长期目标中很重要一点，流批一体的完成将标志着 Flink 进入 2.x 的新大版本时代。</p>
+<p>在 Flink 架构上，负责物理执行环境的 Runtime 层是统一的流处理，上面分别有独立的 DataStream 和 DataSet 两个 API，两者基于不同的任务类型（Stream Task/Batch Task）和 UDF 接口（Transformation/Operator）。而更上层基于关系代数的 Table API 和 SQL API 虽然表面上是统一的，但实际上编程入口（Environment）是分开的，且内部将流批作业分别翻译到 DataStream API 和 DataSet API 的逻辑也是不一致的。</p>
+<p>因此，要实现真正的流批一体，Flink 需完成 Table/SQL API 的和 DataStream/DataSet API 两层的改造，将批处理完全移植到流处理之上，并且需要兼顾作为批处理立身之本的效率和稳定性。目前流批一体也是 Flink 长期目标中很重要一点，流批一体的完成将标志着 Flink 进入 2.x 的新大版本时代。</p>
 <p>流批一体完成以后理想的架构如下:</p>
 <center><p><img src="/img/unified-stream-batch/img2.new-architecture.png" alt="图2. Flink 未来架构" title="图2. Flink 未来架构"></p></center>
 
 <p>其中 Planner 从 Table/SQL API 层独立出来变为可插拔的模块，而原先的 DataStream/DataSet 层则会简化为只有 DataStream（图 2 中的 StreamTransformation 和 Stream Operator 是 Stream DAG 的主要内容，分别表示 UDF 和执行 UDF 的算子），DataSet API 将被废弃。</p>
-<h1 id="Table-SQL-API-的改进"><a href="#Table-SQL-API-的改进" class="headerlink" title="Table/SQL API 的改进"></a>Table/SQL API 的改进</h1><p>Table/SQL API 的改造开始得比较早，截止 1.10 版本发布已经达到阶段性的流批一体目标。然而在 1.7 版本时，Table API 只是作为基于 DataStream/DataSet API 的 lib，并没有得到社区的重点关注。而当时阿里的 Blink 已经在 Table/SQL 上做了大量的优化，为了合并 Blink 的先进特性到 Flink，阿里的工程师推进社区重构了 Table 模块的架构[5]并提议将 Table/SQL API 的地位提升为最高。自此 Table 层中负责将 SQL/Table API 翻译为 DataStream/DataSet API 的代码被抽象为可插拔的 Table Planner 模块，而 Blink 也将主要的特性以 Blink Planner 的形式贡献给社区，于是有了目前两个 Planner 共存的状态。</p>
+<h1 id="Table-SQL-API-的改进"><a href="#Table-SQL-API-的改进" class="headerlink" title="Table/SQL API 的改进"></a>Table/SQL API 的改进</h1><p>Table/SQL API 的改造开始得比较早，截止 1.10 版本发布已经达到阶段性的流批一体目标。然而在 1.7 版本时，Table API 只是作为基于 DataStream/DataSet API 的 lib，并没有得到社区的重点关注。而当时阿里的 Blink 已经在 Table/SQL 上做了大量的优化，为了合并 Blink 的先进特性到 Flink，阿里的工程师推进社区重构了 Table 模块的架构[5]并将 Table/SQL API 提升为主要编程 API。自此 Table 层中负责将 SQL/Table API 翻译为 DataStream/DataSet API 的代码被抽象为可插拔的 Table Planner 模块，而 Blink 也将主要的特性以 Blink Planner 的形式贡献给社区，于是有了目前两个 Planner 共存的状态。</p>
 <center><p><img src="/img/unified-stream-batch/img3.backward-compatibility.png" alt="图3. Flink 目前过渡架构" title="图3. Flink 目前过渡架构"></p></center>
 
-<p>Flink 默认的 Legacy Planner 会将 SQL/Table 程序翻译为 DataStream 或 DataSet 程序，而新的 Blink Planner 则统一翻译为 DataStream 程序。也就是说通过 Blink Planner，Flink Table API 事实上已经实现了流批一体的计算。下文将更深入一点介绍下比起原本的 Planner（Legacy Planner），Blink Planner 是怎么做到将 Batch SQL 和 Streaming SQL 融合的。</p>
+<p>Flink 默认的 Legacy Planner 会将 SQL/Table 程序翻译为 DataStream 或 DataSet 程序，而新的 Blink Planner 则统一翻译为 DataStream 程序。也就是说通过 Blink Planner，Flink Table API 事实上已经实现了流批一体的计算。要了解 Blink Planner 是如何做到的，首先要对 Planner 的工作原理有一定的了解。</p>
 <p>Legacy Planner 对于用户逻辑的表示在 Flink 架构中不同层的演变过程如下:</p>
 <center><p><img src="/img/unified-stream-batch/img4.legacy-planner-architecture.png" alt="图4. Legacy Planner 架构" title="图4. Legacy Planner 架构"></p></center>
 
