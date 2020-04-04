@@ -106,7 +106,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img6.blink-planner-architecture.png">
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img7.source-thread-model.png">
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img8.join-batch-optimization.png">
-<meta property="og:updated_time" content="2020-03-31T11:54:04.124Z">
+<meta property="og:updated_time" content="2020-04-04T07:59:34.920Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 流批一体的实践与探索">
 <meta name="twitter:description" content="自 Google Dataflow 模型被提出以来，流批一体就成为分布式计算引擎最为主流的发展趋势。流批一体意味着计算引擎同时具备流计算的低延迟和批计算的高吞吐高稳定性，提供统一编程接口开发两种场景的应用并保证它们的底层执行逻辑是一致的。对用户来说流批一体很大程度上减少了开发维护的成本，但同时这对计算引擎来说是一个很大的挑战。作为 Dataflow 模型的最早采用者之一，Apache Flink">
@@ -405,12 +405,12 @@
 <li>优化 StreamGraph 和 Plan，并包装为可序列化的 JobGraph。</li>
 </ol>
 <p>因为 Batch SQL 与 Streaming SQL 在大部分语法及语义上是一致的，不同点在于 Streaming SQL 另有拓展语法的来支持 Watermark、Time Characteristic 等流处理领域的特性，因此 SQL parser 是 Batch/Stream 共用的。关键点在于对于关系代数 RelNode 的翻译上。</p>
-<center><p><img src="/img/unified-stream-batch/img5.relnode-uml.png" alt="图5. Flink RelNode 类图" title="图5. Flink RelNode 类图"></p></center>
+<center><p><img src="/img/unified-stream-batch/img5.relnode-uml.png" alt="图5. Legacy Planner RelNode 类图" title="图5. Flink RelNode 类图"></p></center>
 
 <p>Flink 基于 Calcite RelNode 拓展了自己的 FlinkRelNode，FlinkRelNode 有三个子类 FlinkLogicalRel、DataSetRel 和 DataStreamRel。FlinkLogicalRel 表示逻辑的关系代数节点，比如常见的 Map 函数对应的 FlinkLogicalRel 是 DataStreamCalc。DataSetRel 和 DataStreamRel 则分别表示 FlinkLogicalRel 在批处理和流处理下各自的物理执行计算。</p>
 <p>在 SQL 优化过程中，根据编程入口的不同 FlinkLogicalRel 被转化为 DataSetRel 或 DataStreamRel。BatchTableEnvironment 使用 BatchOptimizer 基于 Calcite Rule 的优化，而 StreamTableEnvironment 使用 StreamOptimizer 进行优化。比如 TableScan 这样一个 RelNode，在 Batch 环境下被翻译为 BatchTableSourceScan，在 Stream 环境下被翻译为 StreamTableSourceScan，而这两类物理关系代数节点将可以直接映射到 DataSet 的 Operator 或 DataStream 的 Transformation 上。</p>
 <p>上述的方式最大的问题在于 Calcite 的优化规则无法复用，比如对数据源进行过滤器下推的优化，那么需要给 DateSetRel 和 DataStreamRel 分别做一套，而且 DataSet 和 DataStream 层的算子也要分别进行相应的修改，开发维护成本很高，而这也是 Blink Planner 推动流批一体的主要动力。</p>
-<p>如上文所说，Blink Planner 做的最重要的一点就是废弃了 DataSet 相关的翻译途径，将 DateSetRel 也移植到 DataStream 之上，那么前提当然是 DataStream 要可以表达 DataSet 的语义。熟悉批处理的同学可能会有疑问: 批处理特有的排序等算子，在 DataStream 中是没有的，这将如何表达？事实上 Blink Planner 广泛采用了动态代码生成，很多算子是在关系代数翻译时才生成的，并不一定需要 DataStream 有现成的算子，因此使用 Blink Planner 的 Table API 与 DataStream API 的关系更多是并列的关系。这也是 FLIP-32[5] 所提到的解耦 Table API 和 DataStream/DataSet API 的意思:</p>
+<p>如上文所说，Blink Planner 做的最重要的一点就是废弃了 DataSet 相关的翻译途径，将 DateSetRel 也移植到 DataStream 之上，那么前提当然是 DataStream 要可以表达 DataSet 的语义。熟悉批处理的同学可能会有疑问: 批处理特有的排序等算子，在 DataStream 中是没有的，这将如何表达？事实上 Table Planner 广泛采用了动态代码生成，可以绕过 DataStream API 直接翻译至底层的 Transformation 和 StreamOperator 上，并不一定需要 DataStream 有现成的算子，因此使用 Blink Planner 的 Table API 与 DataStream API 的关系更多是并列的关系。这也是 FLIP-32[5] 所提到的解耦 Table API 和 DataStream/DataSet API 的意思:</p>
 <blockquote>
 <p><strong>Decouple table programs from DataStream/DataSet API</strong><br>Allow table programs to be self-contained. No need for a Stream/ExecutionEnvironment entrypoint anymore. A table program definition is just API that reads and writes to catalog tables.</p>
 </blockquote>
