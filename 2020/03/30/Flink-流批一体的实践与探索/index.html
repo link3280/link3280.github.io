@@ -106,7 +106,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img6.blink-planner-architecture.png">
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img7.source-thread-model.png">
 <meta property="og:image" content="https://link3280.github.io/img/unified-stream-batch/img8.join-batch-optimization.png">
-<meta property="og:updated_time" content="2020-04-04T07:59:34.920Z">
+<meta property="og:updated_time" content="2020-04-04T08:24:03.002Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 流批一体的实践与探索">
 <meta name="twitter:description" content="自 Google Dataflow 模型被提出以来，流批一体就成为分布式计算引擎最为主流的发展趋势。流批一体意味着计算引擎同时具备流计算的低延迟和批计算的高吞吐高稳定性，提供统一编程接口开发两种场景的应用并保证它们的底层执行逻辑是一致的。对用户来说流批一体很大程度上减少了开发维护的成本，但同时这对计算引擎来说是一个很大的挑战。作为 Dataflow 模型的最早采用者之一，Apache Flink">
@@ -417,7 +417,7 @@
 <p>Table 改造完成后整个 API 架构如下，这也是目前 1.10 版本已经实现的架构:</p>
 <center><p><img src="/img/unified-stream-batch/img6.blink-planner-architecture.png" alt="图6. Blink Planner 架构" title="图6. Blink Planner 架构"></p></center>
 
-<p>事实上，早前版本的 DataStream 对批作业的支持并不是太好，为了支持 Blink Planner 的 Batch on Stream，DataStream 方面也先做了不少的优化。这些优化是对于 Table API 是必要的，因此在 Blink Planner 合并到 Flink master 的前置工作，这将和 DataStream 还未完成的改进一起放在下文分析。</p>
+<p>事实上，早前版本的 DataStream 对批作业的支持并不是太好，为了支持 Blink Planner 的 Batch on Stream，DataStream 方面也先做了不少的优化。这些优化是对于 Table API 是必要的，因此在 Blink Planner 合并到 Flink master 的前置工作，这将和 DataStream 还未完成的改进一起放在下文分析。另外虽然 Blink Planner 在计算上是流批一体的，但 Flink Table API 的 TableSource 和 TableSink 仍是流批分离的，这意味着目前绝大数批处理场景的基于 BatchTableSource/BatchTableSink 的 Table 无法很好地跟流批一体的计算合作，这将在 FLIP-95[9] 中处理。</p>
 <h1 id="DataStream-API-的改进"><a href="#DataStream-API-的改进" class="headerlink" title="DataStream API 的改进"></a>DataStream API 的改进</h1><p>在 DataStream API 方面，虽然目前的 DataStream API 已经可以支持有界数据流，但这个支持并不完整且效率上比起 DataSet API 仍有差距。为了实现完全的流批一体，Flink 社区准备在 DataStream 引入 BoundedStream 的概念来表示有界的数据流，完全从各种意义上代替 DataSet。BoundedStream 将是 DataStream 的特例，同样使用 Transformation 和 StreamOperator，且同时需要继承 DataSet 的批处理优化。这些优化可以分为 Task 线程模式、调度策略及容错和计算模型及算法这几部分。</p>
 <h2 id="Task-线程模型"><a href="#Task-线程模型" class="headerlink" title="Task 线程模型"></a>Task 线程模型</h2><p>批处理业务场景通常更重视高吞吐，出于这点考虑，Batch Task 是 pull-based 的，方便 Task 批量拉取数据。Task 启动后会主动通过 DataSet 的 Source API InputFormat 来读取外部数据源，每个 Task 同时只读取和处理一个 Split。</p>
 <p>相比之下，一般流处理业务场景则更注重延迟，因此 Stream Task 是 push-based 的。DataStream 的 Source API SourceFunction 会被独立的 Source Thread 执行，并一直读取外部数据，源源不断地将数据 push 给 Stream Task。每个 Source Thread 可以并发读取一个到多个 Split/Partition/Shard。</p>
@@ -449,6 +449,7 @@
 <li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-27%3A+Refactor+Source+Interface?src=contextnavpagetreemode" target="_blank" rel="external">FLIP-27: Refactor Source Interface</a></li>
 <li><a href="http://www.whitewood.me/2020/02/11/%E6%BC%AB%E8%B0%88-Flink-Source-%E6%8E%A5%E5%8F%A3%E9%87%8D%E6%9E%84/" target="_blank" rel="external">漫谈 Flink Source 接口重构</a></li>
 <li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-31%3A+Pluggable+Shuffle+Service" target="_blank" rel="external">FLIP-31: Pluggable Shuffle Service</a></li>
+<li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-95%3A+New+TableSource+and+TableSink+interfaces" target="_blank" rel="external">FLIP-95: New TableSource and TableSink interfaces</a></li>
 </ol>
 
       
