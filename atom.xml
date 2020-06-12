@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://link3280.github.io/"/>
-  <updated>2020-06-07T16:27:50.755Z</updated>
+  <updated>2020-06-12T14:09:44.426Z</updated>
   <id>https://link3280.github.io/</id>
   
   <author>
@@ -15,6 +15,29 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>如何构建确定性的 Flink 应用</title>
+    <link href="https://link3280.github.io/2020/06/12/%E5%A6%82%E4%BD%95%E6%9E%84%E5%BB%BA%E7%A1%AE%E5%AE%9A%E6%80%A7%E7%9A%84-Flink-%E5%BA%94%E7%94%A8/"/>
+    <id>https://link3280.github.io/2020/06/12/如何构建确定性的-Flink-应用/</id>
+    <published>2020-06-12T14:09:03.000Z</published>
+    <updated>2020-06-12T14:09:44.426Z</updated>
+    
+    <content type="html"><![CDATA[<p>确定性（Determinism）是计算机科学中十分重要的特性，确定性的算法保证对于给定相同的输入总是产生相同的输出。在分布式实时计算领域，确定性是业界一直难以解决的课题，由此导致用离线计算修正实时计算结果的 Lambda 架构成为大数据领域过去近十年的主流架构。而在最近几年随着 Google The Dataflow Model 的提出，实时计算和离线计算的关系逐渐清晰，在实时计算中提供与离线计算一致的确定性成为可能。本文将基于流行实时计算引擎 Apache Flink，梳理构建一个确定性的实时应用要满足什么条件。</p><a id="more"></a><h1 id="确定性与准确性"><a href="#确定性与准确性" class="headerlink" title="确定性与准确性"></a>确定性与准确性</h1><p>比起确定性，准确性（Accuracy）可能是我们接触更多的近义词，大多数场景下两者可以混用，但其实它们稍有不同: 准确的东西一定是确定的，但确定性的东西未必百分百准确。在大数据领域，不少算法可以根据需求调整成本和准确性的平衡，比如 HyperLogLog 去重统计算法给出的结果是有一定误差的（因此不是准确的），但却同时是确定性的（重算可以得到相同结果）。</p><p>要分区确定性和准确性的缘故是，准确性与具体的业务逻辑紧密耦合难以评估，而确定性则是通用的需求（除去少数场景用户故意使用非确定性的算法）。当一个 Flink 实时应用提供确定性，意味着它在异常场景的自动重试或者手动重流数据的情况下，都能像离线作业一般产出相同的结果，这将很大程度上提高用户的信任度。</p><h1 id="影响-Flink-应用确定性的因素"><a href="#影响-Flink-应用确定性的因素" class="headerlink" title="影响 Flink 应用确定性的因素"></a>影响 Flink 应用确定性的因素</h1><h2 id="投递语义"><a href="#投递语义" class="headerlink" title="投递语义"></a>投递语义</h2><p>常见的投递语义有 <code>At-Most-Once</code>、<code>At-Least-Once</code> 和 <code>Exactly-Once</code> 三种。严格来说只有 <code>Exactly-Once</code> 满足确定性的要求，但如果整个业务逻辑是幂等的， 基于<code>At-Least-Once</code> 也可以达到结果的确定性。</p><p>实时计算的 <code>Exactly-Once</code> 通常指端到端的 <code>Exactly-Once</code>，保证输出到下游系统的数据和上游的数据是一致的，没有重复计算或者数据丢失。要达到这点，需要分别实现读取数据源（Source 端）的 <code>Exactly-Once</code>、计算的 <code>Exactly-Once</code> 和输出到下游系统（Sink 端）的 <code>Exactly-Once</code>。</p><p>其中前面两个都比较好保证，因为 Flink 应用出现异常会自动恢复至最近一个成功 checkpoint，Source 的状态和计算的状态都会自动回滚到快照时间点，而问题在于 Sink 端的 <code>Exactly-Once</code>。Sink 端是否能顺利回滚依赖于外部系统的特性，通常来说需要外部系统支持事务，然而不少大数据组件对事务的支持并不是很好，即使是实时计算最常用的 Kafka 也直到 2017 年的 0.11 版本才支持事务，更多的组件需要依赖各种 trick 来达到某种场景下的 <code>Exactly-Once</code>。</p><p>总体来说这些 trick 可以分为两大类:</p><ul><li>依赖写操作的幂等性。比如 HBase 等 KV 存储虽然没有提供跨行事务，但可以通过幂等写操作配合基于主键的 Upsert 操作达到 <code>Exactly-Once</code>。不过由于 Upsert 不能表达 Delete 操作，这种模式不适合有 Delete 的业务场景。</li><li>预写日志（WAL，Write-Ahead-Log）。预写日志是广泛应用于事物机制的技术，包括 MySQL、PostgreSQL 等成熟关系型数据库的事物都基于预写日志。预写日志的基本原理先将变更写入缓存区，等事务提交的时候再一次全部应用。比如 HDFS/S3 等文件系统本身并不提供事务，因此实现预写日志的重担落到了它们的用户（比如 Flink）身上。通过先写临时的文件/对象，等 Flink Checkpoint 成功后再提交，Flink 的 FileSystem Connector 实现了 <code>Exactly-Once</code>。然而，预写日志只能保证事务的原子性和持久性，不能保证一致性和隔离性。为此 FileSystem Connector 通过将预写日志设为隐藏文件的方式提供了隔离性，至于一致性（比如临时文件的清理）则无法保证。</li></ul><p>为了保证 Flink 应用的确定性，在选用官方 Connector，特别是 Sink Connector 时，用户应该留意官方文档关于 Connector 投递语义的说明[3]。此外，在实现定制化的 Sink Connector 时也需要明确达到何种投递语义，可以参考利用外部系统的事务、写操作的幂等性或预写日志三种方式达到 <code>Exactly-Once</code> 语义。</p><h2 id="函数副作用"><a href="#函数副作用" class="headerlink" title="函数副作用"></a>函数副作用</h2><p>函数副作用是指用户函数对外界造成了计算框架意料之外的影响。比如典型的是在一个 Map 函数里将中间结果写到数据库，如果 Flink 作业异常自动重启，那么数据可能被写两遍，导致不确定性。对于这种情况，Flink 提供了基于 Checkpoint 的两阶段提交的钩子（<code>CheckpointedFunction</code> 和 <code>CheckpointListener</code>），用户可以用它来实现事务，以消除副作用的不确定性。另外还有一种常见的情况是，用户使用本地文件来保存临时数据，这些数据在 Task 重新调度的时候很可能丢失。其他的场景或许还有很多，总而言之，如果需要在用户函数里改变外部系统的状态，请确保 Flink 对这些操作是知情的（比如用 State API 记录状态，设置 Checkpoint 钩子）。</p><h2 id="Processing-Time"><a href="#Processing-Time" class="headerlink" title="Processing Time"></a>Processing Time</h2><p>在算法中引入当前时间作为参数是常见的操作，但在实时计算中引入当前系统时间，即 Processing Time，是造成不确定性的最常见也最难避免的原因。对 Processing 的引用可以是很明显、有完善文档标注的，比如 Flink 的 Time Characteristic，但也可能是完全出乎用户意料的，比如来源于缓存等常用的技术。为此，笔者总结了几类常见的 Processing Time 引用:</p><ul><li><p>Flink 提供的 Time Characteristic。Time Characteristic 会影响所有使用与时间相关的算子，比如 Processing Time 会让窗口聚合使用当前系统时间来分配窗口和触发计算，造成不确定性。另外，Processing Timer 也有类似的影响。</p></li><li><p>直接在函数里访问外部存储。因为这种访问是基于外部存储某个 Processing Time 时间点的状态，这个状态很可能在下次访问时就发生了变化，导致不确定性。要获得确定性的结果，比起简单查询外部存储的某个时间点的状态，我们应该获取它状态变更的历史，然后根据当前 Event Time 去查询对应的状态。这也是 Flink SQL 中 Temporary Table Join 的实现原理[1]。</p></li><li><p>对外部数据的缓存。在计算流量很大的数据时，很多情况下用户会选择用缓存来减轻外部存储的负载，但这可能会造成查询结果的不一致，而且这种不一致是不确定的。无论是使用超时阈值、LRU（Least Recently Used）等直接和系统时间相关的缓存剔除策略，还是 FIFO（First In First Out）、LFU（Less Frequently Used）等没有直接关联时间的剔除策略，访问缓存得到的结果通常和消息的到达顺序相关，而在上游经过 shuffle 的算子里面这是难以保证的（没有 shuffle 的 Embarrassingly Parallel 作业是例外）。</p></li><li><p>Flink 的 StateTTL。StateTTL 是 Flink 内置的根据时间自动清理 State 的机制，而这里的时间只目前提供 Processing Time，无论 Flink 本身使用的是 Processing Time 还是 Event Time 作为 Time Characteristic。BTW，Event Time 的 StateTTL 可以关注 FLINK-12005[2]。</p></li></ul><p>综合来讲，要完全避免 Processing Time 造成的影响是非常困难的，不过轻微的不确定性对于业务来说通常是可以接受的，我们要做的更多是提前预料到可能的影响，保证不确定性在可控范围内。</p><h2 id="Watermark"><a href="#Watermark" class="headerlink" title="Watermark"></a>Watermark</h2><p>Watermark 作为计算 Event Time 的机制，其中一个很重要的用途是决定实时计算何时要输出计算结果，类似文件结束标志符（EOF）在离线批计算中达到的效果。然而，在输出结果之后可能还会有迟到的数据到达，这称为窗口完整性问题（Window Completeness）。</p><p>窗口完整性问题无法避免，应对办法是要么更新计算结果，要么丢弃这部分数据。因为离线场景延迟容忍度较大，离线作业可以推迟一定时间开始，尽可能地将延迟数据纳入计算。而实时场景对延迟有比较高的要求，因此一般是输出结果后让状态保存一段时间，在这段时间内根据迟到数据持续更新结果（即 Allowed Lateness），此后将数据丢弃。因为定位，实时计算天然可能出现更多被丢弃的迟到数据，这将和 Watermark 的生成算法紧密相关。</p><p>虽然 Watermark 的生成是流式的，但 Watermark 的下发是断点式的。Flink 的 Watermark 下发策略有 Periodic 和 Punctuated 两种，前者基于 Processing Time 定时触发，后者根据数据流中的特殊消息触发。</p><p><center><img src="/img/flink-determinism/img1.periodic-watermark.png" alt="图1. Periodic Watermark 正常状态与重放追数据状态" title="图1. Periodic Watermark 正常状态与重放追数据状态"></center></p><p>基于 Processing Time 的 Periodic Watermark 具有不确定。在平时流量平稳的时候 Watermark 的提升可能是阶梯式的（见图1(a)）；然而在重放历史数据的情况下，相同长度的系统时间内处理的数据量可能会大很多（见图1(b))，并且伴有 Event Time 倾斜（即有的 Source 的 Event Time 明显比其他要快或慢，导致取最小值的总体 Watermark 被慢 Watermark 拖慢），导致本来丢弃的迟到数据，现在变为 Allowed Lateness 之内的数据（见图1中红色元素）。</p><p><center><img src="/img/flink-determinism/img2.punctuated-watermark.png" alt="图2. Punctuated Watermark 正常状态与重放追数据状态" title="图2. Punctuated Watermark 正常状态与重放追数据状态"></center></p><p>相比之下 Punctuated Watermark 更为稳定，无论在正常情况（见图2(a)）还是在重放数据的情况（见图2(b)）下，下发的 Watermark 都是一致的，不过依然有 Event Time 倾斜的风险。对于这点，Flink 社区起草了 FLIP-27 来处理[4]。基本原理是 Source 节点会选择性地消费或阻塞某个 partition/shard，让总体的 Event Time 保持接近。</p><p>除了 Watermark 的下发有不确定之外，还有个问题是现在 Watermark 并没有被纳入 Checkpoint 快照中。这意味着在作业从 Checkpoint 恢复之后，Watermark 会重新开始算，导致 Watermark 的不确定。这个问题在 FLINK-5601[5] 有记录，但目前只体现了 Window 算子的 Watermark，而在 StateTTL 支持 Event Time 后，或许每个算子都要记录自己的 Watermark。</p><p>综上所述，Watermark 目前是很难做到非常确定的，但因为 Watermark 的不确定性是通过丢弃迟到数据导致计算结果的不确定性的，只要没有丢弃迟到数据，无论中间 Watermark 的变化如何，最终的结果都是相同的。</p><h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>确定性不足是阻碍实时计算在关键业务应用的主要因素，不过当前业界已经具备了解决问题的理论基础，剩下的更多是计算框架后续迭代和工程实践上的问题。就目前开发 Flink 实时应用而言，需要注意投递语义、函数副作用、Processing Time 和 Watermark 这几点造成的不确定性。</p><h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol><li><a href="https://flink.apache.org/2019/05/14/temporal-tables.html" target="_blank" rel="external">Flux capacitor, huh? Temporal Tables and Joins in Streaming SQL</a></li><li><a href="https://issues.apache.org/jira/browse/FLINK-12005" target="_blank" rel="external">[FLINK-12005][State TTL] Event time support</a></li><li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/connectors/guarantees.html" target="_blank" rel="external">Fault Tolerance Guarantees of Data Sources and Sinks</a></li><li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-27%3A+Refactor+Source+Interface" target="_blank" rel="external">FLIP-27: Refactor Source Interface</a></li><li><a href="https://issues.apache.org/jira/browse/FLINK-5601" target="_blank" rel="external">[FLINK-5601] Window operator does not checkpoint watermarks</a></li></ol>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;确定性（Determinism）是计算机科学中十分重要的特性，确定性的算法保证对于给定相同的输入总是产生相同的输出。在分布式实时计算领域，确定性是业界一直难以解决的课题，由此导致用离线计算修正实时计算结果的 Lambda 架构成为大数据领域过去近十年的主流架构。而在最近几年随着 Google The Dataflow Model 的提出，实时计算和离线计算的关系逐渐清晰，在实时计算中提供与离线计算一致的确定性成为可能。本文将基于流行实时计算引擎 Apache Flink，梳理构建一个确定性的实时应用要满足什么条件。&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="Flink" scheme="https://link3280.github.io/categories/Flink/"/>
+    
+    
+      <category term="Flink" scheme="https://link3280.github.io/tags/Flink/"/>
+    
+  </entry>
   
   <entry>
     <title>Flink 1.11 Unaligned Checkpoint 解析</title>
@@ -432,9 +455,9 @@
       <category term="Flink" scheme="https://link3280.github.io/categories/Flink/"/>
     
     
-      <category term="YARN" scheme="https://link3280.github.io/tags/YARN/"/>
-    
       <category term="Flink" scheme="https://link3280.github.io/tags/Flink/"/>
+    
+      <category term="YARN" scheme="https://link3280.github.io/tags/YARN/"/>
     
   </entry>
   
@@ -452,29 +475,6 @@
       &lt;center&gt;&lt;p&gt;&lt;img src=&quot;/img/Flink-1.7-release-announcement-blog-1-768x591.png&quot; alt=&quot;Flink 1.7 Release&quot;&gt;&lt;/p&gt;&lt;/center&gt;
 
 &lt;p&gt;自 feature freezed 以后经过近一个月的努力，Flink 社区在十一月的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的开发。&lt;/p&gt;
-    
-    </summary>
-    
-    
-      <category term="Flink" scheme="https://link3280.github.io/categories/Flink/"/>
-    
-    
-      <category term="Flink" scheme="https://link3280.github.io/tags/Flink/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Flink Event Time 倾斜</title>
-    <link href="https://link3280.github.io/2018/10/28/Flink-Event-Time-%E5%80%BE%E6%96%9C/"/>
-    <id>https://link3280.github.io/2018/10/28/Flink-Event-Time-倾斜/</id>
-    <published>2018-10-28T14:27:02.000Z</published>
-    <updated>2019-04-14T13:04:55.431Z</updated>
-    
-    <content type="html"><![CDATA[<p>数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算系统里面，数据倾斜有了新的表现形式，即 event time 倾斜（event time skew），不同数据流的 event time 存在差异。</p><a id="more"></a><h2 id="并行数据流中的-watermark"><a href="#并行数据流中的-watermark" class="headerlink" title="并行数据流中的 watermark"></a>并行数据流中的 watermark</h2><p>首先来简单回顾下 Flink 的 watermark 机制，如果读者已经比较熟悉可以跳过这一节。在存在多并行度 Source 的 Flink 作业中，每个 Soure 实例（准确来说应该是 watermark assigner）会独立产生 watermark。watermark 会以广播的形式传播到下游，下游算子的每个实例收到后更新自己的 low watermark，并将自己的 low watermark 作为新的 watermark 广播给下游。如果一个算子实例有多个输入数据流，它的 low watermark 会以最小的一个为准。</p><center><img src="/img/watermark-in-paralle-stream.png" alt="并行视图的watermak" title="并行视图的watermak"></center><p>如图 1 所示，算子实例右上角的黄色框数字表示算子实例的 low watermark，数据管道末端的黄色框数字表示该数据管道的 low watermark，数据管道中的白色框表示 (id|timestamp) 形式的数据元素，数据管道中的虚线段表示 watermark 元素。在 map 算子后面接着一个 keyBy 操作，因此下游的 window 算子的实例会接受上游多个输入数据流。</p><p>可以看到 Source(1) 的 watermark 提升得比较快已经达到 33（到达 window 算子的为29），但受限于 Source(2) 的 watermark 还在 17（到达 window 算子的为14），最下游 window 实例的 low watermark 均为 14。顺带一提，window 算子实例的 low watermark 总是相同的，因为如果是 keyed window 每个实例的 low watermark 均取上游算子实例 low watermark 最小的一个；如果是 all window 则该算子只有一个实例。</p><h2 id="Event-Time-倾斜"><a href="#Event-Time-倾斜" class="headerlink" title="Event Time 倾斜"></a>Event Time 倾斜</h2><p>在读取历史数据时，比如从某个 Kafka topic 的最早 offset 开始读，各个 partition 的event time 很可能是不同的。如果有一个 partition 的 event time 明显比其他 partition 慢，那么下游所以算子的 low watermark 都会被其拖慢，而其他 partition 的新数据又会一直读入，这对于部分依赖 event time 进行计算的算子来说会造成不必要的数据缓存。</p><p>比如对于使用了低级 API ProcessingFunction 的 event time window 算子，它的触发条件是 low watermark 达到某个值，在此之前它会缓存该窗口内的所有数据。在 event time 倾斜的情况下，它一直得不到触发，但又要一直摄入新数据导致 State 不断增长。这会给内存和 checkpoint 机制带来很大的压力，使得作业的可能最终因 OOM 崩溃并且重启恢复需要的时间也异常地长。</p><p>比起传统的数据倾斜，event time 数据倾斜更加难以预料和处理。从原因来说，数据倾斜是逻辑上的分布不均匀，常常是由于业务的流量分布造成的，比如微博大 V 用户和普通用户的访问流量肯定不在一个等级，这种分布是比较容易提前预计的和稳定的；而 event time 数据倾斜通常和数据的物理存储相关，更加底层，因此原因也更动态和多样。比如 Kafka topic 扩容时新增的 partiton，从 earliest 消费得到的 event time 可能是更新的。再比如在一个公用的 topic 下，以游戏代号作为 key 写入 partition，如果某个游戏搞活动，流量在一小段时间内增加，那么这段时间这个 partition 的 event time 就比其他 partition 要慢。从处理的办法来说，数据倾斜主要是在业务层，用户可以在计算时再 re-partition 处理，而 event time 倾斜发生在数据摄入阶段，用户的控制权比较少，更多是需要计算框架层面的支持。</p><h2 id="应对方案"><a href="#应对方案" class="headerlink" title="应对方案"></a>应对方案</h2><p>Flink 社区对于 event time 倾斜问题的重要性已经达成共识，在应对方案上也有了基础的思路。最基本的思路就是，既然拉取更多的其他 partition 的数据并不能提升下游的 low watermark，为什么不减缓或者阻塞他们的消费呢？最好的情况下，Source 实例的 watermark 可以像 checkpoint 一样校准。</p><p>围绕这个思路主要有两种实现方式:</p><ol><li><p>从下游算子入手，利用反压的机制来抑制对 watermark 前进过快的数据管道的摄入，比方说下游读取数据时对 watermark 更低的输入流给予更高的优先级。实际上这也是 Kafka Stream 的处理方式（见<a href="https://cwiki.apache.org/confluence/display/KAFKA/KIP-353%3A+Improve+Kafka+Streams+Timestamp+Synchronization" target="_blank" rel="external">KIP-353</a>）。这种方式比较嵌合 Flink 现有的机制，但也存在两个关键的问题。首先，减缓读取部分输入流的同时，会使得输入流中的 barrier 也被延缓，导致 checkpoint 校准产生一定的数据缓存。其次，这种方式只是尽力而为，并不保证反压到 Source 端的效果，有可能反压之后 Source 实例间的 watermark 依然有较大的差距。</p></li><li><p>直接增加一个协调者来为 Source 的 watermark 进行校准，比如 SourceCoodinator。SourceCoodinator 可以是 JobManager 的一部分，就像 CheckpointCoordinator 一样。每个 Source 实例需要定期向 SourceCoodinator 报告目前的 watermark，并接受 SourceCoodinator 的返回决定是否需要继续拉取数据。这种方式并不会影响 checkpoint 机制，准确来说应该说是建立了 checkpoint 并行的机制，不过需要对目前的 Source API 进行一定的重构。</p></li></ol><p>从反馈意见来说，社区大多数是偏向用第二种方式来实现，因为第一种方式的耦合性和复杂度太高，而且对于 stateful streaming 来说任何影响到准确性的改动都应该十分谨慎。</p><h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Event time 数据倾斜是基于 event time 和 watermark 机制的实时计算面临的新问题，主要表现不同 Source 实例的 watermark 不同，导致下游基于 event time 的算子需要不断缓存 watermark 较高的实例的数据。这个问题发生在数据摄入阶段，因此需要从计算框架层面提供支持。Kafka Stream 的处理办法是通过优先消费时间戳更小的输入流来平衡不同 partition 的 event time，但对于 Flink 来说会影响到 checkpoint 机制，所以 Flink 社区目前更希望通过引入 Source 实例的协调机制来解决。</p><h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ol><li><a href="http://apache-flink-mailing-list-archive.1008284.n3.nabble.com/Sharing-state-between-subtasks-td24489.html" target="_blank" rel="external">Flink mail list: Sharing state between subtasks</a></li><li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.6/dev/event_time.html#watermarks-in-parallel-streams" target="_blank" rel="external">Watermarks in Parallel Streams</a></li><li><a href="https://cwiki.apache.org/confluence/display/KAFKA/KIP-353%3A+Improve+Kafka+Streams+Timestamp+Synchronization" target="_blank" rel="external">KIP-353: Improve Kafka Streams Timestamp Synchronization</a></li></ol>]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;数据倾斜是分布式领域最为常见及棘手的问题之一。通常来说分布式系统会以数据的 key 来对数据进行 partition (分区)，不同 key 的计算和状态都是独立，因此可以用分治的方式并行处理。当发生数据倾斜时，数据会集中到少部分的 key 上，导致这些 key 对应的 subtask 负载比其他 subtask 高得多。而在使用 event time 时间特性和 watermak 机制的实时计算系统里面，数据倾斜有了新的表现形式，即 event time 倾斜（event time skew），不同数据流的 event time 存在差异。&lt;/p&gt;
     
     </summary>
     
