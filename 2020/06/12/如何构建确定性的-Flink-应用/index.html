@@ -100,7 +100,7 @@
 <meta property="og:description" content="确定性（Determinism）是计算机科学中十分重要的特性，确定性的算法保证对于给定相同的输入总是产生相同的输出。在分布式实时计算领域，确定性是业界一直难以解决的课题，由此导致用离线计算修正实时计算结果的 Lambda 架构成为大数据领域过去近十年的主流架构。而在最近几年随着 Google The Dataflow Model 的提出，实时计算和离线计算的关系逐渐清晰，在实时计算中提供与离线计算">
 <meta property="og:image" content="https://link3280.github.io/img/flink-determinism/img1.periodic-watermark.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-determinism/img2.punctuated-watermark.png">
-<meta property="og:updated_time" content="2020-06-12T14:09:44.426Z">
+<meta property="og:updated_time" content="2020-06-13T01:43:03.266Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="如何构建确定性的 Flink 应用">
 <meta name="twitter:description" content="确定性（Determinism）是计算机科学中十分重要的特性，确定性的算法保证对于给定相同的输入总是产生相同的输出。在分布式实时计算领域，确定性是业界一直难以解决的课题，由此导致用离线计算修正实时计算结果的 Lambda 架构成为大数据领域过去近十年的主流架构。而在最近几年随着 Google The Dataflow Model 的提出，实时计算和离线计算的关系逐渐清晰，在实时计算中提供与离线计算">
@@ -380,7 +380,7 @@
 <p>要分区确定性和准确性的缘故是，准确性与具体的业务逻辑紧密耦合难以评估，而确定性则是通用的需求（除去少数场景用户故意使用非确定性的算法）。当一个 Flink 实时应用提供确定性，意味着它在异常场景的自动重试或者手动重流数据的情况下，都能像离线作业一般产出相同的结果，这将很大程度上提高用户的信任度。</p>
 <h1 id="影响-Flink-应用确定性的因素"><a href="#影响-Flink-应用确定性的因素" class="headerlink" title="影响 Flink 应用确定性的因素"></a>影响 Flink 应用确定性的因素</h1><h2 id="投递语义"><a href="#投递语义" class="headerlink" title="投递语义"></a>投递语义</h2><p>常见的投递语义有 <code>At-Most-Once</code>、<code>At-Least-Once</code> 和 <code>Exactly-Once</code> 三种。严格来说只有 <code>Exactly-Once</code> 满足确定性的要求，但如果整个业务逻辑是幂等的， 基于<code>At-Least-Once</code> 也可以达到结果的确定性。</p>
 <p>实时计算的 <code>Exactly-Once</code> 通常指端到端的 <code>Exactly-Once</code>，保证输出到下游系统的数据和上游的数据是一致的，没有重复计算或者数据丢失。要达到这点，需要分别实现读取数据源（Source 端）的 <code>Exactly-Once</code>、计算的 <code>Exactly-Once</code> 和输出到下游系统（Sink 端）的 <code>Exactly-Once</code>。</p>
-<p>其中前面两个都比较好保证，因为 Flink 应用出现异常会自动恢复至最近一个成功 checkpoint，Source 的状态和计算的状态都会自动回滚到快照时间点，而问题在于 Sink 端的 <code>Exactly-Once</code>。Sink 端是否能顺利回滚依赖于外部系统的特性，通常来说需要外部系统支持事务，然而不少大数据组件对事务的支持并不是很好，即使是实时计算最常用的 Kafka 也直到 2017 年的 0.11 版本才支持事务，更多的组件需要依赖各种 trick 来达到某种场景下的 <code>Exactly-Once</code>。</p>
+<p>其中前面两个都比较好保证，因为 Flink 应用出现异常会自动恢复至最近一个成功 checkpoint，Pull-Based 的 Source 的状态和 Flink 内部计算的状态都会自动回滚到快照时间点，而问题在于 Push-Based 的 Sink 端。Sink 端是否能顺利回滚依赖于外部系统的特性，通常来说需要外部系统支持事务，然而不少大数据组件对事务的支持并不是很好，即使是实时计算最常用的 Kafka 也直到 2017 年的 0.11 版本才支持事务，更多的组件需要依赖各种 trick 来达到某种场景下的 <code>Exactly-Once</code>。</p>
 <p>总体来说这些 trick 可以分为两大类:</p>
 <ul>
 <li>依赖写操作的幂等性。比如 HBase 等 KV 存储虽然没有提供跨行事务，但可以通过幂等写操作配合基于主键的 Upsert 操作达到 <code>Exactly-Once</code>。不过由于 Upsert 不能表达 Delete 操作，这种模式不适合有 Delete 的业务场景。</li>
@@ -396,7 +396,7 @@
 </li>
 <li><p>对外部数据的缓存。在计算流量很大的数据时，很多情况下用户会选择用缓存来减轻外部存储的负载，但这可能会造成查询结果的不一致，而且这种不一致是不确定的。无论是使用超时阈值、LRU（Least Recently Used）等直接和系统时间相关的缓存剔除策略，还是 FIFO（First In First Out）、LFU（Less Frequently Used）等没有直接关联时间的剔除策略，访问缓存得到的结果通常和消息的到达顺序相关，而在上游经过 shuffle 的算子里面这是难以保证的（没有 shuffle 的 Embarrassingly Parallel 作业是例外）。</p>
 </li>
-<li><p>Flink 的 StateTTL。StateTTL 是 Flink 内置的根据时间自动清理 State 的机制，而这里的时间只目前提供 Processing Time，无论 Flink 本身使用的是 Processing Time 还是 Event Time 作为 Time Characteristic。BTW，Event Time 的 StateTTL 可以关注 FLINK-12005[2]。</p>
+<li><p>Flink 的 StateTTL。StateTTL 是 Flink 内置的根据时间自动清理 State 的机制，而这里的时间目前只提供 Processing Time，无论 Flink 本身使用的是 Processing Time 还是 Event Time 作为 Time Characteristic。BTW，StateTTL 对 Event Time 的支持可以关注 FLINK-12005[2]。</p>
 </li>
 </ul>
 <p>综合来讲，要完全避免 Processing Time 造成的影响是非常困难的，不过轻微的不确定性对于业务来说通常是可以接受的，我们要做的更多是提前预料到可能的影响，保证不确定性在可控范围内。</p>
