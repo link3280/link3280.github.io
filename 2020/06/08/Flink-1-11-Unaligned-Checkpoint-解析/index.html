@@ -106,7 +106,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink-unaligned-checkpoint/img6.chandy-lamport-status.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-unaligned-checkpoint/img7.barrier-overtake-data.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-unaligned-checkpoint/img8.unaligned-checkpoint-status.png">
-<meta property="og:updated_time" content="2020-06-07T16:27:50.755Z">
+<meta property="og:updated_time" content="2020-06-13T02:06:33.590Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 1.11 Unaligned Checkpoint 解析">
 <meta name="twitter:description" content="作为 Flink 最基础也是最关键的容错机制，Checkpoint 快照机制很好地保证了 Flink 应用从异常状态恢复后的数据准确性。同时 Checkpoint 相关的 metrics 也是诊断 Flink 应用健康状态最为重要的指标，成功且耗时较短的 Checkpoint 表明作业运行状况良好，没有异常或反压。然而，由于 Checkpoint 与反压的耦合，反压反过来也会作用于 Checkpo">
@@ -437,7 +437,7 @@
 <li>图 b: 算子优先处理输入 Channel 1 的 Barrier，开始本地快照记录自己的状态，并将 Barrier 插到输出 Channel 末端。</li>
 <li>图 c: 算子继续正常处理两个 Channel 的输入，输出 <code>2</code>、<code>9</code>。同时算子会将 Barrier 越过的数据（即输入 Channel 1 的 <code>2</code> 和输出 Channel 的 <code>1</code>）写入 Checkpoint，并将输入 Channel 2 后续早于 Barrier 的数据（即 <code>2</code>、<code>9</code>、<code>7</code>）持续写入 Checkpoint。</li>
 </ul>
-<p>比起 Aligned Checkpoint 中不同 Checkpoint 周期的输出数据以 Barrier 为界限分隔得很清晰，Unaligned Checkpoint 会使得本属于当前 Checkpoint 的部分输入或输出数据落到下个 Checkpont 的 Barrier 之后。这意味着从 Checkpoint 恢复时，这些数据不会被 Source 端重放，但因为它们也会被 Checkpoint 恢复到对应 Channel 中，所以依然能提供只计算一次的准确结果。</p>
+<p>比起 Aligned Checkpoint 中不同 Checkpoint 周期的数据以算子快照为界限分隔得很清晰，Unaligned Checkpoint 进行快照和输出 Barrier 时，部分本属于当前 Checkpoint 的输入数据还未计算（因此未反映到当前算子状态中），而部分属于当前 Checkpoint 的输出数据却落到 Barrier 之后（因此未反映到下游算子的状态中）。这也正是 Unaligned 的含义: 不同 Checkpoint 周期的数据没有对齐，包括不同输入 Channel 之间的不对齐，以及输入和输出间的不对齐。而这部分不对齐的数据会被快照记录下来，以在恢复状态时重放。换句话说，从 Checkpoint 恢复时，不对齐的数据并不能由 Source 端重放的数据计算得出，同时也没有反映到算子状态中，但因为它们会被 Checkpoint 恢复到对应 Channel 中，所以依然能提供只计算一次的准确结果。</p>
 <p>当然，Unaligned Checkpoint 并不是百分百优于 Aligned Checkpoint，它会带来的已知问题就有:</p>
 <ol>
 <li>由于要持久化缓存数据，State Size 会有比较大的增长，磁盘负载会加重。</li>
