@@ -103,7 +103,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img3.flink-mem-partitions-upper-limit.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img4.pmap-thread-arena.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img5.jdk8-member-name-table-leak.png">
-<meta property="og:updated_time" content="2021-01-04T14:09:28.241Z">
+<meta property="og:updated_time" content="2021-01-04T16:59:26.732Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="详解 Flink 容器化环境下的 OOM Killed">
 <meta name="twitter:description" content="在生产环境中，Flink 通常会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 等容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程因使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。">
@@ -380,7 +380,7 @@
         <p>在生产环境中，Flink 通常会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 等容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程因使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。</p>
 <a id="more"></a>
 <p>针对这个问题，Flink 在 1.10 版本对内存管理模块进行了重构，设计了全新的内存参数。在大多数场景下 Flink 的内存模型和默认已经足够好用，可以帮用户屏蔽进程背后的复杂内存结构，然而一旦出现内存问题，问题的排查和修复都需要比较多的领域知识，通常令普通用户望而却步。</p>
-<p>为此，本文将解析 JVM 和 Flink 的内存模型，并总结在工作中遇到和在社区交流中了解到的造成 Flink 内存使用超出容器限制的常见原因。由于 Flink 内存使用与用户代码、部署环境、各种依赖版本等因素都有紧密关系，本文主要讨论 on YARN 部署、Oracle JDK/OpenJDK 8、Flink 1.10+ 的情况。此外，特别感谢 @宋辛童（Flink 1.10+ 新内存架构的主要作者）在社区的答疑，令笔者受益匪浅。</p>
+<p>为此，本文将解析 JVM 和 Flink 的内存模型，并总结在工作中遇到和在社区交流中了解到的造成 Flink 内存使用超出容器限制的常见原因。由于 Flink 内存使用与用户代码、部署环境、各种依赖版本等因素都有紧密关系，本文主要讨论 on YARN 部署、Oracle JDK/OpenJDK 8、Flink 1.10+ 的情况。此外，特别感谢 @宋辛童（Flink 1.10+ 新内存架构的主要作者）和 @唐云（RocksDB StateBackend 专家）在社区的答疑，令笔者受益匪浅。</p>
 <h1 id="JVM-内存分区"><a href="#JVM-内存分区" class="headerlink" title="JVM 内存分区"></a>JVM 内存分区</h1><p>对于大多数 Java 用户而言，日常开发中与 JVM Heap 打交道的频率远大于其他 JVM 内存分区，因此常把其他内存分区统称为 Off-Heap 内存。而对于 Flink 来说，内存超标问题通常来自 Off-Heap 内存，因此对 JVM 内存模型有更深入的理解是十分必要的。</p>
 <p>根据 JVM 8 Spec[1]，JVM 管理的内存分区如下图:</p>
 <center><p><img src="/img/flink-oom-killed/img1.jvm-memory-overview.jpg" alt="img1. JVM 8 内存模型" title="img1. JVM 8 内存模型"></p></center>
