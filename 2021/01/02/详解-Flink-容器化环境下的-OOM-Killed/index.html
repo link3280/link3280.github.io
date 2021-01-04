@@ -92,21 +92,21 @@
 
 
 
-<meta name="description" content="在生产环境中，Flink 通常在会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。">
+<meta name="description" content="在生产环境中，Flink 通常会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 等容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程因使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="详解 Flink 容器化环境下的 OOM Killed">
 <meta property="og:url" content="https://link3280.github.io/2021/01/02/详解-Flink-容器化环境下的-OOM-Killed/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="在生产环境中，Flink 通常在会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。">
+<meta property="og:description" content="在生产环境中，Flink 通常会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 等容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程因使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。">
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img1.jvm-memory-overview.jpg">
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img2.flink-mem-model.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img3.flink-mem-partitions-upper-limit.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img4.pmap-thread-arena.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img5.jdk8-member-name-table-leak.png">
-<meta property="og:updated_time" content="2021-01-03T10:32:12.231Z">
+<meta property="og:updated_time" content="2021-01-04T14:09:28.241Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="详解 Flink 容器化环境下的 OOM Killed">
-<meta name="twitter:description" content="在生产环境中，Flink 通常在会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。">
+<meta name="twitter:description" content="在生产环境中，Flink 通常会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 等容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程因使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。">
 <meta name="twitter:image" content="https://link3280.github.io/img/flink-oom-killed/img1.jvm-memory-overview.jpg">
 
 
@@ -377,11 +377,11 @@
       
 
       
-        <p>在生产环境中，Flink 通常在会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。</p>
+        <p>在生产环境中，Flink 通常会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 等容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程因使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。</p>
 <a id="more"></a>
 <p>针对这个问题，Flink 在 1.10 版本对内存管理模块进行了重构，设计了全新的内存参数。在大多数场景下 Flink 的内存模型和默认已经足够好用，可以帮用户屏蔽进程背后的复杂内存结构，然而一旦出现内存问题，问题的排查和修复都需要比较多的领域知识，通常令普通用户望而却步。</p>
 <p>为此，本文将解析 JVM 和 Flink 的内存模型，并总结在工作中遇到和在社区交流中了解到的造成 Flink 内存使用超出容器限制的常见原因。由于 Flink 内存使用与用户代码、部署环境、各种依赖版本等因素都有紧密关系，本文主要讨论 on YARN 部署、Oracle JDK/OpenJDK 8、Flink 1.10+ 的情况。此外，特别感谢 @宋辛童（Flink 1.10+ 新内存架构的主要作者）在社区的答疑，令笔者受益匪浅。</p>
-<h1 id="JVM-内存分区"><a href="#JVM-内存分区" class="headerlink" title="JVM 内存分区"></a>JVM 内存分区</h1><p>对于大多数 Java 用户而言，日常开发中只需要关注 JVM Heap 内存，其他的内存分区可以统称为 Off-Heap 内存，通常由 JVM 或第三方库使用。而对于 Flink 来说，内存超标问题通常来自 Off-Heap 内存，因此对 JVM 内存模型有更深入的理解是十分必要的。</p>
+<h1 id="JVM-内存分区"><a href="#JVM-内存分区" class="headerlink" title="JVM 内存分区"></a>JVM 内存分区</h1><p>对于大多数 Java 用户而言，日常开发中与 JVM Heap 打交道的频率远大于其他 JVM 内存分区，因此常把其他内存分区统称为 Off-Heap 内存。而对于 Flink 来说，内存超标问题通常来自 Off-Heap 内存，因此对 JVM 内存模型有更深入的理解是十分必要的。</p>
 <p>根据 JVM 8 Spec[1]，JVM 管理的内存分区如下图:</p>
 <center><p><img src="/img/flink-oom-killed/img1.jvm-memory-overview.jpg" alt="img1. JVM 8 内存模型" title="img1. JVM 8 内存模型"></p></center>
 
@@ -400,7 +400,7 @@
 <li>Unknown: 无法分类的内存。</li>
 </ul>
 <p>理想情况下，我们可以严格控制各分区内存的上限，来保证进程总体内存在容器限额之内。但是过于严格的管理会带来会有额外使用成本且缺乏灵活度，所以在实际中为了 JVM 只对其中几个暴露给用户使用的分区提供了硬性的上限，而其他分区则可以作为整体被视为 JVM 本身的内存消耗。</p>
-<p>具体可以用于限制分区内存的 JVM 参数如下表所示。</p>
+<p>具体可以用于限制分区内存的 JVM 参数如下表所示（注意，业界对于 JVM Native 内存并没有准确的定义，本文的 Native 内存指的是 Off-Heap 内存中非 Direct 的部分，与 Naive Non-Direct 可以互换）。</p>
 <table>
 <thead>
 <tr>
@@ -425,7 +425,7 @@
 </tr>
 <tr>
 <td>Internal(Direct)</td>
-<td>Native Direct 内存</td>
+<td>Direct 内存</td>
 <td>-XX: MaxDirectMemorySize</td>
 <td>通过 <code>java.nio.ByteBuffer#allocateDirect</code> 申请的内存，通常用于 IO 模块</td>
 </tr>
@@ -433,7 +433,7 @@
 <td>Internal(Non-Direct)</td>
 <td>Native 内存</td>
 <td>无</td>
-<td>JVM 本身使用、JNI 使用或通过 <code>sun.misc.Unsafe</code> 申请的内存</td>
+<td>JVM 本身使用、JNI 使用或通过 Java 非安全内部类 <code>sun.misc.Unsafe</code> 申请的内存</td>
 </tr>
 </tbody>
 </table>
@@ -451,7 +451,7 @@
 <ol>
 <li>若是 Flink 有硬限制的分区，Flink 会报该分区内存不足。否则进入下一步。</li>
 <li>若该分区属于 JVM 管理的分区，在其实际值增长导致 JVM 分区也内存耗尽时，JVM 会报其所属的 JVM 分区的 OOM （比如 <code>java.lang.OutOfMemoryError: Jave heap space</code>）。否则进入下一步。</li>
-<li>该分区内存持续溢出，最终导致进程总体内存超出容器内存限制，这时资源管理器（YARN/k8s 等）会 kill 掉进程。</li>
+<li>该分区内存持续溢出，最终导致进程总体内存超出容器内存限制。在开启严格资源控制的环境下，资源管理器（YARN/k8s 等）会 kill 掉该进程。</li>
 </ol>
 <p>为直观地展示了 Flink 各内存分区与 JVM 内存分区间的关系，笔者整理如下的内存映射表:</p>
 <center><p><img src="/img/flink-oom-killed/img3.flink-mem-partitions-upper-limit.png" alt="img3. Flink 分区及 JVM 分区内存限制关系" title="img3. Flink 分区及 JVM 分区内存限制关系"></p></center>
@@ -461,7 +461,7 @@
 <blockquote>
 <p>Although, native non-direct memory usage can be accounted for as a part of the framework off-heap memory or task off-heap memory, it will result in a higher JVM’s direct memory limit in this case.</p>
 </blockquote>
-<p>虽然 Native Non-Direct 的内存（比如 Managed Memory）严格来说属于 JVM Overhead，不会被 JVM <code>-XX:MaxDirectMemorySize</code> 参数所限制，但 Flink 还是将它算入 <code>MaxDirectMemorySize</code> 中。这部分预留的 Direct 内存配额不会被实际使用，所以可以留给没有上限 JVM Overhead 占用，达到为 Native Non-Direct 内存预留空间的效果。</p>
+<p>虽然 Task/Framework 的 Off-Heap 分区中可能含有 Native Non-Direct 内存，而这部分内存严格来说属于 JVM Overhead，不会被 JVM <code>-XX:MaxDirectMemorySize</code> 参数所限制，但 Flink 还是将它算入 <code>MaxDirectMemorySize</code> 中。这部分预留的 Direct 内存配额不会被实际使用，所以可以留给没有上限 JVM Overhead 占用，达到为 Native Non-Direct 内存预留空间的效果。</p>
 <h1 id="OOM-Killed-常见原因"><a href="#OOM-Killed-常见原因" class="headerlink" title="OOM Killed 常见原因"></a>OOM Killed 常见原因</h1><p>与上文分析一致，实践中导致 OOM Killed 的常见原因基本源于 Native 内存的泄漏或者过度使用。因为虚拟内存的 OOM Killed 通过资源管理器的配置很容易避免且通常不会有太大问题，所以下文只讨论物理内存的 OOM Killed。</p>
 <h2 id="RocksDB-Native-内存的不确定性"><a href="#RocksDB-Native-内存的不确定性" class="headerlink" title="RocksDB Native 内存的不确定性"></a>RocksDB Native 内存的不确定性</h2><p>众所周知，RocksDB 通过 JNI 直接申请 Native 内存，并不受 Flink 的管控，所以实际上 Flink 通过设置 RocksDB 的内存参数间接影响其内存使用。然而，目前 Flink 是通过估算得出这些参数，并不是非常精确的值，其中有以下的几个原因。</p>
 <p>首先是部分内存难以准确计算的问题。RocksDB 的内存占用有 4 个部分[6]:  </p>

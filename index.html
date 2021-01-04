@@ -375,7 +375,7 @@
 
       
         
-          <p>在生产环境中，Flink 通常在会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。</p>
+          <p>在生产环境中，Flink 通常会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 等容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程因使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2021/01/02/详解-Flink-容器化环境下的-OOM-Killed/#more" rel="contents">
