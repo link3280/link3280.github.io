@@ -103,7 +103,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img3.flink-mem-partitions-upper-limit.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img4.pmap-thread-arena.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-oom-killed/img5.jdk8-member-name-table-leak.png">
-<meta property="og:updated_time" content="2021-01-05T12:15:32.904Z">
+<meta property="og:updated_time" content="2021-01-05T12:18:54.902Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="详解 Flink 容器化环境下的 OOM Killed">
 <meta name="twitter:description" content="在生产环境中，Flink 通常会部署在 YARN 或 k8s 等资源管理系统之上，进程会以容器化（YARN 容器或 docker 等容器）的方式运行，其资源会受到资源管理系统的严格限制。另一方面，Flink 运行在 JVM 之上，而 JVM 与容器化环境并不是特别适配，尤其 JVM 复杂且可控性较弱的内存模型，容易导致进程因使用资源超标而被 kill 掉，造成 Flink 应用的不稳定甚至不可用。">
@@ -400,7 +400,7 @@
 <li>Unknown: 无法分类的内存。</li>
 </ul>
 <p>理想情况下，我们可以严格控制各分区内存的上限，来保证进程总体内存在容器限额之内。但是过于严格的管理会带来会有额外使用成本且缺乏灵活度，所以在实际中为了 JVM 只对其中几个暴露给用户使用的分区提供了硬性的上限，而其他分区则可以作为整体被视为 JVM 本身的内存消耗。</p>
-<p>具体可以用于限制分区内存的 JVM 参数如下表所示（注意，业界对于 JVM Native 内存并没有准确的定义，本文的 Native 内存指的是 Off-Heap 内存中非 Direct 的部分，与 Native Non-Direct 可以互换）。</p>
+<p>具体可以用于限制分区内存的 JVM 参数如下表所示（值得注意的是，业界对于 JVM Native 内存并没有准确的定义，本文的 Native 内存指的是 Off-Heap 内存中非 Direct 的部分，与 Native Non-Direct 可以互换）。</p>
 <table>
 <thead>
 <tr>
@@ -453,7 +453,7 @@
 <li>若该分区属于 JVM 管理的分区，在其实际值增长导致 JVM 分区也内存耗尽时，JVM 会报其所属的 JVM 分区的 OOM （比如 <code>java.lang.OutOfMemoryError: Jave heap space</code>）。否则进入下一步。</li>
 <li>该分区内存持续溢出，最终导致进程总体内存超出容器内存限制。在开启严格资源控制的环境下，资源管理器（YARN/k8s 等）会 kill 掉该进程。</li>
 </ol>
-<p>为直观地展示了 Flink 各内存分区与 JVM 内存分区间的关系，笔者整理如下的内存映射表:</p>
+<p>为直观地展示 Flink 各内存分区与 JVM 内存分区间的关系，笔者整理了如下的内存分区映射表:</p>
 <center><p><img src="/img/flink-oom-killed/img3.flink-mem-partitions-upper-limit.png" alt="img3. Flink 分区及 JVM 分区内存限制关系" title="img3. Flink 分区及 JVM 分区内存限制关系"></p></center>
 
 <p>根据之前的逻辑，在所有的 Flink 内存分区中，只有不是 Self-Contained 且所属 JVM 分区也没有内存硬限制参数的 JVM Overhead 是有可能导致进程被 OOM kill 掉的。作为一个预留给各种不同用途的内存的大杂烩，JVM Overhead 的确容易出问题，但同时它也可以作为一个兜底的隔离缓冲区，来缓解来自其他区域的内存问题。</p>
