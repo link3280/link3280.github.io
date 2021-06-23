@@ -103,7 +103,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/bigdata-thoughts/img3.kappa-downsides.png">
 <meta property="og:image" content="https://link3280.github.io/img/bigdata-thoughts/img4.yarn-operator.png">
 <meta property="og:image" content="https://link3280.github.io/img/bigdata-thoughts/img5.f1-lightning-architecture.png">
-<meta property="og:updated_time" content="2021-06-23T14:18:45.988Z">
+<meta property="og:updated_time" content="2021-06-23T15:19:57.472Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="浅谈大数据的过去、现在和未来">
 <meta name="twitter:description" content="相信身处于大数据领域的读者多少都能感受到，大数据技术的应用场景正在发生影响深远的变化: 随着实时计算、Kubernetes 的崛起和 HTAP、流批一体的大趋势，之前相对独立的大数据技术正逐渐和传统的在线业务融合。关于该话题，笔者早已如鲠在喉，但因拖延症又犯迟迟没有动笔，最终借最近参加多项会议收获不少感悟的契机才能克服懒惰写下这片文章。">
@@ -434,7 +434,7 @@
 
 <p>比起传统的基于 Hadoop 生态的数据仓库，HTAP 的优点是：</p>
 <ol>
-<li>内置可靠的数据同步机制，避免建立 OLTP 库到数据仓库的复杂 ETL 管道，同时也提高了数据一致性（比如 TiDB 和 F1 Lightning 都提供与 OLTP 一致的可序列化级别一致性）。</li>
+<li>内置可靠的数据同步机制，避免建立 OLTP 库到数据仓库的复杂 ETL 管道，同时也提高了数据一致性（比如 TiDB 和 F1 Lightning 都提供与 OLTP 一致的可重复读一致性）。</li>
 <li>对用户友好的统一查询接口，屏蔽了底层引擎的复杂性，大大降低了 OLAP 的门槛。这使得在有授权的情况下，线上业务团队能利用 OLAP 进行轻量级数据分析，而数据分析团队也能利用 OLTP 进行快速的点查。</li>
 <li>数据安全性更有保障。将数据在不同组件间移动容易造成权限不一致和安全漏洞，而 HTAP 可以复用 OLTP 的数据权限和避免数据跨组件访问来避免这些问题。</li>
 </ol>
