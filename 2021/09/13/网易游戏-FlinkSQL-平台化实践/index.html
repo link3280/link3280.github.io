@@ -102,7 +102,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/streamflysql/img2.streamflysql-v1-architecture.png">
 <meta property="og:image" content="https://link3280.github.io/img/streamflysql/img3.streamflysql-v1-debugging.png">
 <meta property="og:image" content="https://link3280.github.io/img/streamflysql/img4.streamflysql-v2-architecture.png">
-<meta property="og:updated_time" content="2021-09-13T14:36:39.322Z">
+<meta property="og:updated_time" content="2021-09-13T15:12:21.845Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="网易游戏 FlinkSQL 平台化实践">
 <meta name="twitter:description" content="随着近年来流式 SQL 理论逐渐完善，在实时流计算场景中的提供与离线批计算类似的 SQL 开发体验成为可能，GCP Dataflow、Apache Flink、Apache Kafka、Apache Pulsar 都纷纷推出 SQL 支持。在开源领域中，Flink SQL 毫无疑问是流式 SQL 领域最为流行的框架之一，但由于 Flink SQL 缺乏类似 Hive Server2 的服务端组件，">
@@ -447,7 +447,7 @@
 <p>因为 SQL Gateway 本来就有会话级别的 UserCodeClassloader，所以一开始我们尝试了 Classloader 隔离的方案。然而由于 UGI 的使用散落在各个组件 lib 的代码中，要完全将 Hadoop 生态相关的调用模块化难度较大，后续我们转为了 proxy user 的方案。具体来说，系统先登录为超级用户，然后替代理用户获取不同组件的 delegation token，最后伪装为代理用户以 delegation token 而不是 Kerberos TGT 来进行认证。</p>
 <p>另外在多租户的资源隔离方面，我们底层通过 Lambda 在用户自己的队列启动 Session Cluster，因此每个用户的集群资源天然就是隔离的，避免了类似 Spark Thrift Server 只能使用公用队列而导致资源混用的问题。</p>
 <h3 id="3-水平拓展"><a href="#3-水平拓展" class="headerlink" title="3. 水平拓展"></a>3. 水平拓展</h3><p>上文提到我们将主要的状态存储到数据库，StreamflySQL 服务端基本是无状态的，因此可以方便地水平拓展。水平拓展能力对于 StreamflySQL 尤为重要，除单点问题以外，Flink SQL 优化编译有可能打满 CPU 单核，单实例的资源显然是不够的。然而如果同一个会话的 SQL 请求随机被分发到多个不同的实例，则会导致每个服务实例都需要初始化一个 Environment，浪费资源并导致响应时间显著增长。更加重要的是，会话某些状态是不合适持久化的，比如 <code>select</code> DSL 会让 StreamflySQL 服务端开启一个 TCP 链接接收从集群作业回传的结果数据集，如果同个会话的请求被路由到其他实例，显然无法读取到结果。</p>
-<p>为此我们采用了 Nginx 的 <code>hash</code> 负载均衡策略，基于会话 ID 进行路由，确保同一个会话的请求尽可能路由到同一个实例。当然这只确保大部分情况下正常，如果服务实例挂掉或者维护重启，那么 <code>select</code> 的结果还是会丢失。但考虑到 <code>select</code> 一般用于调试或数据探索，所以是可以接受的范围内。</p>
+<p>为此我们采用了亲和性的负载均衡策略，基于会话 ID 进行路由，确保同一个会话的请求尽可能路由到同一个实例。当然这只确保大部分情况下正常，如果服务实例挂掉或者维护重启，那么 <code>select</code> 的结果还是会丢失。但考虑到 <code>select</code> 一般用于调试或数据探索，所以是可以接受的范围内。</p>
 <h3 id="4-作业状态管理"><a href="#4-作业状态管理" class="headerlink" title="4. 作业状态管理"></a>4. 作业状态管理</h3><p>社区的 SQL Gateway 未考虑作业的 SQL 状态，而这在生产环境是不可缺失的。对于普通基于 jar 的作业而言，Lambda 在作业启动时会默认搜索最近的一个成功的 Checkpoint 或 Savepoint 用于恢复，具体策略如下:</p>
 <ol>
 <li>若上一次执行最后用 <code>stop/canel with savepoint</code> 方式停止并成功留下 Savepoint 则用该 Savepoint 恢复。</li>
