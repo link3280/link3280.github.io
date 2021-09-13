@@ -74,7 +74,7 @@
 <link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Flink," />
+  <meta name="keywords" content="Flink,实时计算,网易," />
 
 
 
@@ -92,20 +92,20 @@
 
 
 
-<meta name="description" content="随着近年来流式 SQL 理论逐渐完善，在实时流计算场景中的提供与离线批计算类似的 SQL 开发体验成为可能，GCP Dataflow、Apache Flink、Apache Kafka、Apache Pulsar 都纷纷推出 SQL 支持。在开源领域中，Flink SQL 毫无疑问是流式 SQL 领域最为流行的框架之一，但由 Flink SQL 缺乏类似 Hive Server2 的服务端组件，各">
+<meta name="description" content="随着近年来流式 SQL 理论逐渐完善，在实时流计算场景中的提供与离线批计算类似的 SQL 开发体验成为可能，GCP Dataflow、Apache Flink、Apache Kafka、Apache Pulsar 都纷纷推出 SQL 支持。在开源领域中，Flink SQL 毫无疑问是流式 SQL 领域最为流行的框架之一，但由于 Flink SQL 缺乏类似 Hive Server2 的服务端组件，">
 <meta property="og:type" content="article">
 <meta property="og:title" content="网易游戏 FlinkSQL 平台化实践">
 <meta property="og:url" content="https://link3280.github.io/2021/09/13/网易游戏-FlinkSQL-平台化实践/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="随着近年来流式 SQL 理论逐渐完善，在实时流计算场景中的提供与离线批计算类似的 SQL 开发体验成为可能，GCP Dataflow、Apache Flink、Apache Kafka、Apache Pulsar 都纷纷推出 SQL 支持。在开源领域中，Flink SQL 毫无疑问是流式 SQL 领域最为流行的框架之一，但由 Flink SQL 缺乏类似 Hive Server2 的服务端组件，各">
+<meta property="og:description" content="随着近年来流式 SQL 理论逐渐完善，在实时流计算场景中的提供与离线批计算类似的 SQL 开发体验成为可能，GCP Dataflow、Apache Flink、Apache Kafka、Apache Pulsar 都纷纷推出 SQL 支持。在开源领域中，Flink SQL 毫无疑问是流式 SQL 领域最为流行的框架之一，但由于 Flink SQL 缺乏类似 Hive Server2 的服务端组件，">
 <meta property="og:image" content="https://link3280.github.io/img/streamflysql/img1.streamfly-history.png">
 <meta property="og:image" content="https://link3280.github.io/img/streamflysql/img2.streamflysql-v1-architecture.png">
 <meta property="og:image" content="https://link3280.github.io/img/streamflysql/img3.streamflysql-v1-debugging.png">
 <meta property="og:image" content="https://link3280.github.io/img/streamflysql/img4.streamflysql-v2-architecture.png">
-<meta property="og:updated_time" content="2021-09-13T13:08:31.322Z">
+<meta property="og:updated_time" content="2021-09-13T14:36:39.322Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="网易游戏 FlinkSQL 平台化实践">
-<meta name="twitter:description" content="随着近年来流式 SQL 理论逐渐完善，在实时流计算场景中的提供与离线批计算类似的 SQL 开发体验成为可能，GCP Dataflow、Apache Flink、Apache Kafka、Apache Pulsar 都纷纷推出 SQL 支持。在开源领域中，Flink SQL 毫无疑问是流式 SQL 领域最为流行的框架之一，但由 Flink SQL 缺乏类似 Hive Server2 的服务端组件，各">
+<meta name="twitter:description" content="随着近年来流式 SQL 理论逐渐完善，在实时流计算场景中的提供与离线批计算类似的 SQL 开发体验成为可能，GCP Dataflow、Apache Flink、Apache Kafka、Apache Pulsar 都纷纷推出 SQL 支持。在开源领域中，Flink SQL 毫无疑问是流式 SQL 领域最为流行的框架之一，但由于 Flink SQL 缺乏类似 Hive Server2 的服务端组件，">
 <meta name="twitter:image" content="https://link3280.github.io/img/streamflysql/img1.streamfly-history.png">
 
 
@@ -378,7 +378,7 @@
       
 
       
-        <p>随着近年来流式 SQL 理论逐渐完善，在实时流计算场景中的提供与离线批计算类似的 SQL 开发体验成为可能，GCP Dataflow、Apache Flink、Apache Kafka、Apache Pulsar 都纷纷推出 SQL 支持。在开源领域中，Flink SQL 毫无疑问是流式 SQL 领域最为流行的框架之一，但由 Flink SQL 缺乏类似 Hive Server2 的服务端组件，各大厂对 Flink SQL 平台化的实现方案各不相同，而本文将介绍在网易游戏在 Flink SQL 平台化上的探索和实践。</p>
+        <p>随着近年来流式 SQL 理论逐渐完善，在实时流计算场景中的提供与离线批计算类似的 SQL 开发体验成为可能，GCP Dataflow、Apache Flink、Apache Kafka、Apache Pulsar 都纷纷推出 SQL 支持。在开源领域中，Flink SQL 毫无疑问是流式 SQL 领域最为流行的框架之一，但由于 Flink SQL 缺乏类似 Hive Server2 的服务端组件，各大厂对 Flink SQL 平台化的实现方案各不相同，而本文将介绍在网易游戏在 Flink SQL 平台化上的探索和实践。</p>
 <a id="more"></a>
 <h1 id="发展历程"><a href="#发展历程" class="headerlink" title="发展历程"></a>发展历程</h1><p>Flink SQL 的平台化与实时计算平台的架构密不可分，下文将简单介绍网易游戏实时计算平台的发展历程。</p>
 <p>网易游戏实时计算平台 Streamfly 取名自电影《驯龙高手》中的 Stormfly，由于显然我们已经从 Storm 迁移到 Flink，所以将 Stormfly 中的 Storm 替换成了更为通用的 Stream。</p>
@@ -389,7 +389,7 @@
 <p>然而，由于基于 jar 的方式带来的用户体验问题以及当时 Flink SQL 特性还不够完善，StreamflySQL v1 上线以后并未获得用户的青睐，大多数用户在调研之后仍继续使用 jar 的方式来开发和管理 Flink 应用。因此，我们在 2020 年年底对 Flink SQL 进行了新一轮调研，对 StreamflySQL 进行了重构，即 StreamflySQL v2。</p>
 <p>StreamflySQL v2 弃用了通用 jar 的方式，而是在原有 Lambda 作业平台之上新建了 Flink SQL 平台服务端，提供类似 Hive Server2 或者 Kyuubi 的纯 SQL 服务，极大地提升了用户体验。</p>
 <h1 id="StreamflySQL-v1（基于模板-jar）"><a href="#StreamflySQL-v1（基于模板-jar）" class="headerlink" title="StreamflySQL v1（基于模板 jar）"></a>StreamflySQL v1（基于模板 jar）</h1><h2 id="实现方案"><a href="#实现方案" class="headerlink" title="实现方案"></a>实现方案</h2><p>如上文所述，StreamflySQL v1 使用基于通用模版 jar 加配置的方式来实现 Flink SQL 作业，主要包含三个模块: Flink 模板 jar、作为配置中心的后端和提供 SQL 编辑器交互的前端。总体架构如下图所示（为简洁只画出请求的路径，省略了返回的路径）。</p>
-<center><p><img src="/img/streamflysql/img2.streamflysql-v1-architecture.png" alt="图2. Streamfly v1 架构" title="图2. Streamfly v1 架构"></p></center>
+<center><p><img src="/img/streamflysql/img2.streamflysql-v1-architecture.png" alt="图2. Streamfly v1 架构" title="图2. StreamflySQL v1 架构"></p></center>
 
 <p>一个 Flink SQL 作业的提交流程为:</p>
 <ol>
@@ -412,7 +412,7 @@
 <li>能方便快捷地获取到执行结果</li>
 </ul>
 <p>针对调试需求，StreamflySQL v1 使用替换 Sink 方式来对于数据进行隔离，即提供一个调试的选项，如果开启则在 Flink SQL 翻译 JobGraph 时将原有的 Sink 替换为一个 PrintSink，并且用本地启动 Flink MiniCluster 执行而不是提交到 YARN 集群。PrintSink 会将输出打印以特定格式到标准输出里（并提供限流功能），而日志将在作业结束或者超时后（调试作业最多执行 15 分钟）被一并返回给 StreamflySQL 服务端。服务端会将其中属于输出结果的部分从日志提取出来，返回前端展示。</p>
-<center><p><img src="/img/streamflysql/img3.streamflysql-v1-debugging.png" alt="图3. Streamfly v1 调试实现方案" title="图3. Streamfly v1 调试实现方案"></p></center>
+<center><p><img src="/img/streamflysql/img3.streamflysql-v1-debugging.png" alt="图3. Streamfly v1 调试实现方案" title="图3. StreamflySQL v1 调试实现方案"></p></center>
 
 <p>比起正式执行，调试采用本地执行省去了初始化远程执行环境（YARN application）的时间，同时本地进程更方便采集标准输出。这样的实现方案对于简单的作业而言是可行的，然而缺点也很明显：</p>
 <ul>
@@ -427,7 +427,7 @@
 <p>Flink SQL Gateway 是一个类似 Spark Thrift Server 的应用，提供基于 REST API 的 SQL 接口，但只是一个原型，不具备生产级别的特性。针对于此，我们对其进行了多项改进（下文会逐项解释），并集成到 SpringBoot 应用里，即 StreamflySQL v2 服务端（为简单起见，下文 StreamflySQL 默认指 v2 版本）。</p>
 <p>其中有个比较关键的问题是，StreamflySQL（或者说 SQL Gateway）有和 Lambda 一样的提交作业能力，那么该二者间的关系是如何？如果 StreamflySQL 绕过 Lambda 提交作业，那么相当于有两个独立入口，认证授权、监控告警、计费、审计等通用功能都需要重复建设，而且非常不利于统一管理。</p>
 <p>经过研究，我们最终定下的方案是: 利用 Flink Session Cluster 的资源和作业分离的特性来对两个系统进行分工。具体而言，Lambda 需要新增 Session Cluster 的作业类型，而 StreamflySQL 首先调用 Lambda 新建 Session Cluster，此后再直接和 Session Cluster 交互，包括 SQL 提交和作业管理等。这样的好处是能复用 Lambda 的大部分能力，Lambda 仍然作为运维管理的唯一入口。</p>
-<center><p><img src="/img/streamflysql/img4.streamflysql-v2-architecture.png" alt="图4. Streamfly v2 架构" title="图4. Streamfly v2 架构"></p></center>
+<center><p><img src="/img/streamflysql/img4.streamflysql-v2-architecture.png" alt="图4. Streamfly v2 架构" title="图4. StreamflySQL v2 架构"></p></center>
 
 <p>新的架构下，用户执行 SQL 的流程如下:</p>
 <ol>
@@ -441,13 +441,13 @@
 </ol>
 <p>新版 Streamfly 大大改善了用户体验，获得不错的效果，但开发过程中并不是一帆风顺，下文将分享我们遇到的主要挑战和解决方案。</p>
 <h2 id="挑战及解决方案"><a href="#挑战及解决方案" class="headerlink" title="挑战及解决方案"></a>挑战及解决方案</h2><h3 id="1-元数据持久化"><a href="#1-元数据持久化" class="headerlink" title="1. 元数据持久化"></a>1. 元数据持久化</h3><p>社区的 Flink SQL Gateway 在生产中应用的最大难点在于会话、作业的元数据并没有持久化，这意味着如果进程重启，所以元数据都会丢失。上文有提到，我们将 Flink SQL Gateway 集成到 SpringBoot 项目里，因此很自然地将 SQL Gateway 作为封装一个 Service，并将元数据存储到数据库。本地的 Flink Environment 会作为缓存，若不存在则自动从数据库重建。</p>
-<p>此外，在 SQL Gateway 原本会在启动时加载 Flink Configuration 且会用于创建所有会话，然而在实际场景中，不同会话会有不同的配置，最典型的便是 cluster ID（on-YARN 环境下即 YARN application ID）。因此我们提供了运行时的配置覆盖功能，即为每个会话存储优先级更高的配置项，在初始化会话创建 Environment 时，系统会合并从 <code>FLINK_CONF_DIR</code> 加载而来的默认配置和存储库存储的配置项。</p>
+<p>此外，在 SQL Gateway 原本会在启动时加载 Flink Configuration 且会用于创建所有会话，然而在实际场景中，不同会话会有不同的配置，最典型的便是 cluster ID（on-YARN 环境下即 YARN application ID）。因此我们提供了运行时的配置覆盖功能，即为每个会话存储优先级更高的配置项，在初始化会话创建 Environment 时，系统会合并从 <code>FLINK_CONF_DIR</code> 加载而来的默认配置和数据库存储的配置项。</p>
 <h3 id="2-多租户（认证-资源）"><a href="#2-多租户（认证-资源）" class="headerlink" title="2. 多租户（认证/资源）"></a>2. 多租户（认证/资源）</h3><p>网易游戏大部分组件都使用 Kerberos 认证，而认证是 SQL Gateway 原先并不具备的。更加关键的是，由于 StreamflySQL 是通用平台，必需支持多租户的能力。用过 Hadoop 生态 Kerberos 集成的同学应该了解，这并不是一件容易的事。主要原因是 Hadoop 提供的 Kerberos 接口 <code>UserGroupInformation</code>（下简称 UGI）的很多状态是 static 的，这意味着认证是 JVM 级别的。</p>
 <p>摆在我们面前的选项有两个: 一是分别用自定义 Classloader 包住每个会话（底层是一个 Flink Environment），因此各自的 UGI 是隔离的；二是利用 Hadoop 的 proxy user 特性，将 StreamflySQL 设置为超级用户，并伪装（impersonate）成代理的用户。</p>
 <p>因为 SQL Gateway 本来就有会话级别的 UserCodeClassloader，所以一开始我们尝试了 Classloader 隔离的方案。然而由于 UGI 的使用散落在各个组件 lib 的代码中，要完全将 Hadoop 生态相关的调用模块化难度较大，后续我们转为了 proxy user 的方案。具体来说，系统先登录为超级用户，然后替代理用户获取不同组件的 delegation token，最后伪装为代理用户以 delegation token 而不是 Kerberos TGT 来进行认证。</p>
-<p>同时在多租户的资源隔离方面，我们底层通过 Lambda 在用户自己的队列启动 Session Cluster，因此每个用户的集群资源天然就是隔离的，避免了类似 Spark Thrift Server 只能使用公用队列而导致资源混用的问题。</p>
+<p>另外在多租户的资源隔离方面，我们底层通过 Lambda 在用户自己的队列启动 Session Cluster，因此每个用户的集群资源天然就是隔离的，避免了类似 Spark Thrift Server 只能使用公用队列而导致资源混用的问题。</p>
 <h3 id="3-水平拓展"><a href="#3-水平拓展" class="headerlink" title="3. 水平拓展"></a>3. 水平拓展</h3><p>上文提到我们将主要的状态存储到数据库，StreamflySQL 服务端基本是无状态的，因此可以方便地水平拓展。水平拓展能力对于 StreamflySQL 尤为重要，除单点问题以外，Flink SQL 优化编译有可能打满 CPU 单核，单实例的资源显然是不够的。然而如果同一个会话的 SQL 请求随机被分发到多个不同的实例，则会导致每个服务实例都需要初始化一个 Environment，浪费资源并导致响应时间显著增长。更加重要的是，会话某些状态是不合适持久化的，比如 <code>select</code> DSL 会让 StreamflySQL 服务端开启一个 TCP 链接接收从集群作业回传的结果数据集，如果同个会话的请求被路由到其他实例，显然无法读取到结果。</p>
-<p>为此我们采用了 Nginx 的 <code>hash</code> 负载均衡策略，基于会话 ID 进行路由，确保同一个会话的请求尽可能路由到同一个实例。当然这只确保大部分情况下正常，如果服务实例挂掉或者维护重启，那么 <code>select</code> 的结果还是会丢失。但由于 <code>select</code> 一般用于调试，所以是可以接受的范围内。</p>
+<p>为此我们采用了 Nginx 的 <code>hash</code> 负载均衡策略，基于会话 ID 进行路由，确保同一个会话的请求尽可能路由到同一个实例。当然这只确保大部分情况下正常，如果服务实例挂掉或者维护重启，那么 <code>select</code> 的结果还是会丢失。但考虑到 <code>select</code> 一般用于调试或数据探索，所以是可以接受的范围内。</p>
 <h3 id="4-作业状态管理"><a href="#4-作业状态管理" class="headerlink" title="4. 作业状态管理"></a>4. 作业状态管理</h3><p>社区的 SQL Gateway 未考虑作业的 SQL 状态，而这在生产环境是不可缺失的。对于普通基于 jar 的作业而言，Lambda 在作业启动时会默认搜索最近的一个成功的 Checkpoint 或 Savepoint 用于恢复，具体策略如下:</p>
 <ol>
 <li>若上一次执行最后用 <code>stop/canel with savepoint</code> 方式停止并成功留下 Savepoint 则用该 Savepoint 恢复。</li>
@@ -515,6 +515,10 @@
         <div class="post-tags">
           
             <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+            <a href="/tags/实时计算/" rel="tag"># 实时计算</a>
+          
+            <a href="/tags/网易/" rel="tag"># 网易</a>
           
         </div>
       
@@ -643,7 +647,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-count">40</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
