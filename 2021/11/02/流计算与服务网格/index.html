@@ -105,7 +105,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img5.distributed-transaction-patterns-charateristics.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img6.data-consistency-scalability.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img7.flink-stateful-functions.png">
-<meta property="og:updated_time" content="2021-11-02T16:00:51.741Z">
+<meta property="og:updated_time" content="2021-11-02T16:12:49.386Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="流计算与服务网格">
 <meta name="twitter:description" content="流计算（Stream Processing）和服务网格（Service Mesh）本分别属于大数据和在线服务两个不同的领域，放在一起比较并不常见，但从本质而言两者都是分布式的运行时系统（Runtime）或基础设施，并提供专用的编程 API 或 SDK 供用户在其上运行任意代码。若不论效率，流计算提供的海量数据流式处理功能改为使用服务网格同样可以实现，反之某些服务网格提供的在线服务通过一定改造也可以">
@@ -442,7 +442,7 @@
 <center><p><img src="/img/streaming-service-mesh/img7.flink-stateful-functions.png" alt="图7. StateFun 架构" title="图7. StateFun 架构"></p></center>
 
 <p>不过值得注意的是，StateFun 受限于底层 Flink Runtime 为吞吐量优化的异步网络传输，因此服务间的调用接口也只有异步的。相比之下，服务网格完全不对应用层有假设，使用同步的 HTTP 服务、通过消息队列解耦的异步 Event Driven 服务或其他类型的服务都完全取决于用户。</p>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>本文主要从分布式运行时环境、数据存储架构、分布式事务和编程模型几个角度去对比流计算和服务网格两项不同领域的分布式基础设施。实际上，若不是受限于篇幅和笔者时间精力，还有更多角度可讨论，比如容错处理、反压熔断等，但核心思想不会有太大变化。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>本文主要从分布式运行时环境、数据存储架构、分布式事务和编程模型几个角度去对比流计算和服务网格两项不同领域的分布式基础设施。实际上，若不是受限于篇幅和笔者时间精力，还有更多角度可讨论，比如容错处理、反压熔断、进出（南北）流量等，但核心思想不会有太大变化。</p>
 <p>由于流计算面向的场景主要是外部依赖较少、业务类型比较确定的大数据计算，因此提供更“重”的基础设施（比如有统一数据存储和分布式事务的运行环境）和更新”轻”的编程 API；而服务网格面向的是差异性很大的在线服务，因此需要提供更”轻”更灵活的 API，比如无入侵的流量劫持，但同时也导致基础设施只能比较”轻”，无法做分布式事务这样比较深度的支持。</p>
 <h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
 <li><a href="https://buoyant.io/what-is-a-service-mesh" target="_blank" rel="external">What’s a service mesh? And why do I need one?</a>  </li>
