@@ -98,18 +98,18 @@
 <meta property="og:url" content="https://link3280.github.io/2021/11/02/流计算与服务网格/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="流计算（Stream Processing）和服务网格（Service Mesh）本分别属于大数据和在线服务两个不同的领域，放在一起比较并不常见，但从本质而言两者都是分布式的运行时系统（Runtime）或基础设施，并提供专用的编程 API 或 SDK 供用户在其上运行任意代码。若不论效率，流计算提供的海量数据流式处理功能改为使用服务网格同样可以实现，反之某些服务网格提供的在线服务通过一定改造也可以">
-<meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img1.service-mesh-architecture">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img1.service-mesh-architecture.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img2.xaas.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img3.orchestration-based-saga.jpeg">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img4.choreography-based-saga.jpeg">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img5.distributed-transaction-patterns-charateristics.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img6.data-consistency-scalability.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img7.flink-stateful-functions.png">
-<meta property="og:updated_time" content="2021-11-02T15:58:09.087Z">
+<meta property="og:updated_time" content="2021-11-02T16:00:51.741Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="流计算与服务网格">
 <meta name="twitter:description" content="流计算（Stream Processing）和服务网格（Service Mesh）本分别属于大数据和在线服务两个不同的领域，放在一起比较并不常见，但从本质而言两者都是分布式的运行时系统（Runtime）或基础设施，并提供专用的编程 API 或 SDK 供用户在其上运行任意代码。若不论效率，流计算提供的海量数据流式处理功能改为使用服务网格同样可以实现，反之某些服务网格提供的在线服务通过一定改造也可以">
-<meta name="twitter:image" content="https://link3280.github.io/img/streaming-service-mesh/img1.service-mesh-architecture">
+<meta name="twitter:image" content="https://link3280.github.io/img/streaming-service-mesh/img1.service-mesh-architecture.png">
 
 
 
@@ -387,7 +387,7 @@
 <h1 id="服务网格简述"><a href="#服务网格简述" class="headerlink" title="服务网格简述"></a>服务网格简述</h1><p>因为本文读者大多数是大数据背景，对服务网格可能并不熟悉，所以先简单介绍下服务网格的基本概念。</p>
 <p>在微服务之前的单体系统（Monolithic）时代，业务逻辑集中在少数的进程中，服务进程的可拓展性、可用性、容错性尤为重要，而进程间的依赖关系并不复杂，服务间调用的流量也较少，因此工程师的关注点主要在服务本身，流量调度通常用简单的 Nginx 则可满足。但随着微服务的流行，系统不同模块被拆分为多个独立的微服务，每个服务承载的业务逻辑简化，但迅速膨胀的服务数量以及依赖关系却成为管理的瓶颈。单体系统的模块间调用演变成基于网络的服务调用，复杂性从单个服务内部转移到了多个服务的治理上，此时各类微服务框架应运而生。</p>
 <p>在微服务框架发展早期，SDK 或开发框架等应用层的解决方案毫无疑问是主流，其中最为著名的便是 Spring Cloud[11]。Spring Cloud 对微服务提供了非常完善的支持，同时延续了 Spring 家族一贯的强大生态支持。然而在近几年容器技术逐渐成熟的背景下，以 Kubernetes 为代表的容器编排和与之配套的以 Istio 为代表的服务网格异军突起，凭借更轻量级和适用面更广的优势获得了更多的关注。</p>
-<center><p><img src="/img/streaming-service-mesh/img1.service-mesh-architecture" alt="图1.服务网格架构" title="图1.服务网格架构"></p></center>
+<center><p><img src="/img/streaming-service-mesh/img1.service-mesh-architecture.png" alt="图1.服务网格架构" title="图1.服务网格架构"></p></center>
 
 <p>在服务编排之上，服务网格将服务中原本的非业务功能抽取出来作为基础设施，这些功能包括服务发现、健康检查、流量路由、负载均衡、容错重试、认证授权、故障注入和可观察性等。服务网格分为两个组件: 数据面板（Data Plane）和控制面板（Control Plane）。数据面板由一组边车代理（Sidecar Proxy）组成，而边车代理通常为系统自动在服务器（通常是 Kubernetes 的 Pod）中注入的通信服务器，以类似网络安全里中间人攻击的方式进行流量劫持，在服务无感知的情况下接管其对外的通信[3]；而控制面板则负责边车代理的配置和管理，以操纵流量。</p>
 <h1 id="流计算与服务网格的对比"><a href="#流计算与服务网格的对比" class="headerlink" title="流计算与服务网格的对比"></a>流计算与服务网格的对比</h1><p>如本文开头所说，流计算与服务网格均提供通用目的的分布式的基础设施和编程 API/SDK，因此两者在大体功能上难免有相近之处，但由于各自面向场景的不同，在实现上各有侧重点。下文将详细讨论这里些不同背后的权衡取舍，即为什么要这么设计。</p>
