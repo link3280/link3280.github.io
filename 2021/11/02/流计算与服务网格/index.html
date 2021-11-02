@@ -1,0 +1,896 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="流计算,服务网格,微服务," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="流计算（Stream Processing）和服务网格（Service Mesh）本分别属于大数据和在线服务两个不同的领域，放在一起比较并不常见，但从本质而言两者都是分布式的运行时系统（Runtime）或基础设施，并提供专用的编程 API 或 SDK 供用户在其上运行任意代码。若不论效率，流计算提供的海量数据流式处理功能改为使用服务网格同样可以实现，反之某些服务网格提供的在线服务通过一定改造也可以">
+<meta property="og:type" content="article">
+<meta property="og:title" content="流计算与服务网格">
+<meta property="og:url" content="https://link3280.github.io/2021/11/02/流计算与服务网格/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="流计算（Stream Processing）和服务网格（Service Mesh）本分别属于大数据和在线服务两个不同的领域，放在一起比较并不常见，但从本质而言两者都是分布式的运行时系统（Runtime）或基础设施，并提供专用的编程 API 或 SDK 供用户在其上运行任意代码。若不论效率，流计算提供的海量数据流式处理功能改为使用服务网格同样可以实现，反之某些服务网格提供的在线服务通过一定改造也可以">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img1.service-mesh-architecture">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img2.xaas.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img3.orchestration-based-saga.jpeg">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img4.choreography-based-saga.jpeg">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img5.distributed-transaction-patterns-charateristics.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img6.data-consistency-scalability.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img7.flink-stateful-functions.png">
+<meta property="og:updated_time" content="2021-11-02T15:58:09.087Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="流计算与服务网格">
+<meta name="twitter:description" content="流计算（Stream Processing）和服务网格（Service Mesh）本分别属于大数据和在线服务两个不同的领域，放在一起比较并不常见，但从本质而言两者都是分布式的运行时系统（Runtime）或基础设施，并提供专用的编程 API 或 SDK 供用户在其上运行任意代码。若不论效率，流计算提供的海量数据流式处理功能改为使用服务网格同样可以实现，反之某些服务网格提供的在线服务通过一定改造也可以">
+<meta name="twitter:image" content="https://link3280.github.io/img/streaming-service-mesh/img1.service-mesh-architecture">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2021/11/02/流计算与服务网格/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>流计算与服务网格 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2021/11/02/流计算与服务网格/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">流计算与服务网格</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-11-02T23:53:48+08:00">
+                2021-11-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/随想/" itemprop="url" rel="index">
+                    <span itemprop="name">随想</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2021/11/02/流计算与服务网格/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2021/11/02/流计算与服务网格/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>流计算（Stream Processing）和服务网格（Service Mesh）本分别属于大数据和在线服务两个不同的领域，放在一起比较并不常见，但从本质而言两者都是分布式的运行时系统（Runtime）或基础设施，并提供专用的编程 API 或 SDK 供用户在其上运行任意代码。若不论效率，流计算提供的海量数据流式处理功能改为使用服务网格同样可以实现，反之某些服务网格提供的在线服务通过一定改造也可以运行在流计算引擎之上。当然，实现中大概没有人会将它们的使用场景搞混，但随着实时数据服务与在线服务的边界逐渐模糊，在某些数据密集型系统里，流计算和以服务网络为代表的微服务的确都可以作为技术选型的选项，比如事件驱动（Event Driven）应用。</p>
+<a id="more"></a>
+<p>因此，本文将对比流计算与以服务网络为代表的微服务基础设施之间的异同，希望能帮助大家从不一样的角度来理解两种当前发展迅速的技术。由于笔者并不是微服务或服务网格专家，不能保证所有理解正确，如内容有纰漏之处还请读者不吝指教。</p>
+<h1 id="服务网格简述"><a href="#服务网格简述" class="headerlink" title="服务网格简述"></a>服务网格简述</h1><p>因为本文读者大多数是大数据背景，对服务网格可能并不熟悉，所以先简单介绍下服务网格的基本概念。</p>
+<p>在微服务之前的单体系统（Monolithic）时代，业务逻辑集中在少数的进程中，服务进程的可拓展性、可用性、容错性尤为重要，而进程间的依赖关系并不复杂，服务间调用的流量也较少，因此工程师的关注点主要在服务本身，流量调度通常用简单的 Nginx 则可满足。但随着微服务的流行，系统不同模块被拆分为多个独立的微服务，每个服务承载的业务逻辑简化，但迅速膨胀的服务数量以及依赖关系却成为管理的瓶颈。单体系统的模块间调用演变成基于网络的服务调用，复杂性从单个服务内部转移到了多个服务的治理上，此时各类微服务框架应运而生。</p>
+<p>在微服务框架发展早期，SDK 或开发框架等应用层的解决方案毫无疑问是主流，其中最为著名的便是 Spring Cloud[11]。Spring Cloud 对微服务提供了非常完善的支持，同时延续了 Spring 家族一贯的强大生态支持。然而在近几年容器技术逐渐成熟的背景下，以 Kubernetes 为代表的容器编排和与之配套的以 Istio 为代表的服务网格异军突起，凭借更轻量级和适用面更广的优势获得了更多的关注。</p>
+<center><p><img src="/img/streaming-service-mesh/img1.service-mesh-architecture" alt="图1.服务网格架构" title="图1.服务网格架构"></p></center>
+
+<p>在服务编排之上，服务网格将服务中原本的非业务功能抽取出来作为基础设施，这些功能包括服务发现、健康检查、流量路由、负载均衡、容错重试、认证授权、故障注入和可观察性等。服务网格分为两个组件: 数据面板（Data Plane）和控制面板（Control Plane）。数据面板由一组边车代理（Sidecar Proxy）组成，而边车代理通常为系统自动在服务器（通常是 Kubernetes 的 Pod）中注入的通信服务器，以类似网络安全里中间人攻击的方式进行流量劫持，在服务无感知的情况下接管其对外的通信[3]；而控制面板则负责边车代理的配置和管理，以操纵流量。</p>
+<h1 id="流计算与服务网格的对比"><a href="#流计算与服务网格的对比" class="headerlink" title="流计算与服务网格的对比"></a>流计算与服务网格的对比</h1><p>如本文开头所说，流计算与服务网格均提供通用目的的分布式的基础设施和编程 API/SDK，因此两者在大体功能上难免有相近之处，但由于各自面向场景的不同，在实现上各有侧重点。下文将详细讨论这里些不同背后的权衡取舍，即为什么要这么设计。</p>
+<h2 id="分布式运行时环境"><a href="#分布式运行时环境" class="headerlink" title="分布式运行时环境"></a>分布式运行时环境</h2><p>流计算的分布式 Runtime 通常是主从架构，由计算引擎的 Master 和 Worker 进程组成（比如 Flink 的 JobManager 和 TaskManager、Spark 的 Driver 和 Executor）。Master 负责 Worker 管理和计算的调度，Worker 负责提供计算资源和具体的用户代码执行。Runtime 首先要调度资源，然后才可以接受请求调度用户代码，这样的设计被称为两级调度（Two-Level Scheduling），即资源和计算任务是分开调度的。</p>
+<p>两级调度的 Runtime 架构是比较重的，优点是用户代码可以非常轻，通常以 UDF 的方式存在，提供类似 FaaS (Function As a Service）的体验，并且方便多次调度复用资源（例如 Flink 重试策略的 Local Recovery）；缺点显然是首次运行初始化的时间较长，因为资源准备和计算任务调度是分开两步的。</p>
+<p>相比之下，服务网格的 Runtime 环境则复杂一点，职责分散在容器编排系统系统（Kubernetes）、容器 Runtime（Docker/containerd）、服务网格的控制面板（Istio/Consul 等）和数据面板（Envoy）四者上。Kubernetes 和容器 Runtime 负责底层的服务编排和运行，而服务网格负责上层的流量调度。与流计算不同，服务网格的服务调度是一级调度，服务本身绑定了资源，比如 Kubernetes 的 Pod。这样的设计很符合在线场景，因为用户代码以容器镜像的方式打包并通过仓库分发，只需要容器 Runtime 即可独立运行，并不需要一个中心化的 Master 来调度任务。然而，不同于流计算的 Worker 属于同个用户并且任务的优先级基本相同，在线服务可能千差万别，可能来自不同用户，有不同调用模式和不同优先级，因此需要更加灵活和强大的服务调用管理（服务调用体现为网络流量，因此又称为流量管理）。为此，服务网格在服务编排的基础上再提供一层流量管理，为每个服务部署一个 Sidecar Proxy 组成数据面板进行流量劫持，并提供统一的控制面板进行细粒度管理。</p>
+<center><p><img src="/img/streaming-service-mesh/img2.xaas.png" alt="图2. XaaS 对比" title="图2. XaaS 对比"></p></center>
+
+<p>服务网格的 Runtime 相对而言比较轻，因为服务本身已经是比较重的可执行程序，而且对业务无入侵是最重要的特性之一。类比流计算提供的 FaaS，服务网格毫无疑问是提供 PaaS（见图2）。通常情况下，一个已经容器化部署的微服务架构系统几乎不用业务改造就可以迁移到服务网格之上（Istio 等主流控制面板一般提供对业务透明的代理注入）。这样设计的优点是对用户使用模式没有假设或者前置条件，因此非常灵活；缺点是架构比较复杂，管理比较分散，例如用户代码的分发和运行依赖容器 Runtime 及其仓库，服务编排依赖 Kubernetes，流量管理依赖服务网格，而不像流计算那样一站式的解决方案。</p>
+<h2 id="流量管理"><a href="#流量管理" class="headerlink" title="流量管理"></a>流量管理</h2><p>上文简单提到流计算的流量管理简单，而服务网格的流量管理复杂，本节将深入分析两者的不同。</p>
+<p>根据 2019 年 KubeCon 上微软联合 Linkerd    、Consul 等厂商发布的服务网格接口（Service Mesh Interfaces）[6]，当前服务网格的核心功能分为以下四点，均以流量（Traffic）为核心。</p>
+<ul>
+<li>流量访问控制（Traffic Access Control）: 配置 Pod 间的访问权限以及根据用户身份进行流量的路由。</li>
+<li>流量规范（Traffic Spec）: 配置服务间的基于流量特征的路由。不同的协议有专用的一套资源和路由，例如 <code>HTTPRouteGroup</code> 为 HTTP 协议专用的资源，提基于 HTTP Path/Header/Method 等特征的路由。</li>
+<li>流量拆分（Traffic Split）: 按照百分比拆分流量到不同的服务。除了用于服务实例间的负载均衡，也可用于金丝雀发布和 A/B 测试的场景。</li>
+<li>流量度量（Traffic Metrics）: 通用的流量统计，比如 HTTP 请求的错误率、响应的延迟等。</li>
+</ul>
+<p>就这四个功能点而言，流计算中的流量控制或缺少某个功能，或实现了基本功能但特性上比较少，而当然这些设计都是基于使用场景权衡之后的结果。</p>
+<ul>
+<li>不支持访问控制: 流计算通常以作业集群方式隔离不同用户的作业，而且不同作业间不需要直接网络通信，因此不需要细粒度的访问控制。</li>
+<li>简单的流量规范: 相比与服务网格支持多种应用层协议，流计算通常使用更高效的 Socket 传输数据，因此并没有协议特定的路由规则，而是简单地按照数据本身的属性来路由，比如用户点击数据中按照用户 ID 来进行 <code>KeyBy</code> 或 <code>PartitionBy</code>。值得注意的是，流计算的路由规则是隐式的，用户只要指定作业计算逻辑，系统会自动规划如何路由，或者用大数据领域的词称为 <code>Shuffle</code>。之所以有这样的差别，主要是通常一个在线服务的不同实例都是完全并行的（Embarrassingly Parallel）[7] ，即计算逻辑不需要通过分治来解决，单实例即可完成，所以流量路由是可选的（出于负载均衡、会话亲和性等目的），而不像流计算一样是必须的（分治的划分子问题和合并结果）。</li>
+<li>流量拆分: 流计算假设同个任务的不同实例都是相同的，包括代码版本、资源等，因此一般没有流量拆分的需求。如果一个算子有多个下游，通常以 RoudRobin 的方式来均等拆分流量。虽然用户也可以实现动态配置的 Partitioner 来定制流量拆分，但应用场景十分有限。</li>
+<li>流量度量: 流计算 Runtime 通常会提供通用的流量度量，包括延迟、QPS 等等，但请求错误率通常不会提供。不像在线业务可以按照请求隔离错误，流计算中所有的错误都会导致作业计算不准确，所以一个任意的小错误也会导致整个作业异常，可能整个集群的 Worker 都要从某个快照开始重新计算。</li>
+</ul>
+<h2 id="数据存储架构"><a href="#数据存储架构" class="headerlink" title="数据存储架构"></a>数据存储架构</h2><p>作为微服务架构的延伸，服务网格通常应用 <code>Datebase Per Service</code> 的数据库架构分散管理数据，即每个微服务有独立的数据库，并且只允许直接访问自己的数据库。不同服务的数据库可以放在相同或不同的数据管理系统实例上，只要在逻辑上是分开访问即可。这样的目的是给数据划分明确的边界，避免微服务间的耦合，不过也带来一定的性能损失。</p>
+<p>这样的数据存储架构其实跟流计算的状态持久化十分相似。以 Flink 为例，在以 Runtime 集群为单位的全局状态存储后端（StateBackend）背后，Flink 的每个算子有独立的本地状态存储后端，不同算子间的状态完全隔离。在此基础上，Flink 再提供算子状态的数据分区（即 KeyedState），按照业务特征来隔离物理存储，类似 MySQL 的分库分表。如果并行度发生变化，Flink 可以统一地对数据流和状态进行重新的分区。</p>
+<h2 id="分布式事务"><a href="#分布式事务" class="headerlink" title="分布式事务"></a>分布式事务</h2><p>作为使用多个存储系统的分布式系统，流计算与服务网格均不得不面对分布式事务的难题。实现分布式事务通常有两种思路：一是把分布式事务看作横跨多个服务的一个大事务，典型的实现算法是 <code>2PC</code>（两阶段提交）和 Paxos（BTW，事实上 2PC 也可以被看作是 Paxos 算法容忍零错误时的特例[8]）；二是把分布式事务看作一系列本地（子）事物并分步执行，这种方案被称为 SAGA 模式[9]。</p>
+<p><code>2PC</code> 引入协调者（Coordinator）来掌控所有事务的参与者（Participants）。事务开始进入 Pre-Commit 阶段，协调者节点向所有参与者节点询问是否可提交事务，参与者做提交准备（比如写 WAL）并根据结果决定是否同意。第二阶段为 Commit 阶段，协调者根据参与者反馈作出决策。若所有参与者均同意，则进入下个阶段；否则终止（Abort）事务，协调者通知参与者进行回滚操作。</p>
+<p><code>2PC</code> 实现简单且提供较强的事务保证，因此在业界应用广泛，然而也有一定的局限性：</p>
+<ul>
+<li><code>2PC</code> 事务的提交和回滚依赖于参与者本地事务的提交和回滚，但是 NoSQL 或消息队列等存储系统不一定支持事务。</li>
+<li><code>2PC</code> 事物的进度依赖于协调者单点，如果协调者出现故障，整个事务就会卡住，直到协调者恢复。虽然有 <code>2PC</code> 的改进版本可以通过 Peer 间通信等方式缓解该问题，但又会出现更多衍生问题。  </li>
+<li><code>2PC</code> 是阻塞的，性能有明显的木桶效应，总体性能取决于最慢的一个参与者。</li>
+</ul>
+<p>相比之下，SAGA 模式以牺牲一定程度的原子性和隔离性为代价，降低了分布式事务的门槛。SAGA 原本的目的是避免长时间运行的大事务锁定数据库资源太久，导致事务冲突频繁甚至死锁，因此用多个子事务的方式来分步执行，降低每次加锁的范围。因为在 SAGA 事务未结束前，子事务便会提交，因此 SAGA 要求为每个子事务设计相应的补偿事物（Compensatmg Transaction），用于在 SAGA 事务终止时消除已提交的事务的影响。比如对于新建订单的事务，对应的补偿事务便是取消该订单。</p>
+<p>从实现的架构而言，SAGA 可以分为中心化的编排（Orchestration）模式和去中心化的协同（Choreography）模式。</p>
+<center><p><img src="/img/streaming-service-mesh/img3.orchestration-based-saga.jpeg" alt="图3. 编排模式 SAGA" title="图3. 编排模式 SAGA"></p></center>
+
+<p>编排模式与 <code>2PC</code> 一样引入一个中心化的编排者（Orchestrator）来负责 SAGA 事务的决策。编排者与所有服务通信，依照 SAGA 事务的定义按序触发本地事务或异常恢复。</p>
+<center><p><img src="/img/streaming-service-mesh/img4.choreography-based-saga.jpeg" alt="图4. 协同模式 SAGA" title="图4. 协同模式 SAGA"></p></center>
+
+<p>而协同模式下，SAGA 事务的决策被分散在各个服务上，每个服务通过消息队列直接与其他服务通信，在成功完成当前步骤的 SAGA 事务后，通过事件通知后序步骤的服务执行下一步，或在当前步骤失败后，通过事件通知前序服务的服务回滚前一步。因为服务间通过事件消息协同，协同模式的 SAGA 又被称为事件驱动（Event Driven）。如果对协同模式的 SAGA 进一步放宽约束，允许子事务并行执行，那么还可以细分出一种称为 Parallel Pipelines 的变体。</p>
+<p>RedHat 的一篇博客[10]对上述几种分布式事务进行了很好的总结，借用其中两张图来概括选型上的基本考量。</p>
+<center><p><img src="/img/streaming-service-mesh/img5.distributed-transaction-patterns-charateristics.png" alt="图5. 分布式事务特性对比" title="图5. 分布式事务特性对比"></p></center>
+
+<center><p><img src="/img/streaming-service-mesh/img6.data-consistency-scalability.png" alt="图6. 分布式事务的一致性与水平拓展能力" title="图6. 分布式事务的一致性与水平拓展能力"></p></center>
+
+<p>对于流计算而言，长时间的大事务并不是问题：流计算 Source 的数据通常是不可变的（Append-Only，不支持更新），比如 Kafka/Pulsar 等消息队列或 CDC 数据流，所以不需要锁；而 Sink 的数据存储要么也是不可变的，要么是专门准备给流计算写入的，与其他业务完全隔离，所以很少出现与其他用户的事务冲突的问题。显然，在这样的背景下，提供较强一致性的 <code>2PC</code> 会是不二的选择。事实上，笔者所接触过的流计算引擎都使用 <code>2PC</code> 实现分布式事务，包括 Flink、Spark Structured Streaming、Kafka Streams。</p>
+<p>而对微服务而言，由于无法假定服务的业务使用模式，比如对一致性要求如何、需要何种级别的事务隔离、数据库是否支持事务，所以一般把方案暴露给用户自由选择。常见支持的选项有 <code>XA</code>/<code>TCC</code> 等 <code>2PC</code> 的实现和编排模式或协同模式的 SAGA。在早期微服务时代，Spring Cloud 等云原生基础设施或 Seate[12] 等中间件都提供分布式事务的支持，但现在进入服务网格崛起的后微服务时代，Istio 等头部项目却未对分布式事务有所规划，原因也很简单: 分布式事务与业务联系紧密，离不开应用层的支持，但服务网格对业务无入侵的特性让其也失去了在应用层做事的空间。</p>
+<h2 id="编程模型"><a href="#编程模型" class="headerlink" title="编程模型"></a>编程模型</h2><p>本文开头有说到，流计算和服务网格有一些共性，但很难让人将它们想到一起，其中很大原因可以归咎于两者的编程模型非常不同。但试想如果流计算提供与 Web 开发框架类似的编程接口，每个函数注册好服务地址，接受请求并处理返回结果给调用者，是不是也一定程度上能达到微服务的效果呢？实际上，业界的确有这样的尝试，例如基于 Flink 的 Serverless 框架 StateFun[13]。</p>
+<p>StateFun 在 Flink 之上提供更接近在线场景的面向消息的 API 函数，而且允许任意函数间通过注册的地址相互发消息。这意味着 StateFun 不再需要在编译期构建一个静态的 DAG（有向无环图），打破了流计算由系统控制数据流的传统。这样的编程模型可以更好地适应在线服务不同请求差异大和相互之间基本隔离的特性。有趣的是，若不考虑 Master 节点，StateFun 集群基本是微服务架构（见下图），与传统的微服务框架 Spring Cloud 有意外的相似之处。</p>
+<center><p><img src="/img/streaming-service-mesh/img7.flink-stateful-functions.png" alt="图7. StateFun 架构" title="图7. StateFun 架构"></p></center>
+
+<p>不过值得注意的是，StateFun 受限于底层 Flink Runtime 为吞吐量优化的异步网络传输，因此服务间的调用接口也只有异步的。相比之下，服务网格完全不对应用层有假设，使用同步的 HTTP 服务、通过消息队列解耦的异步 Event Driven 服务或其他类型的服务都完全取决于用户。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>本文主要从分布式运行时环境、数据存储架构、分布式事务和编程模型几个角度去对比流计算和服务网格两项不同领域的分布式基础设施。实际上，若不是受限于篇幅和笔者时间精力，还有更多角度可讨论，比如容错处理、反压熔断等，但核心思想不会有太大变化。</p>
+<p>由于流计算面向的场景主要是外部依赖较少、业务类型比较确定的大数据计算，因此提供更“重”的基础设施（比如有统一数据存储和分布式事务的运行环境）和更新”轻”的编程 API；而服务网格面向的是差异性很大的在线服务，因此需要提供更”轻”更灵活的 API，比如无入侵的流量劫持，但同时也导致基础设施只能比较”轻”，无法做分布式事务这样比较深度的支持。</p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
+<li><a href="https://buoyant.io/what-is-a-service-mesh" target="_blank" rel="external">What’s a service mesh? And why do I need one?</a>  </li>
+<li><a href="https://blog.envoyproxy.io/service-mesh-data-plane-vs-control-plane-2774e720f7fc" target="_blank" rel="external">Service mesh data plane vs. control plane</a>  </li>
+<li><a href="https://istio.io/latest/docs/ops/deployment/architecture/" target="_blank" rel="external">Istio Architecture</a>  </li>
+<li>[周志明.凤凰架构[M]北京:机械工业出版社,2021]  </li>
+<li><a href="https://platform9.com/blog/kubernetes-service-mesh-a-comparison-of-istio-linkerd-and-consul/" target="_blank" rel="external">Kubernetes Service Mesh: A Comparison of Istio, Linkerd, and Consul</a>  </li>
+<li><a href="https://github.com/servicemeshinterface/smi-spec" target="_blank" rel="external">Service Mesh Interface Spec</a>  </li>
+<li><a href="https://en.wikipedia.org/wiki/Embarrassingly_parallel" target="_blank" rel="external">Embarrassingly parallel</a>  </li>
+<li><a href="https://www.microsoft.com/en-us/research/uploads/prod/2004/01/twophase-revised.pdf" target="_blank" rel="external">Consensus on Transaction Commit</a>  </li>
+<li><a href="https://microservices.io/patterns/data/saga.html" target="_blank" rel="external">Pattern: Saga</a>  </li>
+<li><a href="https://developers.redhat.com/articles/2021/09/21/distributed-transaction-patterns-microservices-compared#" target="_blank" rel="external">Distributed transaction patterns for microservices compared</a>  </li>
+<li><a href="https://spring.io/projects/spring-cloud" target="_blank" rel="external">Spring Cloud</a>  </li>
+<li><a href="https://github.com/seata/seata" target="_blank" rel="external">Seata</a>  </li>
+<li><a href="https://github.com/apache/flink-statefun" target="_blank" rel="external">Flink Stateful Functions</a></li>
+</ol>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2021/11/02/流计算与服务网格/" title="流计算与服务网格">2021/11/02/流计算与服务网格/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/流计算/" rel="tag"># 流计算</a>
+          
+            <a href="/tags/服务网格/" rel="tag"># 服务网格</a>
+          
+            <a href="/tags/微服务/" rel="tag"># 微服务</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/09/13/网易游戏-FlinkSQL-平台化实践/" rel="next" title="网易游戏 FlinkSQL 平台化实践">
+                <i class="fa fa-chevron-left"></i> 网易游戏 FlinkSQL 平台化实践
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">70</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">43</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#服务网格简述"><span class="nav-number">1.</span> <span class="nav-text">服务网格简述</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#流计算与服务网格的对比"><span class="nav-number">2.</span> <span class="nav-text">流计算与服务网格的对比</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#分布式运行时环境"><span class="nav-number">2.1.</span> <span class="nav-text">分布式运行时环境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#流量管理"><span class="nav-number">2.2.</span> <span class="nav-text">流量管理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据存储架构"><span class="nav-number">2.3.</span> <span class="nav-text">数据存储架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分布式事务"><span class="nav-number">2.4.</span> <span class="nav-text">分布式事务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#编程模型"><span class="nav-number">2.5.</span> <span class="nav-text">编程模型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2021/11/02/流计算与服务网格/';
+          this.page.identifier = '2021/11/02/流计算与服务网格/';
+          this.page.title = '流计算与服务网格';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
