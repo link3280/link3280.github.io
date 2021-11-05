@@ -105,7 +105,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img5.distributed-transaction-patterns-charateristics.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img6.data-consistency-scalability.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img7.flink-stateful-functions.png">
-<meta property="og:updated_time" content="2021-11-02T16:12:49.386Z">
+<meta property="og:updated_time" content="2021-11-05T14:23:54.136Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="流计算与服务网格">
 <meta name="twitter:description" content="流计算（Stream Processing）和服务网格（Service Mesh）本分别属于大数据和在线服务两个不同的领域，放在一起比较并不常见，但从本质而言两者都是分布式的运行时系统（Runtime）或基础设施，并提供专用的编程 API 或 SDK 供用户在其上运行任意代码。若不论效率，流计算提供的海量数据流式处理功能改为使用服务网格同样可以实现，反之某些服务网格提供的在线服务通过一定改造也可以">
@@ -386,7 +386,7 @@
 <p>因此，本文将对比流计算与以服务网络为代表的微服务基础设施之间的异同，希望能帮助大家从不一样的角度来理解两种当前发展迅速的技术。由于笔者并不是微服务或服务网格专家，不能保证所有理解正确，如内容有纰漏之处还请读者不吝指教。</p>
 <h1 id="服务网格简述"><a href="#服务网格简述" class="headerlink" title="服务网格简述"></a>服务网格简述</h1><p>因为本文读者大多数是大数据背景，对服务网格可能并不熟悉，所以先简单介绍下服务网格的基本概念。</p>
 <p>在微服务之前的单体系统（Monolithic）时代，业务逻辑集中在少数的进程中，服务进程的可拓展性、可用性、容错性尤为重要，而进程间的依赖关系并不复杂，服务间调用的流量也较少，因此工程师的关注点主要在服务本身，流量调度通常用简单的 Nginx 则可满足。但随着微服务的流行，系统不同模块被拆分为多个独立的微服务，每个服务承载的业务逻辑简化，但迅速膨胀的服务数量以及依赖关系却成为管理的瓶颈。单体系统的模块间调用演变成基于网络的服务调用，复杂性从单个服务内部转移到了多个服务的治理上，此时各类微服务框架应运而生。</p>
-<p>在微服务框架发展早期，SDK 或开发框架等应用层的解决方案毫无疑问是主流，其中最为著名的便是 Spring Cloud[11]。Spring Cloud 对微服务提供了非常完善的支持，同时延续了 Spring 家族一贯的强大生态支持。然而在近几年容器技术逐渐成熟的背景下，以 Kubernetes 为代表的容器编排和与之配套的以 Istio 为代表的服务网格异军突起，凭借更轻量级和适用面更广的优势获得了更多的关注。</p>
+<p>在微服务框架发展早期，SDK 或开发框架等应用层的解决方案毫无疑问是主流，其中最为著名的便是 Spring Cloud[11]。Spring Cloud 对微服务提供了非常完善的支持，同时延续了 Spring 家族一贯的强大生态。然而在近几年容器技术逐渐成熟的背景下，以 Kubernetes 为代表的容器编排和与之配套的以 Istio 为代表的服务网格异军突起，凭借更轻量级和适用面更广的优势获得了更多的关注。</p>
 <center><p><img src="/img/streaming-service-mesh/img1.service-mesh-architecture.png" alt="图1.服务网格架构" title="图1.服务网格架构"></p></center>
 
 <p>在服务编排之上，服务网格将服务中原本的非业务功能抽取出来作为基础设施，这些功能包括服务发现、健康检查、流量路由、负载均衡、容错重试、认证授权、故障注入和可观察性等。服务网格分为两个组件: 数据面板（Data Plane）和控制面板（Control Plane）。数据面板由一组边车代理（Sidecar Proxy）组成，而边车代理通常为系统自动在服务器（通常是 Kubernetes 的 Pod）中注入的通信服务器，以类似网络安全里中间人攻击的方式进行流量劫持，在服务无感知的情况下接管其对外的通信[3]；而控制面板则负责边车代理的配置和管理，以操纵流量。</p>
@@ -414,7 +414,7 @@
 </ul>
 <h2 id="数据存储架构"><a href="#数据存储架构" class="headerlink" title="数据存储架构"></a>数据存储架构</h2><p>作为微服务架构的延伸，服务网格通常应用 <code>Datebase Per Service</code> 的数据库架构分散管理数据，即每个微服务有独立的数据库，并且只允许直接访问自己的数据库。不同服务的数据库可以放在相同或不同的数据管理系统实例上，只要在逻辑上是分开访问即可。这样的目的是给数据划分明确的边界，避免微服务间的耦合，不过也带来一定的性能损失。</p>
 <p>这样的数据存储架构其实跟流计算的状态持久化十分相似。以 Flink 为例，在以 Runtime 集群为单位的全局状态存储后端（StateBackend）背后，Flink 的每个算子有独立的本地状态存储后端，不同算子间的状态完全隔离。在此基础上，Flink 再提供算子状态的数据分区（即 KeyedState），按照业务特征来隔离物理存储，类似 MySQL 的分库分表。如果并行度发生变化，Flink 可以统一地对数据流和状态进行重新的分区。</p>
-<h2 id="分布式事务"><a href="#分布式事务" class="headerlink" title="分布式事务"></a>分布式事务</h2><p>作为使用多个存储系统的分布式系统，流计算与服务网格均不得不面对分布式事务的难题。实现分布式事务通常有两种思路：一是把分布式事务看作横跨多个服务的一个大事务，典型的实现算法是 <code>2PC</code>（两阶段提交）和 Paxos（BTW，事实上 2PC 也可以被看作是 Paxos 算法容忍零错误时的特例[8]）；二是把分布式事务看作一系列本地（子）事物并分步执行，这种方案被称为 SAGA 模式[9]。</p>
+<h2 id="分布式事务"><a href="#分布式事务" class="headerlink" title="分布式事务"></a>分布式事务</h2><p>作为使用多个存储系统的分布式系统，流计算与服务网格均不得不面对分布式事务的难题。实现分布式事务通常有两种思路：一是把分布式事务看作横跨多个服务的一个大事务，典型的实现算法是 <code>2PC</code>（两阶段提交）和 Paxos（BTW，事实上 <code>2PC</code> 也可以被看作是 Paxos 算法容忍零错误时的特例[8]）；二是把分布式事务看作一系列本地（子）事物并分步执行，这种方案被称为 SAGA 模式[9]。</p>
 <p><code>2PC</code> 引入协调者（Coordinator）来掌控所有事务的参与者（Participants）。事务开始进入 Pre-Commit 阶段，协调者节点向所有参与者节点询问是否可提交事务，参与者做提交准备（比如写 WAL）并根据结果决定是否同意。第二阶段为 Commit 阶段，协调者根据参与者反馈作出决策。若所有参与者均同意，则进入下个阶段；否则终止（Abort）事务，协调者通知参与者进行回滚操作。</p>
 <p><code>2PC</code> 实现简单且提供较强的事务保证，因此在业界应用广泛，然而也有一定的局限性：</p>
 <ul>
@@ -442,7 +442,11 @@
 <center><p><img src="/img/streaming-service-mesh/img7.flink-stateful-functions.png" alt="图7. StateFun 架构" title="图7. StateFun 架构"></p></center>
 
 <p>不过值得注意的是，StateFun 受限于底层 Flink Runtime 为吞吐量优化的异步网络传输，因此服务间的调用接口也只有异步的。相比之下，服务网格完全不对应用层有假设，使用同步的 HTTP 服务、通过消息队列解耦的异步 Event Driven 服务或其他类型的服务都完全取决于用户。</p>
-<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>本文主要从分布式运行时环境、数据存储架构、分布式事务和编程模型几个角度去对比流计算和服务网格两项不同领域的分布式基础设施。实际上，若不是受限于篇幅和笔者时间精力，还有更多角度可讨论，比如容错处理、反压熔断、进出（南北）流量等，但核心思想不会有太大变化。</p>
+<h2 id="容错机制"><a href="#容错机制" class="headerlink" title="容错机制"></a>容错机制</h2><p>上文流量管理部分谈到流计算不提供错误率，因为通常所有的数据都属于一个业务单元（即作业），如果出现异常就会导致整个作业的计算结果不准确，所以结果通常只有正常和失败两种。相对地，在线服务的业务单元通常在请求级别，一个请求错误并不影响其他请求，所以能按比率进行统计。错误造成的不同后果导致流计算和服务网格有非常不同的容错机制。</p>
+<p>流计算通过分布式事务定时进行 Checkpoint 快照，在默认情况下，如果某个节点计算出现异常（包括机器故障等系统原因或代码 bug 等业务原因），与之有依赖关系的上下游节点全部需要进行重启恢复，将状态回滚至最近一个成功的快照并进行重试。当回滚发生时，在内存中正被处理的数据会被丢弃掉，然后在作业重试后从快照中读取（比如 Spark）或者重新从数据源读取（比如 Flink）。</p>
+<p>在服务网格中，容错通常是在请求级别的，不会涉及其他的请求和服务实例。对于一个提供 HTTP/REST 这样同步接口的服务，如果某个实例出现异常，通常系统会将流量自动切换到相同服务的其他实例，并自动进行请求的重试。对于 Event Driven 的服务，Kafka/Pulsar 等消息队列通常提供多次消费的持久化能力和负载均衡的消费模式，在某个实例异常时，其他实例可以自动接管其未处理完的事件。</p>
+<p>顺带一提，StateFun 尽管面向 Event Driven 的微服务场景，但容错机制依然沿用了 Flink 的 Checkpoint 快照方式，导致某个服务的异常会引起全部服务的重启（官方称之为“回滚整个世界”）。初看下这是很明显的 overkilled，但因为 Flink 本身节点间的通信并没有使用外部的提供持久化能力的消息队列，要让上游节点重发事件不得不也回滚上游的服务，直到 Source 节点从外部重读消息，所以 StateFun 的做法估计也是不得已而为之。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>本文主要从分布式运行时环境、数据存储架构、分布式事务、编程模型和容错机制几个角度去对比流计算和服务网格两项不同领域的分布式基础设施。实际上，受限于篇幅和笔者时间精力，还有更多角度未纳入讨论，比如反压熔断、进出（南北）流量等，但也足以体现两者设计差异背后的考量</p>
 <p>由于流计算面向的场景主要是外部依赖较少、业务类型比较确定的大数据计算，因此提供更“重”的基础设施（比如有统一数据存储和分布式事务的运行环境）和更新”轻”的编程 API；而服务网格面向的是差异性很大的在线服务，因此需要提供更”轻”更灵活的 API，比如无入侵的流量劫持，但同时也导致基础设施只能比较”轻”，无法做分布式事务这样比较深度的支持。</p>
 <h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
 <li><a href="https://buoyant.io/what-is-a-service-mesh" target="_blank" rel="external">What’s a service mesh? And why do I need one?</a>  </li>
@@ -692,7 +696,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#服务网格简述"><span class="nav-number">1.</span> <span class="nav-text">服务网格简述</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#流计算与服务网格的对比"><span class="nav-number">2.</span> <span class="nav-text">流计算与服务网格的对比</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#分布式运行时环境"><span class="nav-number">2.1.</span> <span class="nav-text">分布式运行时环境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#流量管理"><span class="nav-number">2.2.</span> <span class="nav-text">流量管理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据存储架构"><span class="nav-number">2.3.</span> <span class="nav-text">数据存储架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分布式事务"><span class="nav-number">2.4.</span> <span class="nav-text">分布式事务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#编程模型"><span class="nav-number">2.5.</span> <span class="nav-text">编程模型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#服务网格简述"><span class="nav-number">1.</span> <span class="nav-text">服务网格简述</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#流计算与服务网格的对比"><span class="nav-number">2.</span> <span class="nav-text">流计算与服务网格的对比</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#分布式运行时环境"><span class="nav-number">2.1.</span> <span class="nav-text">分布式运行时环境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#流量管理"><span class="nav-number">2.2.</span> <span class="nav-text">流量管理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据存储架构"><span class="nav-number">2.3.</span> <span class="nav-text">数据存储架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分布式事务"><span class="nav-number">2.4.</span> <span class="nav-text">分布式事务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#编程模型"><span class="nav-number">2.5.</span> <span class="nav-text">编程模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容错机制"><span class="nav-number">2.6.</span> <span class="nav-text">容错机制</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
             
 
           </div>
