@@ -105,7 +105,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img5.distributed-transaction-patterns-charateristics.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img6.data-consistency-scalability.png">
 <meta property="og:image" content="https://link3280.github.io/img/streaming-service-mesh/img7.flink-stateful-functions.png">
-<meta property="og:updated_time" content="2021-11-05T14:23:54.136Z">
+<meta property="og:updated_time" content="2021-11-07T14:50:18.887Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="流计算与服务网格">
 <meta name="twitter:description" content="流计算（Stream Processing）和服务网格（Service Mesh）本分别属于大数据和在线服务两个不同的领域，放在一起比较并不常见，但从本质而言两者都是分布式的运行时系统（Runtime）或基础设施，并提供专用的编程 API 或 SDK 供用户在其上运行任意代码。若不论效率，流计算提供的海量数据流式处理功能改为使用服务网格同样可以实现，反之某些服务网格提供的在线服务通过一定改造也可以">
@@ -441,7 +441,7 @@
 <p>StateFun 在 Flink 之上提供更接近在线场景的面向消息的 API 函数，而且允许任意函数间通过注册的地址相互发消息。这意味着 StateFun 不再需要在编译期构建一个静态的 DAG（有向无环图），打破了流计算由系统控制数据流的传统。这样的编程模型可以更好地适应在线服务不同请求差异大和相互之间基本隔离的特性。有趣的是，若不考虑 Master 节点，StateFun 集群基本是微服务架构（见下图），与传统的微服务框架 Spring Cloud 有意外的相似之处。</p>
 <center><p><img src="/img/streaming-service-mesh/img7.flink-stateful-functions.png" alt="图7. StateFun 架构" title="图7. StateFun 架构"></p></center>
 
-<p>不过值得注意的是，StateFun 受限于底层 Flink Runtime 为吞吐量优化的异步网络传输，因此服务间的调用接口也只有异步的。相比之下，服务网格完全不对应用层有假设，使用同步的 HTTP 服务、通过消息队列解耦的异步 Event Driven 服务或其他类型的服务都完全取决于用户。</p>
+<p>不过值得注意的是，StateFun 受限于底层 Flink Runtime 为吞吐量优化的异步网络传输，因此服务间的调用接口也只有异步的。相比之下，服务网格完全不对应用层有假设，使用同步的 HTTP/REST 服务、通过消息队列解耦的异步 Event Driven 服务或其他类型的服务都完全取决于用户。</p>
 <h2 id="容错机制"><a href="#容错机制" class="headerlink" title="容错机制"></a>容错机制</h2><p>上文流量管理部分谈到流计算不提供错误率，因为通常所有的数据都属于一个业务单元（即作业），如果出现异常就会导致整个作业的计算结果不准确，所以结果通常只有正常和失败两种。相对地，在线服务的业务单元通常在请求级别，一个请求错误并不影响其他请求，所以能按比率进行统计。错误造成的不同后果导致流计算和服务网格有非常不同的容错机制。</p>
 <p>流计算通过分布式事务定时进行 Checkpoint 快照，在默认情况下，如果某个节点计算出现异常（包括机器故障等系统原因或代码 bug 等业务原因），与之有依赖关系的上下游节点全部需要进行重启恢复，将状态回滚至最近一个成功的快照并进行重试。当回滚发生时，在内存中正被处理的数据会被丢弃掉，然后在作业重试后从快照中读取（比如 Spark）或者重新从数据源读取（比如 Flink）。</p>
 <p>在服务网格中，容错通常是在请求级别的，不会涉及其他的请求和服务实例。对于一个提供 HTTP/REST 这样同步接口的服务，如果某个实例出现异常，通常系统会将流量自动切换到相同服务的其他实例，并自动进行请求的重试。对于 Event Driven 的服务，Kafka/Pulsar 等消息队列通常提供多次消费的持久化能力和负载均衡的消费模式，在某个实例异常时，其他实例可以自动接管其未处理完的事件。</p>
