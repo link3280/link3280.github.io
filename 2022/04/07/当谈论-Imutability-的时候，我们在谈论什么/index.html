@@ -1,0 +1,844 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="随想," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="谈起 Immutability (不可变性)，相信大多数读者先想起的是编程语言中的 final、const 之类的常量关键词或 ImmutableMap 之类的数据结构。不可否认，它们是日常开发中的实用工具，但这仅是 Immutability 的最基础应用，而在更深入的领域，比如编程范式、数据库、服务架构设计，同样无不处处体现着 Immutability 的理念。Immutability 通常意味">
+<meta property="og:type" content="article">
+<meta property="og:title" content="当谈论 Imutability 的时候，我们在谈论什么">
+<meta property="og:url" content="https://link3280.github.io/2022/04/07/当谈论-Imutability-的时候，我们在谈论什么/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="谈起 Immutability (不可变性)，相信大多数读者先想起的是编程语言中的 final、const 之类的常量关键词或 ImmutableMap 之类的数据结构。不可否认，它们是日常开发中的实用工具，但这仅是 Immutability 的最基础应用，而在更深入的领域，比如编程范式、数据库、服务架构设计，同样无不处处体现着 Immutability 的理念。Immutability 通常意味">
+<meta property="og:image" content="https://link3280.github.io/img/immutability/img1.seq_chart_multi_thread.png">
+<meta property="og:image" content="https://link3280.github.io/img/immutability/img2.saga-flow.png">
+<meta property="og:image" content="https://link3280.github.io/img/immutability/img3.saga-transaction-log.png">
+<meta property="og:updated_time" content="2022-04-07T14:56:22.569Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="当谈论 Imutability 的时候，我们在谈论什么">
+<meta name="twitter:description" content="谈起 Immutability (不可变性)，相信大多数读者先想起的是编程语言中的 final、const 之类的常量关键词或 ImmutableMap 之类的数据结构。不可否认，它们是日常开发中的实用工具，但这仅是 Immutability 的最基础应用，而在更深入的领域，比如编程范式、数据库、服务架构设计，同样无不处处体现着 Immutability 的理念。Immutability 通常意味">
+<meta name="twitter:image" content="https://link3280.github.io/img/immutability/img1.seq_chart_multi_thread.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2022/04/07/当谈论-Imutability-的时候，我们在谈论什么/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>当谈论 Imutability 的时候，我们在谈论什么 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2022/04/07/当谈论-Imutability-的时候，我们在谈论什么/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">当谈论 Imutability 的时候，我们在谈论什么</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-04-07T22:27:02+08:00">
+                2022-04-07
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/随想/" itemprop="url" rel="index">
+                    <span itemprop="name">随想</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2022/04/07/当谈论-Imutability-的时候，我们在谈论什么/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2022/04/07/当谈论-Imutability-的时候，我们在谈论什么/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>谈起 Immutability (不可变性)，相信大多数读者先想起的是编程语言中的 <code>final</code>、<code>const</code> 之类的常量关键词或 <code>ImmutableMap</code> 之类的数据结构。不可否认，它们是日常开发中的实用工具，但这仅是 Immutability 的最基础应用，而在更深入的领域，比如编程范式、数据库、服务架构设计，同样无不处处体现着 Immutability 的理念。Immutability 通常意味着用直接赋值以外的方式来表达更新，本文就来谈谈这些方式提供何种特性及其如何让我们的程序设计受益。</p>
+<a id="more"></a>
+<h1 id="并发控制"><a href="#并发控制" class="headerlink" title="并发控制"></a>并发控制</h1><p>Immutability 最明显的优势在于并发控制。</p>
+<p>并发控制是现代程序设计最为核心的问题之一。多线程编程在释放单机算力的同时也带来了线程安全问题，以最小成本实现多线程的并发控制，成为几乎所有高性能应用绕不开的问题。最为典型的例子便是数据库，为平衡性能和并发控制的效果（即事务隔离性），主流数据库都会提供不同的事务隔离等级供用户设置。然而，处理线程安全问题通常依赖各种锁，而锁除了会显著拖慢性能，还大大增加系统复杂度，容易出现死锁等各类疑难问题。</p>
+<p>避免线程安全问题的一个办法便是 Immutability。线程安全问题的本质在于 Shared State（多线程公用的状态）可能被某个线程改变，而该操作对于其他线程来说是不知情的。这在面向过程/对象编程中习以为常的事情，在函数式编程观点看来却是非常危险的。函数式编程摒弃了 Shared State，而是采用不可变的对象作为函数的输入和输出，这些对象类似于局部变量仅可在函数内访问，因此函数可以被安全地传递到任意线程上执行，并且无需考虑锁同步。这样的特性令函数式编程完美适配并行计算场景，因此事实上数据密集型计算框架（比如 Spark/Flink/Pandas 等）几乎都以函数式编程为主。</p>
+<p>当然，基于 Immutability 的并发控制并不专属于函数式编程，在面向过程/对象编程中我们依然能在系统设计中发挥 Immutability 的威力，基本的思路是: 线程安全问题来自于多线程访问变量的不确定性，那么不如将状态的访问收敛到一个线程里，再用显式的消息传递来实现状态的读写。这样我们确保了对象状态在多线程的环境下依然有良好的封装——状态不但属于某个对象，而且属于某个线程，因此不会出现任意能访问到对象的线程都能将对象的状态乱搞一通的情况。</p>
+<center><p><img src="/img/immutability/img1.seq_chart_multi_thread.png" alt="图1. 两个线程同时访问任意对象" title="图1. 两个线程同时访问对象(图来自 Akka 文档)"></p></center>
+
+<p>打个比方，一家初创公司有销售、采购、行政三个负责人，每个负责人都有权动用公司账户并分别记账，那么公司的账目一定非常混乱很容易出现对不上的情况，而若有财务负责人来专门管帐，每个部门有收入支出则通知财务处理即可，更加规范易于管理。</p>
+<p>熟悉设计模式的读者可能会想起 Command 模式[2]或者 Actor 模式[3]，熟服务架构的读者可能会想起微服务——它们都基于消息传递进行跨进程或线程的直接通信，而不是依赖对内存或者外部存储的共同访问权限间接协作。可能有读者会问，函数式编程还可以理解，基于消息传递为什么是 Immutability 设计呢？其实很简单：不同线程或进程之间唯一共享的是不可变的消息，而消息包含的命令和参数均是确定性的，这与函数式编程中的函数非常相近。</p>
+<h1 id="信息完整性"><a href="#信息完整性" class="headerlink" title="信息完整性"></a>信息完整性</h1><p>Immutability 另外一项重要特性是信息完整性。</p>
+<p>简单地用新值覆盖旧值会导致信息的丢失，原本旧值是什么无从考证，导致很难维护系统的数据一致性。解决这个问题的常见办法是通过日志来记录数据的每一项变更，每次变更时新增一个版本，同时保留旧版本，相当于自带版本控制。事实上，在数据库领域等数据一致性关键的领域，不可变的日志可以说是容错机制、数据同步和审计的基石，比如 MySQL 的 binlog、MongoDB 的 oplog 和实现事务常用的 WAL（Write Ahead Log）。在日志强大能力背后，其实是 Immutability 对于信息完整性的保护。</p>
+<p>在如今的微服务架构时代，横跨多个服务调用的事务十分常见，维护数据一致性的复杂度很大程度上由基础设施转移到了应用层，因此我们可以发现 Immutability 的理念在应用层愈发流行。事实上，近年来一些热门概念，比如 Event Sourcing、CRQS、SAGA，都是建立在 Immutability 的基础之上。这些新架构使用异步的通信机制，通常倡导除了在常规地更新服务状态的同时，将状态变化以事件日志的形式保存下来，这些事件日志可用于排查问题、重建整个某个时间点的服务状态或者作为通知（Notification）同步给一起协作的其他服务。</p>
+<p>考虑一个电商交易场景的微服务架构，有订单（Order）、支付（Payment）和库存（Inventory）三个独立的服务。新建一个订单，需要先后调用支付服务和库存服务，用 SAGA 实现的流程如下图所示:</p>
+<center><p><img src="/img/immutability/img2.saga-flow.png" alt="图2. SAGA 工作流程" title="图2. SAGA 工作流程"></p></center>
+
+
+<p>其中蓝色的为常规事务，黄色为用于回滚规范事务的补偿事务（Compensating Transaction），常规事务跟补偿事务是一对一的关系。如果某个常规事务出错，那么系统会逆序执行该事务及其前置事务的补偿事务。每个事务的执行结果都会以事件消息的形式通知 SAGA 的中心化节点 Coordinator 并被作为日志记录下来（见下图的 Saga Log）。</p>
+<center><p><img src="/img/immutability/img3.saga-transaction-log.png" alt="图3. SAGA 分布式事务日志" title="图3. SAGA 分布式事务日志"></p></center>
+
+<p>通过不可变的事务日志，SAGA 将多个独立的本地事务串联起来，成为一个松耦合的分布式事务。</p>
+<h1 id="性能"><a href="#性能" class="headerlink" title="性能"></a>性能</h1><p>Immutability 引起最多的担忧在于它对性能（时间复杂度和空间复杂度）的影响，毕竟每次更新都产生一个完整的拷贝。诚然，若不考虑并发控制，Immutability 大多数情况下的确不如原址更新性能好（尽管可以通过 COW (Copy-On-Write) 数据结构来降低性能损耗），然而在 on-disk 场景下 Immutability 可能却是更有效率的方式。</p>
+<p>on-disk 场景下 IOPS 非常珍贵，比起占用的空间，大家更在乎一次读或写会导致多少次磁盘 IO，即数据库领域常见的空间放大、读放大和写放大三个指标。Immutability 虽然在空间放大和读放大上不占优，但在写放大的表现上却非常优秀，其中最为典型的例子便是 LSM-tree。</p>
+<p>简单来说，对于一次写操作（比如更新一条 1 KB 大小的记录），传统的 B-Tree 需要通过索引查找到目标记录对应的页（Page），然后原址覆盖掉整一页（通常 4K 大小），而 LSM-tree 以追加写的方式代替原址更新，只需要在最新的文件写入记录的最新值。虽然有人会说提及 LSM-tree 后续合并文件的 Compaction 同样会带来写放大，但上述过程也没有算上 B-Tree 需要的 WAL。</p>
+<p>此外，因为 LSM-Tree 一直是追加写的缘故，IO 一直也是大块数据的顺序写，这对于传统 HDD 来说尤为重要。即使是已经采用 SSD，大块的连续写入也有助于减少磁盘空间碎片和提高压缩性能。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>变量与赋值作为计算机程序中最为基础的概念，绝大多数程序员已经习惯以它们为基础的思维方式，但 Immutability 并不小众，反而凭借着在并发控制、信息完整性和性能上的优势在不少新领域大放异彩。其中部分原因来自于，相比起变赋值是计算机科学为提高资源复用率发明的操作，Immutability 更贴近纯粹的数学，因此更加不容易出现竞争条件、信息丢失这些计算机科学独有的问题。</p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
+<li><a href="https://en.wikipedia.org/wiki/Thread_safety#Levels_of_thread_safety" target="_blank" rel="external">Wikipeida: Thread Safety</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Command_pattern" target="_blank" rel="external">Wikipeida: Command Pattern</a></li>
+<li><a href="https://www.baeldung.com/cs/saga-pattern-microservices" target="_blank" rel="external">Saga Pattern in Microservices</a></li>
+<li><a href="">Designing Data-Intensive Applications</a></li>
+<li><a href="https://doc.akka.io/docs/akka/current/typed/guide/actors-motivation.html" target="_blank" rel="external">Akka Document</a></li>
+<li><a href="https://zh.wikipedia.org/zh/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%A8%8B%E5%BA%8F%E7%9A%84%E6%9E%84%E9%80%A0%E5%92%8C%E8%A7%A3%E9%87%8A" target="_blank" rel="external">计算机程序的构造和解释</a></li>
+</ol>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2022/04/07/当谈论-Imutability-的时候，我们在谈论什么/" title="当谈论 Imutability 的时候，我们在谈论什么">2022/04/07/当谈论-Imutability-的时候，我们在谈论什么/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/随想/" rel="tag"># 随想</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/02/13/Flink-流批一体中的数据边界/" rel="next" title="Flink 流批一体中的数据边界">
+                <i class="fa fa-chevron-left"></i> Flink 流批一体中的数据边界
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">72</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">43</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#并发控制"><span class="nav-number">1.</span> <span class="nav-text">并发控制</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#信息完整性"><span class="nav-number">2.</span> <span class="nav-text">信息完整性</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#性能"><span class="nav-number">3.</span> <span class="nav-text">性能</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2022/04/07/当谈论-Imutability-的时候，我们在谈论什么/';
+          this.page.identifier = '2022/04/07/当谈论-Imutability-的时候，我们在谈论什么/';
+          this.page.title = '当谈论 Imutability 的时候，我们在谈论什么';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
