@@ -1,0 +1,861 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Flink," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="前不久笔者在 Flink 社区讨论 Flink SQL 中 Savepoint 的 SQL 语法时（见 FLIP-222 [3]），曾提议过参考数据库的 Savepoint 语法。虽然最终未能获得 Flink 社区的大多数赞成，但也引发了笔者的好奇心: Flink Savepoint 和传统的数据库 Savepoint 究竟有何异同？于是经过笔者一番调研与思考，便有了这篇文章。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink Savepoint vs 数据库 Savepoint">
+<meta property="og:url" content="https://link3280.github.io/2022/06/13/Flink-Savepoint-vs-数据库-Savepoint/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="前不久笔者在 Flink 社区讨论 Flink SQL 中 Savepoint 的 SQL 语法时（见 FLIP-222 [3]），曾提议过参考数据库的 Savepoint 语法。虽然最终未能获得 Flink 社区的大多数赞成，但也引发了笔者的好奇心: Flink Savepoint 和传统的数据库 Savepoint 究竟有何异同？于是经过笔者一番调研与思考，便有了这篇文章。">
+<meta property="og:image" content="https://link3280.github.io/img/savepoint-comparison/img1.savepoint_scope.png">
+<meta property="og:image" content="https://link3280.github.io/img/savepoint-comparison/img2.flink_savepoint_progress.png">
+<meta property="og:image" content="https://link3280.github.io/img/savepoint-comparison/img3.database_savepoint_progress.png">
+<meta property="og:updated_time" content="2022-06-13T15:42:14.693Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink Savepoint vs 数据库 Savepoint">
+<meta name="twitter:description" content="前不久笔者在 Flink 社区讨论 Flink SQL 中 Savepoint 的 SQL 语法时（见 FLIP-222 [3]），曾提议过参考数据库的 Savepoint 语法。虽然最终未能获得 Flink 社区的大多数赞成，但也引发了笔者的好奇心: Flink Savepoint 和传统的数据库 Savepoint 究竟有何异同？于是经过笔者一番调研与思考，便有了这篇文章。">
+<meta name="twitter:image" content="https://link3280.github.io/img/savepoint-comparison/img1.savepoint_scope.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2022/06/13/Flink-Savepoint-vs-数据库-Savepoint/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Flink Savepoint vs 数据库 Savepoint | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2022/06/13/Flink-Savepoint-vs-数据库-Savepoint/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink Savepoint vs 数据库 Savepoint</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-06-13T23:32:22+08:00">
+                2022-06-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2022/06/13/Flink-Savepoint-vs-数据库-Savepoint/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2022/06/13/Flink-Savepoint-vs-数据库-Savepoint/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>前不久笔者在 Flink 社区讨论 Flink SQL 中 Savepoint 的 SQL 语法时（见 FLIP-222 [3]），曾提议过参考数据库的 Savepoint 语法。虽然最终未能获得 Flink 社区的大多数赞成，但也引发了笔者的好奇心: Flink Savepoint 和传统的数据库 Savepoint 究竟有何异同？于是经过笔者一番调研与思考，便有了这篇文章。</p>
+<a id="more"></a>
+<h2 id="Savepoint-功能"><a href="#Savepoint-功能" class="headerlink" title="Savepoint 功能"></a>Savepoint 功能</h2><p>就功能而言，由两者共用 Savepoint 一词可见其语义之相近，均用于保存状态数据。Flink Savepoint 用于持久化作业当前的状态，以便后续用于恢复作业状态到该时间点；数据库 Savepoint 用于保存当前事务当前的状态，后续可用于事务回滚。</p>
+<p>从表面上看，除了对象不同，两者最大的不同点在于 Savepoint 作用的范围。Flink Savepoint 可以作用于作业的整个运行周期，而数据库 Savepoint 只能作用于单个事务中。然而，若我们将一个 Flink 作业视为一个超长事务，那么两种 Savepoint 的作用范围也是一致的。</p>
+<p><center><img src="/img/savepoint-comparison/img1.savepoint_scope.png" alt="图1. Savepoint 范围" title="图1. Savepoint 范围"></center></p>
+
+<p>更为有趣的是，数据库 Savepoint 常与 Nested Transaction (内嵌事务)一起出现。顾名思义，Nested Transaction 即事务中的事务，可独立进行 Commit 或者 Rollback，不会与外层事务的状态相互影响。大多数常见的数据库，包括 MySQL、PostgresSQL 等等，并没有直接支持 Nested Transaction，而是提供 Savepoint 作为替代方案。具体来说，即用户可以在一个事务的范围里声明一个 Savepoint，此后的所有操作可以被视为一个 Nested Transaction。若有需要，用户直接回滚事务到该 Savepoint，因为后续操作也被回滚，因此看起来的效果就跟 Nested Transaction 被回滚了一样。</p>
+<p>熟悉 Flink 的读者一定很快联想到一个概念。没错，就是 Flink Checkpoint。Flink Checkpoint 本身是两阶段提交的事务（2PC），对于作为外层事务的 Flink 作业而言，无疑是 Nested Transaction（当然，其中还有很多细节问题，留待下文再谈）。</p>
+<p>综上所述，我们可以得到如下的相似映射　。</p>
+<table>
+<thead>
+<tr>
+<th>Flink</th>
+<th>数据库</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>作业</td>
+<td>事务</td>
+</tr>
+<tr>
+<td>Savepoint</td>
+<td>Savepoint</td>
+</tr>
+<tr>
+<td>Checkpoint</td>
+<td>内嵌事务</td>
+</tr>
+</tbody>
+</table>
+<h2 id="Savepoint-度量"><a href="#Savepoint-度量" class="headerlink" title="Savepoint 度量"></a>Savepoint 度量</h2><p>Flink Savepoint 与数据库 Savepoint 保存作业或事务的状态数据，但由于 Flink 作业为流式执行、数据库事务为批式执行，两者的状态基于不同的度量指标: Flink Savepoint 以数据为基准，而数据库事务则以操作（Operation，即 SQL statement）为基准。</p>
+<p><center><img src="/img/savepoint-comparison/img2.flink_savepoint_progress.png" alt="图2. Flink Savepoint 执行流程" title="图2. Flink Savepoint 执行流程"></center></p>
+
+
+<p>具体而言，Flink 作业可能包含多个 Operation (Flink 对应概念为 Task)，在流式计算模式下，这些 Operation 会被同时调度、同时执行，并且可能永远不会终止。因此，Flink Savepoint 是独立于作业之外的，并不需要等待某个 Operation 完成。Flink Savepoint 会对所有的操作进行快照，记录它们正在处理中的数据和中间状态（见图 2）。</p>
+<p>一般而言，快照通常需要 Stop-The-World (STW)，不过 Flink 采用 Chandy-Lamport 算法，向数据注入特殊的 Barrier 并以之为基础进行快照，避免了 STW，因此可以说 Flink Savepoint 是以数据为基准的。</p>
+<p><center><img src="/img/savepoint-comparison/img3.database_savepoint_progress.png" alt="图3. 数据库 Savepoint 执行流程" title="图3. 数据库 Savepoint 执行流程"></center></p>
+
+
+<p>而另一方面，数据库事务可视为是合并到一个逻辑单位中的操作(数据库中一般称为 Statement)序列，这些操作会像批计算一样顺序执行。显然，两个 Operation 之间是很好的 Savepoint STW 快照时机，所以数据库 Savepoint 是以特殊的 Statement 的方式嵌入到事务里面，因此可以说数据库 Savepoint 是以操作为基准的。</p>
+<h2 id="DDL-支持"><a href="#DDL-支持" class="headerlink" title="DDL 支持"></a>DDL 支持</h2><p>除了常见的 DML (Data Manipulation Language，比如 <code>insert</code>、<code>update</code>、<code>delete</code>)，数据库事务还可能包含 DDL (Data Definition Language，比如 <code>alter table</code>、<code>create index</code>)，这个特性被称为 Transactional DDL [3]。Transactional DDL 在系统发版升级场景非常有用，但只有少数的主流数据库支持。比如 MySQL、Oracle 不支持 Transactional DDL，而 PostgreSQL 则支持。</p>
+<p>由于 Flink 作业只涉及 DML，不涉及 DDL (DDL 在 Flink 中属于非作业操作 <code>Non-Job Operation</code>)，因此以作业运行周期为范围的 Flink Savepoint 自然无法被纳入到 Savepoint 里。回滚到某个 Savepoint 并不能回滚 Savepoint 以后的 DDL 造成的 Schema 变更，无论是在流计算模式还是批计算模式。</p>
+<h2 id="Savepoint-权属"><a href="#Savepoint-权属" class="headerlink" title="Savepoint 权属"></a>Savepoint 权属</h2><p>数据库 Savepoint 属于事务的一部分，其数据主要存储在数据库内部的内存或者日志里，由数据库管理系统控制，不会暴露给用户。相比之下，Flink Savepoint 则开放得多: 我们不仅可以声明 Savepoint 的权属（在 Flink 1.14 及之前版本，Savepoint Owner 只能为用户），还可以将 Savepoint 搬来搬去，甚至对其进行修改或直接生成一个新 Savepoint。</p>
+<p>笔者认为 Flink 与传统数据库截然不同的 Savepoint 管理方式主要有两点原因:</p>
+<ul>
+<li>Flink 支持执行任意用户代码，并且用户代码可以将任意状态信息以任意序列化方式存到 Savepoint 中，这意味着 Flink 并不掌握所有恢复 Savepoint 需要的信息，因此只能将控制权交给用户。</li>
+<li>Flink 并不存储数据（撇开尚不成熟的 Table Store 不谈），通常会依赖外部数据存储，因而外部数据存储的变更可能导致 Savepoint 的不兼容，导致 Flink 不能做到 Savepoint 的 Self Contained。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Flink Savepoint 与传统数据库的 Savepoint 在功能定位十分接近，都用于对状态进行快照，而且与 Savepoint 相关的概念都大同小异。然而，在 Savepoint 特性和实现细节方面却大相径庭，其中主要体现在 Savepoint 度量（基于数据或基于操作）、DDL 支持、Savepoint 权属三个方面。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://en.wikipedia.org/wiki/Savepoint" target="_blank" rel="external">Wikipidia: Savepoint</a><br>[2] <a href="https://en.wikipedia.org/wiki/Nested_transaction" target="_blank" rel="external">Wikipidia: Nested Transaction</a><br>[3] <a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-222%3A+Support+full+job+lifecycle+statements+in+SQL+client" target="_blank" rel="external">FLIP-222: Support full job lifecycle statements in SQL client</a>  </p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2022/06/13/Flink-Savepoint-vs-数据库-Savepoint/" title="Flink Savepoint vs 数据库 Savepoint">2022/06/13/Flink-Savepoint-vs-数据库-Savepoint/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/04/07/当谈论-Immutability-的时候，我们在谈论什么/" rel="next" title="当谈论 Immutability 的时候，我们在谈论什么">
+                <i class="fa fa-chevron-left"></i> 当谈论 Immutability 的时候，我们在谈论什么
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">73</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">43</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Savepoint-功能"><span class="nav-number">1.</span> <span class="nav-text">Savepoint 功能</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Savepoint-度量"><span class="nav-number">2.</span> <span class="nav-text">Savepoint 度量</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#DDL-支持"><span class="nav-number">3.</span> <span class="nav-text">DDL 支持</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Savepoint-权属"><span class="nav-number">4.</span> <span class="nav-text">Savepoint 权属</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2022/06/13/Flink-Savepoint-vs-数据库-Savepoint/';
+          this.page.identifier = '2022/06/13/Flink-Savepoint-vs-数据库-Savepoint/';
+          this.page.title = 'Flink Savepoint vs 数据库 Savepoint';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
