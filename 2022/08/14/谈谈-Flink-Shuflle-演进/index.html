@@ -92,12 +92,12 @@
 
 
 
-<meta name="description" content="谈谈 Flink Shuflle 演进在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在">
+<meta name="description" content="在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在于 Shuffle。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="谈谈 Flink Shuflle 演进">
 <meta property="og:url" content="https://link3280.github.io/2022/08/14/谈谈-Flink-Shuflle-演进/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
-<meta property="og:description" content="谈谈 Flink Shuflle 演进在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在">
+<meta property="og:description" content="在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在于 Shuffle。">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img1.flink-logical-edges.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img2.flink-shuffle-implement.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img3.pipeline_shuffle.gif">
@@ -105,10 +105,10 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img5.sort-shuffle.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img6.hybird-shuffle.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img7.word-count-shuffle.png">
-<meta property="og:updated_time" content="2022-08-14T14:27:41.877Z">
+<meta property="og:updated_time" content="2022-08-14T14:36:17.145Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="谈谈 Flink Shuflle 演进">
-<meta name="twitter:description" content="谈谈 Flink Shuflle 演进在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在">
+<meta name="twitter:description" content="在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在于 Shuffle。">
 <meta name="twitter:image" content="https://link3280.github.io/img/flink-shuffle/img1.flink-logical-edges.png">
 
 
@@ -381,7 +381,7 @@
       
 
       
-        <h1 id="谈谈-Flink-Shuflle-演进"><a href="#谈谈-Flink-Shuflle-演进" class="headerlink" title="谈谈 Flink Shuflle 演进"></a>谈谈 Flink Shuflle 演进</h1><p>在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在于 Shuffle。</p>
+        <p>在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在于 Shuffle。</p>
 <a id="more"></a>
 <p>众所周知，分布式算法的基础在于分治，而分治的三步为: 分解（Divide）、解决（Conquer）、合并（Combine），其中最为核心的分解与合并两步都与 Shuffle 密不可分。除了数据同步之类的完全并行（Embarrassingly parallel）作业，大多数分布式计算作业都会包含一到多轮 Shuffle，而这些 Shuffle 的本质则是将上一轮计算的中间结果按照下一轮计算需要的方式重新组织。例如，在著名的 WordCount 案例中，在 Map 阶段的数据是随机分布的，而在 Shuffle 过后则是按照单词为分区 Key 来分布。而剩下的完全并行作业，本质上并不是在处理一个需要分治的大问题，而是处理重复的大量小问题，这样的需求其实跟普通的 Web 服务是类似的，若不考虑效率，完全可以用微服务框架来实现。</p>
 <p>如果说数据分治的核心在于 Shuffle，那么计算分治的核心则在于调度器，两者相辅相成，比如流式调度和批式调度会搭配不同的 Shuffle。对于实践流批一体的 Flink 而言，Shuffle 面临的问题比其他计算引擎更加复杂，因此 Flink 做了更多的优化，包括流计算的 Pipeline Shuffle、批计算的 Blocking Shuffle 以及结合二者特点的 Hybird Shuffle。</p>
@@ -393,20 +393,19 @@
 <p>面对 Pipeline Shuffle 的需求，最容易想到的实现方式便是上游 Subtask 所在 TaskManager 直接通过网络推给下游 Subtask 的 TaskManager。事实上，Flink 也的确是这么做的。Flink 在 TaskManager 里内嵌了基于 Netty 的 Shuffle Service，计算得出的中间数据会存到 TaskManager 的缓存池中，由 Netty 去定时轮询发送给下游。</p>
 <p><center><p><img src="/img/flink-shuffle/img3.pipeline_shuffle.gif" alt="图3. 内置 Netty Shuffle" title="图3. 内置 Netty Shuffle"></p></center></p><p></p>
 <p>Pipeline Shuffle 实现上有很多值得研究的地方，其中最重要的是 Flink 1.5 版本引入的 Credit-Based 流控机制。简单来说，Credit-Based 流控实现了类似 TCP 滑动窗口的机制，让上游 Subtask 依据下游 Subtask 的空闲 buffer（Credit）来发送数据，避免多个 Subtask 共用的一条 TCP 链接因为其中一个 Subtask 被阻塞。感兴趣的读者推荐阅读《批流统一计算引擎的动力源泉—Shuffle机制的重构与优化》这篇博客[11]。</p>
-<h2 id="批计算的-Blocking-Shuffle"><a href="#批计算的-Blocking-Shuffle" class="headerlink" title="批计算的 Blocking Shuffle"></a>批计算的 Blocking Shuffle</h2><p>批计算的上下游 Subtask 通常不会同时调度起来，所以上游产出数据首先需要落盘存储，等下游调度起来再去读取，这种方式被称为 Blocking Shuffle。自Flink 开始定位为流批一体计算引擎后，社区便持续对 Flink 批计算的 Blocking Shuffle 进行改良。</p>
+<h2 id="批计算的-Blocking-Shuffle"><a href="#批计算的-Blocking-Shuffle" class="headerlink" title="批计算的 Blocking Shuffle"></a>批计算的 Blocking Shuffle</h2><p>批计算的上下游 Subtask 通常不会同时调度起来，所以上游产出数据首先需要落盘存储，等下游调度起来再去读取，这种方式被称为 Blocking Shuffle。自 Flink 开始定位为流批一体计算引擎后，社区便持续对 Flink 批计算的 Blocking Shuffle 进行改良。</p>
 <p>首先是 Flink 1.9 将 Shuffle Service 与计算解耦，改为插件化的架构（见 FLIP-31[31]）。在此之前，Shuffle Service 作为 TaskManager 职责之一，绑定使用 TaskManager 内置的 Netty Shuffle Service。Netty Shuffle Service 在 Pipeline Shuffle 的场景下会直接通过 TCP 流式发送数据，而在 Blocking Shuffle 的场景下则会先写本地文件，再等下游 Subtask 拉取。然而，后一种情况会导致问题是，上游已经结束的 Subtask 想要释放 TM 的资源，必须先等下游 Subtask 被调度起来并拉完数据，这会造成资源的浪费甚至死锁。更加重要的是，在某些批计算场景下（比如交互式查询），同一批中间数据可能会被消费多次，这是 TaskManager 兼任的 Shuffle Service 无法满足的。</p>
 <p>熟悉 Spark 的读者可能会想起 Spark 的 ESS (External Shuffle Service) 和 RSS (Remote Shuffle Service)。前者支持 Spark Executor 本地部署 Shuffle Service，比如部署在 YARN NodeManager 里的 YARN Shuffle Service，而后者支持在远端部署 Shuffle Service，比如阿里的 Aliyun RSS[12]、腾讯刚贡献给 Apache 的 Uniffle（原名 Firestorm）[13]。Flink 参考Spark 的经验，在 FLIP-31 中同时考虑了 ESS 和 RSS 的需求，为后续迭代奠定了良好基础。</p>
 <p>其次，Flink 1.12、1.13 引入并完善了 Blocking Shuffle 的 Sort-Merge 实现（见 FLIP-148[4]）。Blocking Shuffle 有 Hash Shuffle 和 Sort-Merge Shuffle 两种常见策略。在此之前，Flink 只支持比较简单的 Hash Shuffle，而缺少性能更好更适合生产使用的 Sort-Merge Shuffle。</p>
 <p>简单而言，Hash Shuffle 是将数据按照下游每个消费者一个文件的形式组织，当并行度高时会产生大量的文件，容易耗光操作系统的文件描述符，并产生大量随机 IO 对 HDD 磁盘不友好，此外每个文件需要一个独立 Buffer 占内存过多。</p>
 <p><center><p><img src="/img/flink-shuffle/img4.hash-shuffle.png" alt="图4. Hash Shuffle" title="图4. Hash Shuffle"></p></center></p><p></p>
 <p>相比之下，Sort-Merge Shuffle 是将上游所有的结果写入同一个文件，文件内部再按照下游消费者的 ID 进行排序并维护索引，下游有读取数据请求时，则按照索引来读取大文件中的某一段。</p>
-<p><img src="" alt="img4.hash-shuffle-vs-sort-shuffle"></p>
 <p><center><p><img src="/img/flink-shuffle/img5.sort-shuffle.png" alt="图5. Sort Shuffle" title="图5. Sort Shuffle"></p></center></p><p></p>
 <p>参考 Spark，Spark 在 1.1 版本引入 Sort-Merge Shuffle，并在 1.2 版本用其替代 Hase Shuffle，成为默认的 Shuffle 策略。说句题外话，一方面 Spark 1.1 2014 年发布，而 Flink 1.12 2020 年发布，Flink 在批计算落后于 Spark 6 年，而另一方面，Spark 今年（2022）新宣布的流计算 ProjectLightspeed（Structured Streaming 升级版）[14]要做的特性基本上是 Flink 5 年前已经实现的，可谓有趣的对称。Flink 在批计算上落后于 Spark，正如同 Spark 在流计算上落后于 Flink。</p>
 <h2 id="批场景下流批一体的-Hybrid-Shuffle"><a href="#批场景下流批一体的-Hybrid-Shuffle" class="headerlink" title="批场景下流批一体的 Hybrid Shuffle"></a>批场景下流批一体的 Hybrid Shuffle</h2><p>如上文所讲，流计算用 Pipeline Shuffle，批计算用 Blocking Shuffle，那么流批一体用什么 Shuffle 呢？大家很容易联系到本节要讨论的 Hybrid Shuffle，但遗憾的是这句话大概只对一半，因为目前的 Hybrid Shuffle 只针对批场景有效。</p>
 <p>众所周知，Flink 遵循 “批是流的特殊案例” 的流批一体理念，因而 Flink 中的批计算是能以流计算的方式去跑的。然而，大多数情况下我们不会这么做，因为批场景有额外的特点能让我们进行优化，比如借助 Blocking Shuffle 可以解耦上下游，让它们无需同时运行，相当于用时间换空间，让作业资源门槛比 Pipeline Shuffle 更低。这点也体现在 Flink 的配置上: Flink 的批作业可以通过 <code>execution.batch-shuffle-mode</code> 指定 Shuffle 模式，默认为 Blocking 模式（其余模式还有 Pipelined 和 Hybird）。</p>
 <p>Blocking Shuffle 带来的一个限制是排斥上下游同时运行，因为上游计算结束之前，下游是没办法访问到其不完整的结果数据的，即使调度下游 Subtask 也只会让其空跑。这点在批计算的角度看来很正常，但对于流批一体的 Flink 而言其实是有优化空间的。设想如果在执行上游作业时，集群有空余资源能跑下游作业，那么我们是不是可以尽量 fallback 回 Pipeline Shuffle，用空间换时间，让作业更快完成？</p>
-<p>基于这个思路，Flink 社区在 FLIP-235 [8] 中提出了 Hybird Shuffle。Hybird Shuffle 支持以内存（Pipeline Shuffle 风格）或文件（Blocking Shuffle 风格）的方式存储上游产出的结果数据，原则是优先内存，内存满了后 spill 到文件（见下图）。无论是在内存或者文件中，所有数据在产出后即对下游可见，因此可以同时支持流式的消费（Pipeline Shuffle 风格）或批式的消费（Blocking Shuffle 风格）。</p>
+<p>基于这个思路，Flink 社区在 FLIP-235 [8] 中提出了 Hybird Shuffle。Hybird Shuffle 支持以内存（Pipeline Shuffle 风格）或文件（Blocking Shuffle 风格）的方式存储上游产出的结果数据，原则是优先内存，内存满了后 spill 到文件（见下图）。无论是在内存或者文件中，所有数据在产出后即对下游可见，因此可以同时支持流式的消费或批式的消费。</p>
 <p><center><p><img src="/img/flink-shuffle/img6.hybird-shuffle.png" alt="图6. Hybird Shuffle 的数据生产和消费" title="图6. Hybird Shuffle 的数据生产和消费"></p></center></p><p></p>
 <p>以 WordCount 作业为例，假设一共有 2 个 Map 和 2 个 Reduce，但现在计算资源只有 3 个 slot，采用不同的 Shuffle 有以下效果:</p>
 <ul>
@@ -665,7 +664,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#谈谈-Flink-Shuflle-演进"><span class="nav-number">1.</span> <span class="nav-text">谈谈 Flink Shuflle 演进</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#流计算的-Pipeline-Shuffle"><span class="nav-number">1.1.</span> <span class="nav-text">流计算的 Pipeline Shuffle</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#批计算的-Blocking-Shuffle"><span class="nav-number">1.2.</span> <span class="nav-text">批计算的 Blocking Shuffle</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#批场景下流批一体的-Hybrid-Shuffle"><span class="nav-number">1.3.</span> <span class="nav-text">批场景下流批一体的 Hybrid Shuffle</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">1.4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">1.5.</span> <span class="nav-text">参考</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#流计算的-Pipeline-Shuffle"><span class="nav-number">1.</span> <span class="nav-text">流计算的 Pipeline Shuffle</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#批计算的-Blocking-Shuffle"><span class="nav-number">2.</span> <span class="nav-text">批计算的 Blocking Shuffle</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#批场景下流批一体的-Hybrid-Shuffle"><span class="nav-number">3.</span> <span class="nav-text">批场景下流批一体的 Hybrid Shuffle</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
             
 
           </div>
