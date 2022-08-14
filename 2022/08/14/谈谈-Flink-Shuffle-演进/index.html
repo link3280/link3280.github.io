@@ -94,8 +94,8 @@
 
 <meta name="description" content="在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在于 Shuffle。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="谈谈 Flink Shuflle 演进">
-<meta property="og:url" content="https://link3280.github.io/2022/08/14/谈谈-Flink-Shuflle-演进/index.html">
+<meta property="og:title" content="谈谈 Flink Shuffle 演进">
+<meta property="og:url" content="https://link3280.github.io/2022/08/14/谈谈-Flink-Shuffle-演进/index.html">
 <meta property="og:site_name" content="时间与精神的小屋">
 <meta property="og:description" content="在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在于 Shuffle。">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img1.flink-logical-edges.png">
@@ -105,9 +105,9 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img5.sort-shuffle.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img6.hybird-shuffle.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img7.word-count-shuffle.png">
-<meta property="og:updated_time" content="2022-08-14T14:36:17.145Z">
+<meta property="og:updated_time" content="2022-08-14T14:51:29.038Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="谈谈 Flink Shuflle 演进">
+<meta name="twitter:title" content="谈谈 Flink Shuffle 演进">
 <meta name="twitter:description" content="在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别正在于 Shuffle。">
 <meta name="twitter:image" content="https://link3280.github.io/img/flink-shuffle/img1.flink-logical-edges.png">
 
@@ -137,7 +137,7 @@
 
 
 
-  <link rel="canonical" href="https://link3280.github.io/2022/08/14/谈谈-Flink-Shuflle-演进/"/>
+  <link rel="canonical" href="https://link3280.github.io/2022/08/14/谈谈-Flink-Shuffle-演进/"/>
 
 
 
@@ -145,7 +145,7 @@
 
 <script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 
-  <title>谈谈 Flink Shuflle 演进 | 时间与精神的小屋</title>
+  <title>谈谈 Flink Shuffle 演进 | 时间与精神的小屋</title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -284,7 +284,7 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2022/08/14/谈谈-Flink-Shuflle-演进/">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2022/08/14/谈谈-Flink-Shuffle-演进/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Paul Lin">
@@ -301,7 +301,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">谈谈 Flink Shuflle 演进</h2>
+          <h2 class="post-title" itemprop="name headline">谈谈 Flink Shuffle 演进</h2>
         
 
         <div class="post-meta">
@@ -354,9 +354,9 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2022/08/14/谈谈-Flink-Shuflle-演进/#comments" itemprop="discussionUrl">
+                <a href="/2022/08/14/谈谈-Flink-Shuffle-演进/#comments" itemprop="discussionUrl">
                   <span class="post-comments-count disqus-comment-count"
-                        data-disqus-identifier="2022/08/14/谈谈-Flink-Shuflle-演进/" itemprop="commentCount"></span>
+                        data-disqus-identifier="2022/08/14/谈谈-Flink-Shuffle-演进/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -467,7 +467,7 @@
         </li>
         <li class="post-copyright-link">
           <strong>本文链接：</strong>
-          <a href="/2022/08/14/谈谈-Flink-Shuflle-演进/" title="谈谈 Flink Shuflle 演进">2022/08/14/谈谈-Flink-Shuflle-演进/</a>
+          <a href="/2022/08/14/谈谈-Flink-Shuffle-演进/" title="谈谈 Flink Shuffle 演进">2022/08/14/谈谈-Flink-Shuffle-演进/</a>
         </li>
         <li class="post-copyright-license">
           <strong>版权声明： </strong>
@@ -796,9 +796,9 @@
     
       <script type="text/javascript">
         var disqus_config = function () {
-          this.page.url = 'https://link3280.github.io/2022/08/14/谈谈-Flink-Shuflle-演进/';
-          this.page.identifier = '2022/08/14/谈谈-Flink-Shuflle-演进/';
-          this.page.title = '谈谈 Flink Shuflle 演进';
+          this.page.url = 'https://link3280.github.io/2022/08/14/谈谈-Flink-Shuffle-演进/';
+          this.page.identifier = '2022/08/14/谈谈-Flink-Shuffle-演进/';
+          this.page.title = '谈谈 Flink Shuffle 演进';
         };
         var d = document, s = d.createElement('script');
         s.src = 'https://whitewood.disqus.com/embed.js';
