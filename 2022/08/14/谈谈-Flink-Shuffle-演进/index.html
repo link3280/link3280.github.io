@@ -105,7 +105,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img5.sort-shuffle.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img6.hybird-shuffle.png">
 <meta property="og:image" content="https://link3280.github.io/img/flink-shuffle/img7.word-count-shuffle.png">
-<meta property="og:updated_time" content="2022-08-15T12:58:05.281Z">
+<meta property="og:updated_time" content="2022-08-15T13:04:06.245Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="谈谈 Flink Shuffle 演进">
 <meta name="twitter:description" content="在分布式计算中，Shuffle 是非常关键但常常容易被忽视的一环。比如著名的 MapReduce 的命名跳过 Shuffle ，只包含其前后的 Map 跟 Reduce。背后原因一方面是 Shuffle 是底层框架在做的事情，用户基本不会感知到其存在，另一方面是 Shuffle 听起来似乎是比较边缘的基础服务。然而，笔者认为大数据计算与在线服务最基础的区别之一正在于 Shuffle。">
@@ -385,7 +385,7 @@
 <a id="more"></a>
 <p>众所周知，分布式算法的基础在于分治，而分治的三步为: 分解（Divide）、解决（Conquer）、合并（Combine），其中最为核心的分解与合并两步都与 Shuffle 密不可分。除了数据同步之类的完全并行（Embarrassingly Parallel）作业，大多数分布式计算作业都会包含一到多轮 Shuffle，而这些 Shuffle 的本质则是将上一轮计算的中间结果按照下一轮计算需要的方式重新组织。例如，在著名的 WordCount 案例中，在 Map 阶段的数据是随机分布的，而在 Shuffle 过后则是按照单词为分区 Key 来分布。而剩余的完全并行作业，本质上并不是在处理一个需要分治的大问题，而是处理重复的大量小问题，这样的需求其实跟普通的 Web 服务是类似的，若不考虑效率，完全可以用微服务框架来实现。</p>
 <p>如果说数据分治的核心在于 Shuffle，那么计算分治的核心则在于调度器，两者相辅相成，比如流式调度和批式调度会搭配不同的 Shuffle。对于实践流批一体的 Flink 而言，Shuffle 面临的问题比其他计算引擎更加复杂，因此 Flink 做了更多的优化，包括流计算的 Pipelined Shuffle、批计算的 Blocking Shuffle 以及结合二者特点的 Hybird Shuffle。</p>
-<h2 id="流计算的-Pipelined-Shuffle"><a href="#流计算的-Pipelined-Shuffle" class="headerlink" title="流计算的 Pipelined Shuffle"></a>流计算的 Pipelined Shuffle</h2><p>相比起 MapReduce 和 Spark 等批计算引擎，Flink 流计算的 Shuffle 相对简单，主要原因是所有 Task 同时在运行，上下游 Task 可以通过网络流式地传输中间结果，不需要落盘，这种 Shuffle 被称为 Pipelined Shuffle。</p>
+<h2 id="流计算的-Pipelined-Shuffle"><a href="#流计算的-Pipelined-Shuffle" class="headerlink" title="流计算的 Pipelined Shuffle"></a>流计算的 Pipelined Shuffle</h2><p>Flink 流计算的 Shuffle 相对简单，主要原因是所有 Task 同时在运行，上下游 Task 可以通过网络流式地传输中间结果，不需要落盘，这种 Shuffle 被称为 Pipelined Shuffle。</p>
 <p>相信不少读者都接触过 Flink DAG 的边类型。当我们在 DAG 构建中使用 Partition （将数据分区）相关的操作，比如 DataStream 的 <code>keyBy</code> 或 <code>rescale</code>、SQL 中的 <code>Group By</code>，Flink 会引入一轮 Shuffle，体现在可视化的 DAG 上就是上下游划分到不同的两个节点，两者以一条边相连。边的类型有 <code>HASH</code>、<code>BROADCAST</code>、<code>REBALANCE</code> 等等（见下图）。</p>
 <p><center><p><img src="/img/flink-shuffle/img1.flink-logical-edges.png" alt="图1. Flink DAG 的边" title="图1. Flink DAG 的边"></p></center></p><p></p>
 <p>尽管逻辑上的 Partition 有多种多样的算法，产生的边五花八门，但它们的区别仅在于产出的结果如何划分给不同的下游 Subtask，所以从底层的 Shuffle 看来要做的事情是一样的：将中间结果提供给不同的下游 Subtask 读取。结合下图用 Flink 的话语讲，Partition 算法决定如何划分出 Subpartition，而 Shuffle 决定如何将 Subpartition 传递给 InputGate。</p>
