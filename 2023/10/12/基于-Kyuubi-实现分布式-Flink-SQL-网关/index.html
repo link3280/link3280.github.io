@@ -1,0 +1,918 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Flink,Kyuubi," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="基于 Kyuubi 实现分布式 Flink SQL 网关Apache Kyuubi [1] 是一个分布式多租户的 SQL 网关，主要功能为接受用户的通过 JDBC/REST 等协议提交的 SQL 并根据多租户隔离策略路由给其管理的 SQL 引擎执行。在最新的 Kyuubi 1.8 版本，Kyuubi Flink Engine 迁移到 Flink SQL Gateway（下简称 FSG） API 之">
+<meta property="og:type" content="article">
+<meta property="og:title" content="基于 Kyuubi 实现分布式 Flink SQL 网关">
+<meta property="og:url" content="https://link3280.github.io/2023/10/12/基于-Kyuubi-实现分布式-Flink-SQL-网关/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="基于 Kyuubi 实现分布式 Flink SQL 网关Apache Kyuubi [1] 是一个分布式多租户的 SQL 网关，主要功能为接受用户的通过 JDBC/REST 等协议提交的 SQL 并根据多租户隔离策略路由给其管理的 SQL 引擎执行。在最新的 Kyuubi 1.8 版本，Kyuubi Flink Engine 迁移到 Flink SQL Gateway（下简称 FSG） API 之">
+<meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img1.kyuubi-architecture.png">
+<meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img2.kyuubi-router.png">
+<meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img3.fsg-app-mode.png">
+<meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img4.kyuubi-app-mode.png">
+<meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img5.kyuubi-web-ui.png">
+<meta property="og:updated_time" content="2023-10-12T14:36:16.574Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="基于 Kyuubi 实现分布式 Flink SQL 网关">
+<meta name="twitter:description" content="基于 Kyuubi 实现分布式 Flink SQL 网关Apache Kyuubi [1] 是一个分布式多租户的 SQL 网关，主要功能为接受用户的通过 JDBC/REST 等协议提交的 SQL 并根据多租户隔离策略路由给其管理的 SQL 引擎执行。在最新的 Kyuubi 1.8 版本，Kyuubi Flink Engine 迁移到 Flink SQL Gateway（下简称 FSG） API 之">
+<meta name="twitter:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img1.kyuubi-architecture.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2023/10/12/基于-Kyuubi-实现分布式-Flink-SQL-网关/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>基于 Kyuubi 实现分布式 Flink SQL 网关 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2023/10/12/基于-Kyuubi-实现分布式-Flink-SQL-网关/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">基于 Kyuubi 实现分布式 Flink SQL 网关</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2023-10-12T21:57:24+08:00">
+                2023-10-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2023/10/12/基于-Kyuubi-实现分布式-Flink-SQL-网关/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2023/10/12/基于-Kyuubi-实现分布式-Flink-SQL-网关/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="基于-Kyuubi-实现分布式-Flink-SQL-网关"><a href="#基于-Kyuubi-实现分布式-Flink-SQL-网关" class="headerlink" title="基于 Kyuubi 实现分布式 Flink SQL 网关"></a>基于 Kyuubi 实现分布式 Flink SQL 网关</h1><p>Apache Kyuubi [1] 是一个分布式多租户的 SQL 网关，主要功能为接受用户的通过 JDBC/REST 等协议提交的 SQL 并根据多租户隔离策略路由给其管理的 SQL 引擎执行。在最新的 Kyuubi 1.8 版本，Kyuubi Flink Engine 迁移到 Flink SQL Gateway（下简称 FSG） API 之上并支持 Flink Application 模式，这让我们能借助 Kyuubi 快速部署生产可用的分布式 Flink SQL 网关。</p>
+<a id="more"></a>
+<h2 id="为什么需要-Kyuubi"><a href="#为什么需要-Kyuubi" class="headerlink" title="为什么需要 Kyuubi"></a>为什么需要 Kyuubi</h2><p>相信不少读者首先会想到的问题是，Flink 已经提供 SQL Gateway，为什么还需要引入 Kyuubi 呢？其实关键答案就在 Kyuubi 描述中: 一是分布式，二是多租户，两者相辅相成。网关负载能力需要水平拓展，那么自然会演进到分布式；在分布式环境下需要保证会话的亲和性，那么自然产生多租户路由的需求；而多租户对隔离性有较高要求，因此反过来也会促进分布式架构的发展。</p>
+<p>SQL Gateway 和 SQL Client 的组合能开箱即用并帮助我们快速跑通 demo，然而在企业生产环境，单个实例往往难以满足用户请求，此外不同业务用户对于 Flink 版本、内置依赖、资源配置常有不同需求，这导致我们不得不维护多个 SQL Gateway 实例。更令人头疼的是，一个实例可能在多个小用户间共享，也可能被一个大用户独占，用户与 SQL Gateway 实例间成多对多的映射关系。除此以外，高可用和负载均衡也是不得不面对的难题。种种问题造成 SQL Gateway 的运维管理成本居高不下，而 Kyuubi 的出现则很大程度地解决了这个问题。</p>
+<h2 id="Kyuubi-基本原理"><a href="#Kyuubi-基本原理" class="headerlink" title="Kyuubi 基本原理"></a>Kyuubi 基本原理</h2><p>Kyuubi 主要有 Client、Server 和 Engine 三个模块。</p>
+<p><img src="/img/kyuubi-flink-engine/img1.kyuubi-architecture.png" alt="图1. Kyuubi 架构"></p>
+<p><center>图1. Kyuubi 架构</center></p>
+
+<ul>
+<li>Kyuubi Client 比较简单，既有 <code>kyuubi-beeline</code> 这样开箱即用的客户端，也可选择 DBeaver 或 JDBC/REST 之类的开放工具或协议。</li>
+<li>Kyuubi Server 是最为核心的模块，主要职责为:<ul>
+<li>为 Client 提供包括 多种协议的 Frontend，接受 Connection。</li>
+<li>管控 Engine 的生命周期并将用户请求路由到合适的 Engine。</li>
+<li>管理  Session / Operation 状态。</li>
+</ul>
+</li>
+<li>Kyuubi Engine 是承载实际计算负载的模块，负责将 Kyuubi Server 的请求翻译为引擎原生操作，支持 Spark / Flink / Trino 等多种计算引擎。</li>
+</ul>
+<p>不少读者可能已经发现，FSG 的定位类似于 Kyuubi 的 Flink Engine （实际上 Kyuubi Flink Engine 的确内嵌一个 FSG），而 Kyuubi Server 这层抽象正是解决分布式和多租户问题的关键。</p>
+<p>Kyuubi 架构中 Client 与 Server、Server 与 Engine 之间的通信均有服务发现和负载均衡，这意味着不同模块之间是非常松耦合的。Client 可以连到任意一个相同 Namespace 的 Kyuubi Server 上，Kyuubi Server 也能访问同个 Namespace 下的任意 Engine。这使得 Kyuubi 能提供优秀的水平拓展能力。</p>
+<p><img src="/img/kyuubi-flink-engine/img2.kyuubi-router.png" alt="图2. Kyuubi 会话路由"></p>
+<p><center>图2. Kyuubi 会话路由</center></p>
+
+<p>如上文所说，多租户请求的路由是 Kyuubi Server 的核心功能。Kyuubi Server 提供不同程度的 Engine Share Level 以满足多租户的隔离需求，同时根据 Engine Share Level 来选取请求对应的 Engine。</p>
+<table>
+<thead>
+<tr>
+<th>Share Level</th>
+<th>描述</th>
+<th>共享性</th>
+<th>隔离性</th>
+<th>适合场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CONNECTION</td>
+<td>每个连接独占一个 Engine</td>
+<td>最低</td>
+<td>最高</td>
+<td>大数据量 ETL 或 Ad-hoc 查询或实时作业</td>
+</tr>
+<tr>
+<td>USER</td>
+<td>每个用户独占一个 Engine</td>
+<td>中等</td>
+<td>中等</td>
+<td>普通 ETL 或者 Ad-hoc 查询或实时作业</td>
+</tr>
+<tr>
+<td>GROUP</td>
+<td>每个用户组共享一个 Engine</td>
+<td>高</td>
+<td>低</td>
+<td>普通 ETL 或者 Ad-hoc 查询或实时作业</td>
+</tr>
+<tr>
+<td>SERVER</td>
+<td>全部用户共享一个 Engine</td>
+<td>最高</td>
+<td>最低</td>
+<td>管理员操作</td>
+</tr>
+</tbody>
+</table>
+<p>此外，Engine 的生命周期由 Server 自动管控。如果当前没有合适的 Engine，那么 Server 就会启动一个 Engine；而如果有 Engine 空闲超过一定时间，Server 也可以自动停止 Engine 来节省资源。</p>
+<h2 id="额外好处"><a href="#额外好处" class="headerlink" title="额外好处"></a>额外好处</h2><p>Kyuubi 除了上述最基础的优势以外，对比直接使用 FSG 还会有额外的好处。其中有因为开发进度不同而导致的短期差异，也有因为项目定位不同而可能存在的长期差异。</p>
+<h3 id="Application-部署模式"><a href="#Application-部署模式" class="headerlink" title="Application 部署模式"></a>Application 部署模式</h3><p>Kyuubi 在最新的 1.8 版本支持了 Flink on YARN Application 模式，而目前 FSG 的 Application 模式尚在讨论阶段（见 FLIP-316 [2]）。值得关注的是，长期来说两者对于 Application 模式的实现方式并不相同。</p>
+<p>要理解背后的差异，首先简单回顾 Flink SQL 的基础。我们执行一条 Flink SQL 会经历如下几个阶段:</p>
+<ol>
+<li>解析: 用户提交的 SQL 首先会被 Parser 解析为逻辑执行计划</li>
+<li>优化: 逻辑执行计划经过 Planner Optimizer 优化，会生成物理执行计划</li>
+<li>编译: 物理执行计划再通过 Planner CodeGen 代码生成 Java 代码（DataStream Transformation），构建 JobGraph</li>
+<li>执行: 将 JobGraph 提交给 JobManager，后者申请 TaskManager 执行作业</li>
+</ol>
+<p>对于 Flink Session 模式或者 Per-Job 模式而言，前 3 个步骤均在 Flink Client 端的 TableEnvironment 完成，而且编译产出的 JobGraph 可序列化并包含全部作业信息，因此十分适合用于划分 SQL 网关和 Flink 集群的界限。换句话说，网关完成 SQL 解析、优化、编译之后，将 JobGraph 以 REST 或提交到 HDFS/S3 等分布式存储即可。</p>
+<p>然而，Application 模式对架构提出了新挑战。Application 模式下 JobGraph 的构建必须在 JobManager 端进行，这意味着编译也需要在 JobManager 端进行。为此，我们需要将步骤 2 产生的物理执行计划序列化后并上传到 JobManager 端，而这个序列化对象便是 Json Plan [3]。Json Plan 在 Flink 1.14 引入，是 Flink 物理执行计划 ExecNodeGraph 的序列化表示，原本主要是为 Flink SQL 的跨版本升级设计，现在用于 FSG 与 JobManager 的通信也是开箱即用十分方便。而 FSG 支持 Application 模式的议案 FLIP-316 正是基于 Json Plan 来设计。</p>
+<p><img src="/img/kyuubi-flink-engine/img3.fsg-app-mode.png" alt="图3. FSG Application Mode 架构"></p>
+<p><center>图3. FSG Application Mode 架构</center></p>
+
+<p>然而 Json Plan 当前还是有一定的局限性，其中最大的限制是 Json Plan 只支持 Streaming 模式的 INSERT 语句和 STATEMENT SET 语句，这导致 Application 模式暂时无法支持 Batch 模式和  SELECT，限制了数据探索的场景。</p>
+<p><img src="/img/kyuubi-flink-engine/img4.kyuubi-app-mode.png" alt="图4. Kyuubi Application Mode 架构"></p>
+<p><center>图4. Kyuubi Application Mode 架构</center></p>
+
+<p>相对地，Kyuubi Flink Engine 的 Application 模式采用类似 Spark Cluster 模式的架构，直接在 JobManager 端的 TableEnvironment 完成 SQL 的解析、优化、编译和执行，作业信息无需跨进程传递，故不受 Json Plan 的限制。通过 Kyuubi，我们可以像使用 Spark 一样使用 Flink 做任意的数据探索。</p>
+<h3 id="可观测性"><a href="#可观测性" class="headerlink" title="可观测性"></a>可观测性</h3><p>在企业级应用中，可观测性无疑是重要的基础需求。Kyuubi 提供丰富的 Metric 和 Reporter，并且提供内嵌在 Kyuubi Server 的 Web UI，让我们随时掌握网关的负载情况。</p>
+<p><img src="/img/kyuubi-flink-engine/img5.kyuubi-web-ui.png" alt="图5. Kyuubi Web UI"></p>
+<p><center>图5. Kyuubi Web UI</center></p>
+
+<p>在 Metric 方面，Kyuubi Metric 可以分为几大类:</p>
+<ul>
+<li>Connection Metric: 监控不同状态的 Connection 数目</li>
+<li>Operation Metric: 监控不同状态的 Operation 数目以及执行时长</li>
+<li>线程池 Metric: 监控 Kyuubi Server 服务线程池是否充裕</li>
+<li>Engine Metric: 监控不同用户的不同状态的 Engine 数目</li>
+<li>RPC 调用 Metric: 监控 Kyuubi Server 与 Engine 之前不同 RPC 调用的频率及时间</li>
+</ul>
+<p>在 Report 方面，Kyuubi 提供最流行的 Prometheus Reporter 和 JMX Reporter，如果需要基于日志的 Metric 也可选择 SLF4J Reporter、JSON Reporter 或 Console Reporter。</p>
+<h2 id="未来展望"><a href="#未来展望" class="headerlink" title="未来展望"></a>未来展望</h2><p>从 Spark 专用到多引擎支持，Kyuubi 正一步步地往 “SQL Gateway 的标准解决方案” 的目标迈进。而在 Flink Engine 支持上，未来 Kyuubi 将进一步重点补齐 on K8s 和伪装认证能力，完善用户在不同的环境下使用 Flink SQL 体验。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
+<li><a href="https://github.com/apache/kyuubi" target="_blank" rel="external">Apache Kyuubi Github Repo</a>  </li>
+<li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-316%3A+Introduce+SQL+Driver" target="_blank" rel="external">FLIP-316: Introduce SQL Driver](https://cwiki.apache.org/confluence/display/FLINK/FLIP-316%3A+Introduce+SQL+Driver)<em>**</em></a>  </li>
+<li><a href="https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=191336489" target="_blank" rel="external">FLIP-190: Support Version Upgrades for Table API &amp; SQL Programs](https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=191336489)<em>**</em></a>  </li>
+</ol>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2023/10/12/基于-Kyuubi-实现分布式-Flink-SQL-网关/" title="基于 Kyuubi 实现分布式 Flink SQL 网关">2023/10/12/基于-Kyuubi-实现分布式-Flink-SQL-网关/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+            <a href="/tags/Kyuubi/" rel="tag"># Kyuubi</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/04/15/深入理解-Flink-Classloader/" rel="next" title="深入理解 Flink Classloader">
+                <i class="fa fa-chevron-left"></i> 深入理解 Flink Classloader
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#基于-Kyuubi-实现分布式-Flink-SQL-网关"><span class="nav-number">1.</span> <span class="nav-text">基于 Kyuubi 实现分布式 Flink SQL 网关</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么需要-Kyuubi"><span class="nav-number">1.1.</span> <span class="nav-text">为什么需要 Kyuubi</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Kyuubi-基本原理"><span class="nav-number">1.2.</span> <span class="nav-text">Kyuubi 基本原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#额外好处"><span class="nav-number">1.3.</span> <span class="nav-text">额外好处</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Application-部署模式"><span class="nav-number">1.3.1.</span> <span class="nav-text">Application 部署模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#可观测性"><span class="nav-number">1.3.2.</span> <span class="nav-text">可观测性</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#未来展望"><span class="nav-number">1.4.</span> <span class="nav-text">未来展望</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">1.5.</span> <span class="nav-text">参考</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2023/10/12/基于-Kyuubi-实现分布式-Flink-SQL-网关/';
+          this.page.identifier = '2023/10/12/基于-Kyuubi-实现分布式-Flink-SQL-网关/';
+          this.page.title = '基于 Kyuubi 实现分布式 Flink SQL 网关';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
