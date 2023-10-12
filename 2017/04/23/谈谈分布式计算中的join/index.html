@@ -1,0 +1,839 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="MapReduce,Hive,HBase," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="Join操作是数据处理中必不可少的一部分，传统关系型数据库经历多年对高效率join的研究和技术沉淀，已经非常成熟。然而在分布式环境下，数据存在不同程度的异构并缺乏索引等机制，使得传统的join优化技术难以应用。更重要的join是一个全局操作，一台物理机器需要大量网络IO获取join计算需要的记录，而网络却正是分布式计算最为珍贵的资源。以上种种原因导致分布式join与传统关系型join有着较大的差别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="谈谈分布式计算中的join">
+<meta property="og:url" content="https://link3280.github.io/2017/04/23/谈谈分布式计算中的join/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="Join操作是数据处理中必不可少的一部分，传统关系型数据库经历多年对高效率join的研究和技术沉淀，已经非常成熟。然而在分布式环境下，数据存在不同程度的异构并缺乏索引等机制，使得传统的join优化技术难以应用。更重要的join是一个全局操作，一台物理机器需要大量网络IO获取join计算需要的记录，而网络却正是分布式计算最为珍贵的资源。以上种种原因导致分布式join与传统关系型join有着较大的差别">
+<meta property="og:image" content="https://link3280.github.io/img/reduce_join.png">
+<meta property="og:image" content="https://link3280.github.io/img/map_join.png">
+<meta property="og:image" content="https://link3280.github.io/img/hbase_map_join.png">
+<meta property="og:updated_time" content="2017-12-17T05:20:23.797Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="谈谈分布式计算中的join">
+<meta name="twitter:description" content="Join操作是数据处理中必不可少的一部分，传统关系型数据库经历多年对高效率join的研究和技术沉淀，已经非常成熟。然而在分布式环境下，数据存在不同程度的异构并缺乏索引等机制，使得传统的join优化技术难以应用。更重要的join是一个全局操作，一台物理机器需要大量网络IO获取join计算需要的记录，而网络却正是分布式计算最为珍贵的资源。以上种种原因导致分布式join与传统关系型join有着较大的差别">
+<meta name="twitter:image" content="https://link3280.github.io/img/reduce_join.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/04/23/谈谈分布式计算中的join/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>谈谈分布式计算中的join | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/04/23/谈谈分布式计算中的join/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">谈谈分布式计算中的join</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-23T16:50:11+08:00">
+                2017-04-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/MapReduce/" itemprop="url" rel="index">
+                    <span itemprop="name">MapReduce</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/04/23/谈谈分布式计算中的join/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/04/23/谈谈分布式计算中的join/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Join操作是数据处理中必不可少的一部分，传统关系型数据库经历多年对高效率join的研究和技术沉淀，已经非常成熟。然而在分布式环境下，数据存在不同程度的异构并缺乏索引等机制，使得传统的join优化技术难以应用。更重要的join是一个全局操作，一台物理机器需要大量网络IO获取join计算需要的记录，而网络却正是分布式计算最为珍贵的资源。以上种种原因导致分布式join与传统关系型join有着较大的差别（当然这仅仅是目前的状况，分布式计算也在不断借鉴关系型数据库的经验）。  </p>
+<p>分布式计算中的join大部分基于MapReduce计算模型，根据join操作实现的阶段可以分为reduce join和map join两大类，其余都是在该基础上进行优化。  </p>
+<a id="more"></a>
+<h1 id="Reduce-Join"><a href="#Reduce-Join" class="headerlink" title="Reduce Join"></a>Reduce Join</h1><p>Reduce join是更为通用和常见的join模式，相对地，计算效率会比较一般，毕竟泛化能力和效率总是鱼和熊掌的关系。  </p>
+<p>Reduce join的核心思想是通过shuffle将具有相同join key的记录拉取到同一个reducer，map端只通过partitioner起到一个分类的作用，其他计算都在reduce端完成。不同于一般的MapReduce只有一个输入数据集，reduce join以两个表作为输入。Map端需要分别将数据转换为(joinKey,record)的形式输出，为了在reduce端区分两个表的记录，最好可以在record中加入一个标识字段，这个字段可以在分类完成之后丢弃。  </p>
+<p>下面以连接tbl_user(user_id, user_name)和tbl_tel(user_id, tel)两个表为例：</p>
+<p><img src="/img/reduce_join.png" alt="Reduce Join" title="Reduce Join"></p>
+<p>Reduce join的瓶颈在于需要shuffle传输所有的记录，在数据集很大的情况下这个消耗无疑是巨大的。  </p>
+<h1 id="Map-Join"><a href="#Map-Join" class="headerlink" title="Map Join"></a>Map Join</h1><p>Map join将join操作本地化，效率更高。但适用场景没有reduce join广，要满足两个条件：随机访问一个数据集，同时可以遍历另外一个数据集。</p>
+<p>常见的案例是join一个大表和一个小表，可以直接将小表广播到所有map端，并以哈希表方式加载到内存。在map端即可完成所有的操作，所以是map-only作业，避免了shuffle阶段，大大提高了效率。</p>
+<p><img src="/img/map_join.png" alt="Map Join" title="Map Join"></p>
+<p>使用Map Join要注意的一点衡量广播小表的代价是否值得。在标准情况下，一个map处理一个block的数据，通常是64M或128M。但是如果小表有1G那么大，为了处理64M或128M的数据加载1G额外数据，可能得不偿失。</p>
+<h1 id="HBase-Map-Join"><a href="#HBase-Map-Join" class="headerlink" title="HBase Map Join"></a>HBase Map Join</h1><p>为了随机访问小表，普通的map join的策略是广播小表并加载到map端内存，但在有时广播的成本太高，而且当两个表都是大表时普通map join就有心无力了。那么有没有别的方式呢？答案当然是有，比较好的方案就是将其中一个表存储到HBase中，HBase表的row key自然就是join key了。</p>
+<p><img src="/img/hbase_map_join.png" alt="HBase Map Join" title="HBase Map Join"></p>
+<p>这样相当于为map端提供了统一的随机访问服务，而不要每个map端单独建立一个哈希表。</p>
+<h1 id="Hive-Bucket-Map-Join"><a href="#Hive-Bucket-Map-Join" class="headerlink" title="Hive Bucket Map Join"></a>Hive Bucket Map Join</h1><p>当数据可以提前确定join key时，Hive的bucket map join就可以派上用场了。Join的难点就在于对应key的数据是散乱分布的，要从多个的节点获取，那么如果一开始存储的时候就将两个表的数据按join key分片进行存储，map端的key对应的数据只需要从其他某个或少量几个节点批量获取，效率不就高多了？  </p>
+<p>Hive基于这个想法，在建表的时候支持通过指定clustered by (col_name,xxx ) into number_buckets buckets 关键字进行哈希分区。当两个表的join key都是clustered by的字段时，就可以通过设置参数</p>
+<pre><code>hive.optimize.bucketmapjoin = true
+</code></pre><p>来命令hive执行bucket map join了。  </p>
+<p>这种方式其实本质上和普通的map join是一样的，只不过Hive利用了元数据优化了数据的存储分布，使得每个map的数据都是属于同一个join key，并使得拉数据变为批量操作，减少了网络IO。</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>1.NickDimiduck, Amandeep Khurana. HBase实战[M]. 谢磊, 译. 北京: 人民邮电出版社, 2013.<br>2.张俊林. 大数据日知录: 架构与算法[M]. 北京: 电子工业出版社, 2014.<br>3.<a href="http://www.cnblogs.com/ggjucheng/archive/2013/01/03/2842821.html" target="_blank" rel="external">Hive join详解</a>, cnblogs.<br>4.Edward Capriolo, Dean Warmpler, Jason Ruberglen. Hive编程指南[M]. 曹坤, 译. 北京: 人民邮电出版社, 2013.</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/04/23/谈谈分布式计算中的join/" target="_blank" rel="external">时间与精神的小屋 - 谈谈分布式计算中的join</a></em></font>
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2017/04/23/谈谈分布式计算中的join/" title="谈谈分布式计算中的join">2017/04/23/谈谈分布式计算中的join/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
+          
+            <a href="/tags/Hive/" rel="tag"># Hive</a>
+          
+            <a href="/tags/HBase/" rel="tag"># HBase</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/04/08/MultipleOutputs实现MapReduce多个输出/" rel="next" title="MultipleOutputs实现MapReduce多个输出">
+                <i class="fa fa-chevron-left"></i> MultipleOutputs实现MapReduce多个输出
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/05/06/实时计算与离线计算的区别和联系/" rel="prev" title="实时计算与离线计算的区别和联系">
+                实时计算与离线计算的区别和联系 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Reduce-Join"><span class="nav-number">1.</span> <span class="nav-text">Reduce Join</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Map-Join"><span class="nav-number">2.</span> <span class="nav-text">Map Join</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#HBase-Map-Join"><span class="nav-number">3.</span> <span class="nav-text">HBase Map Join</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Hive-Bucket-Map-Join"><span class="nav-number">4.</span> <span class="nav-text">Hive Bucket Map Join</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2017/04/23/谈谈分布式计算中的join/';
+          this.page.identifier = '2017/04/23/谈谈分布式计算中的join/';
+          this.page.title = '谈谈分布式计算中的join';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

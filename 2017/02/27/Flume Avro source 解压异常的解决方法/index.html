@@ -1,0 +1,812 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大数据,Flume,Bugfix," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="最近接入一个新的日志，需要导入历史数据。数据分析师跟我说的时候我爽快地答应了，不就是ETL么，没想到在调用flume接口上卡了一个星期，今天查flume源码终于才搞定。虽然周末都花费在debug上，不过第一次算是解决了一个jira上的issuse(尽管已经关闭)，还是很开心的啦。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flume Avro source 解压异常的解决方法">
+<meta property="og:url" content="https://link3280.github.io/2017/02/27/Flume Avro source 解压异常的解决方法/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="最近接入一个新的日志，需要导入历史数据。数据分析师跟我说的时候我爽快地答应了，不就是ETL么，没想到在调用flume接口上卡了一个星期，今天查flume源码终于才搞定。虽然周末都花费在debug上，不过第一次算是解决了一个jira上的issuse(尽管已经关闭)，还是很开心的啦。">
+<meta property="og:image" content="https://link3280.github.io/img/flume_avro_error_stacktrace.png">
+<meta property="og:updated_time" content="2017-12-17T05:37:26.342Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flume Avro source 解压异常的解决方法">
+<meta name="twitter:description" content="最近接入一个新的日志，需要导入历史数据。数据分析师跟我说的时候我爽快地答应了，不就是ETL么，没想到在调用flume接口上卡了一个星期，今天查flume源码终于才搞定。虽然周末都花费在debug上，不过第一次算是解决了一个jira上的issuse(尽管已经关闭)，还是很开心的啦。">
+<meta name="twitter:image" content="https://link3280.github.io/img/flume_avro_error_stacktrace.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/02/27/Flume Avro source 解压异常的解决方法/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Flume Avro source 解压异常的解决方法 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/02/27/Flume Avro source 解压异常的解决方法/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flume Avro source 解压异常的解决方法</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-02-27T22:39:18+08:00">
+                2017-02-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flume/" itemprop="url" rel="index">
+                    <span itemprop="name">Flume</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/02/27/Flume Avro source 解压异常的解决方法/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/02/27/Flume Avro source 解压异常的解决方法/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最近接入一个新的日志，需要导入历史数据。数据分析师跟我说的时候我爽快地答应了，不就是ETL么，没想到在调用flume接口上卡了一个星期，今天查flume源码终于才搞定。虽然周末都花费在debug上，不过第一次算是解决了一个jira上的issuse(尽管已经关闭)，还是很开心的啦。  </p>
+<a id="more"></a>
+<p>程序流程是这样的:从一个http server的文件列表下载数据文件，然后逐行ETL，发送至flume的avro source。Flume的版本是1.6.0。我简单实现之后，在发送flume数据时，出现如下错误:</p>
+<p><img src="/img/flume_avro_error_stacktrace.png" alt="服务端异常栈信息" title="服务端异常栈信息"></p>
+<p>显然是netty报出的解压错误。查看flume agent配置，发现的确是配了deflate压缩。如果是source端有压缩选项，sdk应该也有相应的压缩方法。出乎意料的是找遍<a href="flume.apache.org/releases/content/1.6.0/FlumeDeveloperGuide.html">FlumeDeveloperGuide</a>都没有提到deflate压缩。估计是avro比较少用，毕竟它多用于hadoop内部通讯，其它案例好像真没怎么听过。然后RpcClient这个类也并没有设置压缩的方法。</p>
+<p>好吧，既然官方没有提供压缩，那就自己实现。然而使用了 java.util.zip.Deflater 压缩，各种level都尝试过之后，问题依旧。  </p>
+<p>我在测试服另起了一个agent，开启flume debug模式并关闭压缩，发现收到的Avro的数据格式如下:</p>
+<ul>
+<li>未压缩: {“headers”:{}，”body”:{“bytes”:”明文”}}</li>
+<li>压缩:  {“headers”:{}，”body”:{“bytes”:”序列化后的字节数组”}}  </li>
+</ul>
+<p>显然这是先压缩再包装，但估计avro source是先解压再解包，因为解压是在netty实现，而netty肯定是最先接触数据的。所以想要自己实现压缩，不能只压缩bytes里面的内容，而是要压缩完整的一条数据。这样的话就没法在sdk的框架之内实现这个压缩了。  </p>
+<p>于是我决定上google求救，很快就给我搜到了一个与我情况相同的case，就是我前面提到的<a href="https://issues.apache.org/jira/browse/FLUME-2370" target="_blank" rel="external">Flume-2370</a>，可惜的是当时并没有解决方案，这个issue也不了了之。其中提到</p>
+<blockquote>
+<p> I found if I changed ‘deflate’ for ‘gzip’ it works。</p>
+</blockquote>
+<p>其实只是没有启用压缩，因为avro source只支持deflate，gzip是无效参数。</p>
+<p>看来必须查源码才可以解决了。一开始我在flume-ng-core中找AvroSource相关的类，包括ZlibUtil、ZlibDecoder等实现，最大的收获只是-3的返回码对应了DATA_ERROR。后来我转念一想，其实问题不在于source，而在于avro客户端。这么一来思路就清晰了很多，我直奔flume-sdk，找到了 org.apache.flume.api.RpcClientConfigurationConstants，这不就是RpcClient的配置参数么？仔细一看，终于被我找到配置的方法：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">  <span class="comment">/**</span></div><div class="line">   * The following are const for the NettyAvro Client。  To enable compression</div><div class="line">   * and set a compression level</div><div class="line">   */</div><div class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String CONFIG_COMPRESSION_TYPE = <span class="string">"compression-type"</span>;</div><div class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String CONFIG_COMPRESSION_LEVEL = <span class="string">"compression-level"</span>;</div><div class="line">  <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> DEFAULT_COMPRESSION_LEVEL = <span class="number">6</span>;</div><div class="line">`</div></pre></td></tr></table></figure></p>
+<p>再看工厂类RpcClientFactory，getInstance()方法是可以设置properties的，于是我将客户端初始化代码改成如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">Properties props = <span class="keyword">new</span> Properties();</div><div class="line">props.put(<span class="string">"hosts"</span>,<span class="string">"h1"</span>);</div><div class="line">props.put(<span class="string">"hosts.h1"</span>,socket);</div><div class="line">props.put(<span class="string">"compression-type"</span>,<span class="string">"deflate"</span>);</div><div class="line">props.put(<span class="string">"compression-level"</span>,<span class="string">"6"</span>);</div><div class="line">RpcClient client = RpcClientFactory.getInstance(props);</div></pre></td></tr></table></figure></p>
+<p>测试发送，成功！</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/02/27/Flume%20Avro%20source%20解压异常的解决方法/" target="_blank" rel="external">时间与精神的小屋 - Flume Avro source 解压异常的解决方法</a></em></font>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2017/02/27/Flume Avro source 解压异常的解决方法/" title="Flume Avro source 解压异常的解决方法">2017/02/27/Flume Avro source 解压异常的解决方法/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Flume/" rel="tag"># Flume</a>
+          
+            <a href="/tags/Bugfix/" rel="tag"># Bugfix</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/02/18/[译]Spark调优教程中文版/" rel="next" title="[译]Spark调优教程中文版">
+                <i class="fa fa-chevron-left"></i> [译]Spark调优教程中文版
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/03/11/Spark-on-YARN两种部署方式的不同/" rel="prev" title="Spark on YARN两种部署方式的不同">
+                Spark on YARN两种部署方式的不同 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <section class="site-overview sidebar-panel sidebar-panel-active">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2017/02/27/Flume Avro source 解压异常的解决方法/';
+          this.page.identifier = '2017/02/27/Flume Avro source 解压异常的解决方法/';
+          this.page.title = 'Flume Avro source 解压异常的解决方法';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

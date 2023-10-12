@@ -1,0 +1,840 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Spark,YARN," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="作为提交Spark应用的高级接口，SparkContext封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行new SparkContext()命令背后，Spark为执行用户代码做了大量的准备，包括启动BlockManager、HeartbeatReceiver、MetricsSystem等等。不过最为关键的一点还是启动Spark调度器，这点从Spark应用的app">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spark源码学习笔记（三）：Spark-on-YARN调度器初始化">
+<meta property="og:url" content="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="作为提交Spark应用的高级接口，SparkContext封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行new SparkContext()命令背后，Spark为执行用户代码做了大量的准备，包括启动BlockManager、HeartbeatReceiver、MetricsSystem等等。不过最为关键的一点还是启动Spark调度器，这点从Spark应用的app">
+<meta property="og:image" content="https://link3280.github.io/img/yarn-api/Spark-YARN-Cluster.png">
+<meta property="og:image" content="https://link3280.github.io/img/yarn-api/Spark-YARN-Client.png">
+<meta property="og:updated_time" content="2017-12-23T14:59:23.483Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Spark源码学习笔记（三）：Spark-on-YARN调度器初始化">
+<meta name="twitter:description" content="作为提交Spark应用的高级接口，SparkContext封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行new SparkContext()命令背后，Spark为执行用户代码做了大量的准备，包括启动BlockManager、HeartbeatReceiver、MetricsSystem等等。不过最为关键的一点还是启动Spark调度器，这点从Spark应用的app">
+<meta name="twitter:image" content="https://link3280.github.io/img/yarn-api/Spark-YARN-Cluster.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Spark源码学习笔记（三）：Spark-on-YARN调度器初始化 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Spark源码学习笔记（三）：Spark-on-YARN调度器初始化</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-12-17T21:30:09+08:00">
+                2017-12-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>作为提交Spark应用的高级接口，SparkContext封装了分布式计算的绝大部分底层逻辑，API简单易用对用户十分友好。然而在简单的一行<code>new SparkContext()</code>命令背后，Spark为执行用户代码做了大量的准备，包括启动BlockManager、HeartbeatReceiver、MetricsSystem等等。不过最为关键的一点还是启动Spark调度器，这点从Spark应用的applicationId取自TaskScheduler的applicationId便可看出。</p>
+<a id="more"></a>
+<h1 id="调度器初始化入口"><a href="#调度器初始化入口" class="headerlink" title="调度器初始化入口"></a>调度器初始化入口</h1><p>每个应用都从SparkContext的实例化开始，而SparkContext初始化阶段的重要工作之一就是启动SchedulerBackend守护进程。SchedulerBackend作为Driver与Executor的RPC通信接口，应该Driver初始化时启动以便Executor启动后可以向Driver注册自己。同时SchedulerBackend的门面(Facade)，TaskScheduler会被传递给SparkContext的DAGScheduler持有。此后DAGScheduler负责高级的作业(Job)和阶段(Stage)管理，将应用分解到TaskSet级别，交由TaskScheduler完成底层的任务(Task)分发、执行和监控等操作。</p>
+<p>SparkContext创建TaskScheduler部分代码：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line">/**</div><div class="line"> * Create a task scheduler based on a given master URL.</div><div class="line"> * Return a 2-tuple of the scheduler backend and the task scheduler.</div><div class="line"> */</div><div class="line">private def createTaskScheduler(</div><div class="line">    sc: SparkContext,</div><div class="line">    master: String,</div><div class="line">    deployMode: String): (SchedulerBackend, TaskScheduler) = &#123;</div><div class="line">  import SparkMasterRegex._</div><div class="line"></div><div class="line">  master match &#123;</div><div class="line">    //为简单起见，删除了local模式的case。</div><div class="line">    case SPARK_REGEX(sparkUrl) =&gt;</div><div class="line">      val scheduler = new TaskSchedulerImpl(sc)</div><div class="line">      val masterUrls = sparkUrl.split(&quot;,&quot;).map(&quot;spark://&quot; + _)</div><div class="line">      val backend = new StandaloneSchedulerBackend(scheduler, sc, masterUrls)</div><div class="line">      scheduler.initialize(backend)</div><div class="line">      (backend, scheduler)</div><div class="line"></div><div class="line">    case masterUrl =&gt;</div><div class="line">      //通过master url匹配合适的集群管理器并加载该类。</div><div class="line">      //masterUrl即spark-submit的`--master`参数，或SparkConf的setMaster指定的参数。</div><div class="line">      val cm = getClusterManager(masterUrl) match &#123;</div><div class="line">        case Some(clusterMgr) =&gt; clusterMgr</div><div class="line">        case None =&gt; throw new SparkException(&quot;Could not parse Master URL: &apos;&quot; + master + &quot;&apos;&quot;)</div><div class="line">      &#125;</div><div class="line">      try &#123;</div><div class="line">        val scheduler = cm.createTaskScheduler(sc, masterUrl)</div><div class="line">        val backend = cm.createSchedulerBackend(sc, masterUrl, scheduler)</div><div class="line">        //以SchedulerBackend作为初始化TaskScheduler</div><div class="line">        cm.initialize(scheduler, backend)</div><div class="line">        (backend, scheduler)</div><div class="line">      &#125; catch &#123;</div><div class="line">        case se: SparkException =&gt; throw se</div><div class="line">        case NonFatal(e) =&gt;</div><div class="line">          throw new SparkException(&quot;External scheduler cannot be instantiated&quot;, e)</div><div class="line">      &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h1 id="YARN模式下调度器的初始化流程"><a href="#YARN模式下调度器的初始化流程" class="headerlink" title="YARN模式下调度器的初始化流程"></a>YARN模式下调度器的初始化流程</h1><p>官方支持的集群管理器有Standalone、Mesos和YARN三种，分别对应StandaloneSchedulerBackend, MesosCoarseGrainedSchedulerBackend和MesosFineGrainedSchedulerBackend,  YarnClusterSchedulerBackend和YarnClientSchedulerBackend三种调度器（后台）。</p>
+<p>其中和Mesos一样作为外部集群管理器，YARN并没有常驻的Spark的守护进程，所以每个Spark应用需要在初始化期间启动这些守护进程（线程），并在应用结束时销毁他们。因此Spark守护进程需要在YARN的框架内实现，如果对YARN编程不太熟悉可以先阅读董西成的<a href="http://dongxicheng.org/mapreduce-nextgen/how-to-write-an-yarn-applicationmaster/" target="_blank" rel="external">如何编写YARN应用程序</a>。</p>
+<p>Spark-on-YARN有cluster和client两种不同的部署模式，两者区别在<a href="http://www.whitewood.me/2017/03/11/Spark-on-YARN%E4%B8%A4%E7%A7%8D%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F%E7%9A%84%E4%B8%8D%E5%90%8C/" target="_blank" rel="external">之前一篇博客</a>提过，而它们的应用初始化流程区别就是如何启动YarnSchedulerBackend。</p>
+<h2 id="YARN-cluster部署模式"><a href="#YARN-cluster部署模式" class="headerlink" title="YARN cluster部署模式"></a>YARN cluster部署模式</h2><p><img src="/img/yarn-api/Spark-YARN-Cluster.png" alt="YARN cluster模式的应用初始化" title="YARN cluster模式的应用初始化"></p>
+<p>步骤如下：</p>
+<ol>
+<li>Spark通过YARN Client申请application id，提交AM初始化上下文后YARN Client退出。</li>
+<li>RM分配到一个container启动AM。AM初始化后先启动一个独立线程执行Spark Driver，后者通过反射获取并执行用户代码main方法。main方法本身会初始化SparkContext来注册Driver的RPC端口和监控端口，YarnClusterSchedulerBackend会在这个阶段启动。</li>
+<li>等Driver成功启动后，AM启动自己的RPC终端并通过YarnRMClient向RM注册自己，然后不断轮询向RM请求container，并在通过NMClient通知NM在申请到的container上启动Spark Executor，直到executor数目达到预设数目。</li>
+<li>Executor初始化后启动自己的RPC终端，并向Driver注册自己，等待Driver调度。</li>
+</ol>
+<h2 id="YARN-client部署模式"><a href="#YARN-client部署模式" class="headerlink" title="YARN client部署模式"></a>YARN client部署模式</h2><p><img src="/img/yarn-api/Spark-YARN-Client.png" alt="YARN client模式的应用初始化" title="YARN client模式的应用初始化"></p>
+<p>具体步骤如下：</p>
+<ol>
+<li>Spark Submit直接运行用户提交的应用，期间会启动Spark Driver。SparkContext初始化时会启动YarnClientSchedulerBackend，后者通过YARN Client申请application id，提交AM初始化上下文后不断轮询RM获取application最新状态。</li>
+<li>RM分配到一个container启动AM。AM初始化后AM启动自己的RPC终端并通过YarnRMClient向RM注册自己。</li>
+<li>AM不断轮询向RM请求container，并在通过NMClient通知NM在申请到的container上启动Spark Executor，直到executor数目达到预设数目。</li>
+<li>Executor初始化后启动自己的RPC终端，并向Driver注册自己，等待Driver调度。</li>
+</ol>
+<h1 id="后记"><a href="#后记" class="headerlink" title="后记"></a>后记</h1><p>这篇博客其实从今年较早的时候就开始写了，但YARN调度器这部分代码逻辑实在有点复杂，一边要实现YARN的API（花了不少时间去看YARN的协议），一边要完成Spark守护进程的功能。这让我也花了很多时间来整理，不过离深入浅出依然有很大差距。如果有可以改善的地方，希望读者不吝指教。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/" target="_blank" rel="external">时间与精神的小屋 - Spark源码学习笔记（三）：Spark-on-YARN调度器初始化</a></em></font>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/" title="Spark源码学习笔记（三）：Spark-on-YARN调度器初始化">2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
+          
+            <a href="/tags/YARN/" rel="tag"># YARN</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/12/10/Kylin实战（七）：实现维度分桶/" rel="next" title="Kylin实战（七）：实现维度分桶">
+                <i class="fa fa-chevron-left"></i> Kylin实战（七）：实现维度分桶
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/12/24/关于Learned-Indexes的思考/" rel="prev" title="关于Learned Indexes的思考">
+                关于Learned Indexes的思考 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#调度器初始化入口"><span class="nav-number">1.</span> <span class="nav-text">调度器初始化入口</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#YARN模式下调度器的初始化流程"><span class="nav-number">2.</span> <span class="nav-text">YARN模式下调度器的初始化流程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-cluster部署模式"><span class="nav-number">2.1.</span> <span class="nav-text">YARN cluster部署模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN-client部署模式"><span class="nav-number">2.2.</span> <span class="nav-text">YARN client部署模式</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#后记"><span class="nav-number">3.</span> <span class="nav-text">后记</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/';
+          this.page.identifier = '2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/';
+          this.page.title = 'Spark源码学习笔记（三）：Spark-on-YARN调度器初始化';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

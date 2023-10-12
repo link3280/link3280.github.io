@@ -1,0 +1,805 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大数据,Spark," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="平时spark thrift server多用来做探索性的查询，比如验证下数据格式或count一下某天数据数量，都是轻量级的查询，查询效率也比较满意。没想到最近要真正用起来的时候，却遭遇各种瓶颈。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="记一次排查Spark thrift server OOM错误的经历">
+<meta property="og:url" content="https://link3280.github.io/2017/02/05/记一次排查Spark thrift server OOM错误的经历/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="平时spark thrift server多用来做探索性的查询，比如验证下数据格式或count一下某天数据数量，都是轻量级的查询，查询效率也比较满意。没想到最近要真正用起来的时候，却遭遇各种瓶颈。">
+<meta property="og:image" content="https://link3280.github.io/img/spark结果集协议.png">
+<meta property="og:image" content="https://link3280.github.io/img/doinator_tree.png">
+<meta property="og:updated_time" content="2017-12-17T05:39:11.830Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="记一次排查Spark thrift server OOM错误的经历">
+<meta name="twitter:description" content="平时spark thrift server多用来做探索性的查询，比如验证下数据格式或count一下某天数据数量，都是轻量级的查询，查询效率也比较满意。没想到最近要真正用起来的时候，却遭遇各种瓶颈。">
+<meta name="twitter:image" content="https://link3280.github.io/img/spark结果集协议.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/02/05/记一次排查Spark thrift server OOM错误的经历/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>记一次排查Spark thrift server OOM错误的经历 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/02/05/记一次排查Spark thrift server OOM错误的经历/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">记一次排查Spark thrift server OOM错误的经历</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-02-05T22:17:32+08:00">
+                2017-02-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/02/05/记一次排查Spark thrift server OOM错误的经历/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/02/05/记一次排查Spark thrift server OOM错误的经历/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>平时spark thrift server多用来做探索性的查询，比如验证下数据格式或count一下某天数据数量，都是轻量级的查询，查询效率也比较满意。没想到最近要真正用起来的时候，却遭遇各种瓶颈。</p>
+<a id="more"></a>
+<p>前阵子突然有需求需要使用thrift server提供的jdbc接口进行提数，一开始我有点怀疑它能不能撑住，因为Spark基于内存计算，吞吐量肯定比不上MR。所以我先是查了一下表的大小约300M，并不算大。我给Spark thrift server分配了12个executor，每个有2G内存，Driver也有12G内存，感觉完全没有问题。而实际查的时候却出乎意料。查询迟迟不返回结果，看后台log，driver不断在报 java.lang.OutOfMemoryError:GC overhead limit exceeded。再jmap查 Driver的内存，各个分区都在95%以上。卡了一会，整个thrift server就崩溃了。</p>
+<p>一开始我以为是负载太高，但反复提交都是同样情况，而且集群也没有其他用户提交查询。于是我加上 limit 100000，查询就可以正常返回，thrift server 的heap也在合理范围。查询的整个结果集是要汇总到Driver一个节点是没错，但是查300M的数据就撑爆了12G内存未免夸张了吧？</p>
+<p>google搜下，大部分人都建议使用increamental方式，分批返回result set，但并没有解决这个内存消耗问题。我在stack overflow上看到一个question <a href="http://stackoverflow.com/questions/39986827/spark-thrift-server-for-exposing-big-size-file" target="_blank" rel="external">Spark Thrift Server for exposing big size file</a>，和我的情况基本一致，可惜并没有回答。  </p>
+<p>Spark从效率上考虑，是先将结果集缓存到Driver内存，再一并返回给客户端。从stage0的进度可以看到，645个task已经完成将近一半，成功task的结果会发到Driver缓存起来。仔细分析log，第一个OOM错误基本上都是Driver的result-getter线程反序列化task结果时报出来的，于是Driver怎么去缓存这些数据就至关重要了。顺着栈信息找到 org.apache.spark.scheduler.TaskResultGetter，其中的 enqueueSuccessfulTask 函数将逐个收集成功tasks的结果数据，缓存到 org.apache.spark.scheduler.TaskResult 对象中。读取单个task结果数据的源代码如下：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">readExternal</span></span>(in: <span class="type">ObjectInput</span>): <span class="type">Unit</span> = <span class="type">Utils</span>.tryOrIOException &#123;</div><div class="line"></div><div class="line">  <span class="keyword">val</span> blen = in.readInt()</div><div class="line">  <span class="keyword">val</span> byteVal = <span class="keyword">new</span> <span class="type">Array</span>[<span class="type">Byte</span>](blen)</div><div class="line">  in.readFully(byteVal)</div><div class="line">  valueBytes = <span class="type">ByteBuffer</span>.wrap(byteVal)</div><div class="line"></div><div class="line">  <span class="keyword">val</span> numUpdates = in.readInt</div><div class="line">  <span class="keyword">if</span> (numUpdates == <span class="number">0</span>) &#123;</div><div class="line">    accumUpdates = <span class="literal">null</span></div><div class="line">  &#125; <span class="keyword">else</span> &#123;</div><div class="line">    <span class="keyword">val</span> _accumUpdates = mutable.<span class="type">Map</span>[<span class="type">Long</span>, <span class="type">Any</span>]()</div><div class="line">    <span class="keyword">for</span> (i &lt;- <span class="number">0</span> until numUpdates) &#123;</div><div class="line">      _accumUpdates(in.readLong()) = in.readObject()</div><div class="line">    &#125;</div><div class="line">    accumUpdates = _accumUpdates</div><div class="line">  &#125;</div><div class="line">  metrics = in.readObject().asInstanceOf[<span class="type">TaskMetrics</span>]</div><div class="line">  valueObjectDeserialized = <span class="literal">false</span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>从上面可以看出executor往Driver发送数据是一个对象流，协议如下：</p>
+<p><img src="/img/spark结果集协议.png" alt="Alt spark task result传输协议" title="spark task result传输协议"></p>
+<p>前4个字节以整形方式存放结果集的长度，Driver先读取之后按照这个长度申请byte数组，读取整个结果集放到该数组。接着以同样的方式保存累加器数据（如果有的话）。最后读取剩余的字节，也就是监控指标数据（metric）。可以看出spark内存存储还是很紧凑的，并没有浪费内存。  </p>
+<p>于是我决定祭出必杀技，将Driver的内存dump出来分析。因为我开发机只有8G内存，所以我先将Driver调整为2G，再执行查询使其OOM。之前并没有试过分析这么大内存的进程，光是dump就花了40分钟，MAT加载dump文件更是花了1个小时以上，内存吃掉了7.5G，MAT疯狂GC，我吃完饭回来还在跑。不过幸好结果是好的。如下是MAT分析结果的dominator tree:</p>
+<p><img src="/img/doinator_tree.png" alt="Alt Driver dominator_tree" title="Driver dominator_tree"></p>
+<p>可以看到 org.apache.spark.sql.catalyst.InternalRow[][] 这个二维数组吃了1.2G的内存，其中行是succeeded tasks的index，列是每个task结果集中的一行。我初略算了下，每行占2字节，这个分析结果的内存占用是比较合理的。我count一下要查的表，其实有900W行，那么就是要占18G内存，算上反序列化的空间膨胀，应该也只要6G左右的数据，那么为什么我算hive表大小的时候只有300M呢？突然想起平时在HDFS的文件都是lzo压缩的，我看到hive表没有.lzo后缀就以为没有压缩，这肯定是不对的。查一下，hive表果然默认使用了deflate压缩，由于这个表空值比较多，数据比较稀疏，所以压缩率很高，把6G的数据压到了300M。  </p>
+<p>到此为止，OOM问题算是找到原因了。  </p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/02/05/记一次排查Spark%20thrift%20server%20OOM错误的经历/" target="_blank" rel="external">时间与精神的小屋 - 记一次排查Spark thrift server OOM错误的经历</a></em></font>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2017/02/05/记一次排查Spark thrift server OOM错误的经历/" title="记一次排查Spark thrift server OOM错误的经历">2017/02/05/记一次排查Spark thrift server OOM错误的经历/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Spark/" rel="tag"># Spark</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/01/14/从蒙代尔三角到分布式CAP原则/" rel="next" title="从蒙代尔三角到分布式CAP原则">
+                <i class="fa fa-chevron-left"></i> 从蒙代尔三角到分布式CAP原则
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/02/18/[译]Spark调优教程中文版/" rel="prev" title="[译]Spark调优教程中文版">
+                [译]Spark调优教程中文版 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <section class="site-overview sidebar-panel sidebar-panel-active">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2017/02/05/记一次排查Spark thrift server OOM错误的经历/';
+          this.page.identifier = '2017/02/05/记一次排查Spark thrift server OOM错误的经历/';
+          this.page.title = '记一次排查Spark thrift server OOM错误的经历';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

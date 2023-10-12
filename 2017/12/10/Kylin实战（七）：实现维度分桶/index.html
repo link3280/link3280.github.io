@@ -1,0 +1,843 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kylin," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
+这个方案的问题在于太过死板，如果用户突然又想以20为区间">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kylin实战（七）：实现维度分桶">
+<meta property="og:url" content="https://link3280.github.io/2017/12/10/Kylin实战（七）：实现维度分桶/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
+这个方案的问题在于太过死板，如果用户突然又想以20为区间">
+<meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/static_bucket.jpg">
+<meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/dynamic_bucket.jpg">
+<meta property="og:updated_time" content="2018-01-28T03:59:47.208Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kylin实战（七）：实现维度分桶">
+<meta name="twitter:description" content="数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。
+这个方案的问题在于太过死板，如果用户突然又想以20为区间">
+<meta name="twitter:image" content="https://link3280.github.io/img/kylin-in-action/static_bucket.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/12/10/Kylin实战（七）：实现维度分桶/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Kylin实战（七）：实现维度分桶 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/12/10/Kylin实战（七）：实现维度分桶/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Kylin实战（七）：实现维度分桶</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-12-10T16:05:51+08:00">
+                2017-12-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kylin/" itemprop="url" rel="index">
+                    <span itemprop="name">Kylin</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/12/10/Kylin实战（七）：实现维度分桶/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/12/10/Kylin实战（七）：实现维度分桶/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>数据分析实战中经常有对数值类型的维度进行分桶统计的需求，比如将游戏玩家角色等级按照10级一个区间分桶并计算充值金额。对于这种涉及衍生维度的查询需求，Kylin官方给出的解决方案是在ETL阶段生成这个维度。比如加一个名为”等级区间”的维度，在ETL时计算出该记录对应的值（像”0-10”、”10-20），然后在Kylin建模时就可以使用这个列。</p>
+<p>这个方案的问题在于太过死板，如果用户突然又想以20为区间分桶，修改成本就很高。所以我研究了两种out of the box的解决方案，可以在查询的级别上实现分桶，不需要修改Kylin模型。</p>
+<a id="more"></a>
+<p>按照Kylin常规的查询类型，一个查询只能对数据进行一次过滤，即获得一个桶的统计数据，即：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">SELECT level, SUM(payment) FROM tbl_payment WHERE level BETWEEN 0 AND 10 GROUP BY level`;</div></pre></td></tr></table></figure></p>
+<p>如果需要在一个查询结果里面展示多个桶的数据，有静态分桶和动态分桶的两种方法。</p>
+<h2 id="静态分桶"><a href="#静态分桶" class="headerlink" title="静态分桶"></a>静态分桶</h2><p>静态分桶是通过嵌套查询将每个桶的子查询结果拼接到一起，比如:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">SELECT &quot;0-10&quot; AS level_buck, SUM(payment) FROM tbl_payment WHERE level BETWEEN 0 AND 10</div><div class="line">UNION</div><div class="line">SELECT &quot;10-20&quot; AS level_buck, SUM(payment) FROM tbl_payment WHERE level BETWEEN 10 AND 20</div></pre></td></tr></table></figure></p>
+<p>静态分桶是最为基础的分桶方式，优点是分桶自由度较大，桶区间由用户自定义，可以支持字符串类型和日期类型维度的分桶，桶结果的计算在HBase Coprocessor内完成，不会受到limit语句限制。</p>
+<p>Kylin日志的查询分析如下：<br><img src="/img/kylin-in-action/static_bucket.jpg" alt="静态分桶查询分析" title="静态分桶查询分析"></p>
+<p>可以看到<code>need storage aggregation</code>，意味着Coprocessor执行完scan后需要将记录聚合为一个桶结果再返回给Kylin。其中这里limit下推被禁用是因为我实际查询时将桶的区间设为[0, 1000000)，如果区间是如上的[0, 10)谓词下推还是会顺利执行的。</p>
+<p>然而静态分桶也有两个主要的不足之处：</p>
+<ol>
+<li>分桶区间是静态的，需要预先知道分桶维度的值区间，否则可能漏掉不在任意一个桶内的数据，最常见的的情况是漏掉分桶维度为空的记录。</li>
+<li>每个桶对应一个子查询，而每个子查询对应一次Coprocessor的scan，查询时长随桶数线性增长。桶数超过300后的查询时长可能会变得不可接受，除此之外生成的SQL也变得冗长难以维护。</li>
+</ol>
+<h2 id="动态分桶"><a href="#动态分桶" class="headerlink" title="动态分桶"></a>动态分桶</h2><p>动态分桶是基于未分桶的查询结果集上进行的二次计算。听起来有点绕，不过看SQL就很明了：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">SELECT FLOOR(level / 10), SUM(payment) FROM tbl_payment GROUP BY FLOOR(level / 10);</div></pre></td></tr></table></figure></p>
+<p>动态分桶的SQL更加巧妙可以动态计算桶区间，而且由于只需要一次HBase scan效率会高于静态分桶，特别是桶数大于50的情况下。</p>
+<p>Kylin日志的查询分析如下：<br><img src="/img/kylin-in-action/dynamic_bucket.jpg" alt="动态分桶查询分析" title="动态分桶查询分析"></p>
+<p>显然，该查询不需要Coprocessor端的聚合，所以实际上HBase查询的是:<br><code>SELECT level, SUM(payment) FROM tbl_payment GROUP BY level LIMIT 50000;</code><br>该查询返回的结果会在Kylin Server端进行GROUP BY FLOOR(level / 10)的二次聚合得出最终结果。</p>
+<p>然而动态分桶也有两个缺陷：</p>
+<ol>
+<li><p>动态分桶是在Coprocessor之外，也就是将HBase查询结果收集到Kylin Server之后再进行计算的。<br>这样会导致计算结果的条数受到limit语句的限制，HBase可能只会返回部分结果数据，而为了保护Kylin Server和region不受慢查询拖累，通常我们都会带上limit语句。如此一来，动态分桶可能只是的部分数据的统计结果，区分的界限是查询不分桶时结果集大小是否超过limit限制。根本原因是Kylin没有将动态分桶这类表达式的计算作为PostAggregation考虑到limit下推的情况里。</p>
+</li>
+<li><p>由于分桶是通过除法和取整实现的，所以不支持String类型或Date类型的维度分桶。虽然这两种需求不常见，但如果出现了只能通过静态分桶实现。</p>
+</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>静态分桶和动态分桶的本质区别在于分桶操作是发生在HBase Coprocessor还是Kylin Server。虽然目前两种分桶可以满足绝大多数分桶的需求，但是毕竟属于查询级别的操作，从效率上和可维护性上不及原生支持。最好的解决方案是Kylin官方提供SQL分桶函数，比如”bucket(level, 10)”，并在Coprocessor的级别上支持这个函数。如果能顺便支持String类型和Date类型的分桶，那就更好了。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/12/10/Kylin实战（七）：实现维度分桶/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（七）：实现维度分桶</a></em></font>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2017/12/10/Kylin实战（七）：实现维度分桶/" title="Kylin实战（七）：实现维度分桶">2017/12/10/Kylin实战（七）：实现维度分桶/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kylin/" rel="tag"># Kylin</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/11/11/再见，老白/" rel="next" title="再见，老白">
+                <i class="fa fa-chevron-left"></i> 再见，老白
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/12/17/Spark源码学习笔记（三）：Spark-on-YARN调度器初始化/" rel="prev" title="Spark源码学习笔记（三）：Spark-on-YARN调度器初始化">
+                Spark源码学习笔记（三）：Spark-on-YARN调度器初始化 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#静态分桶"><span class="nav-number">1.</span> <span class="nav-text">静态分桶</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#动态分桶"><span class="nav-number">2.</span> <span class="nav-text">动态分桶</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2017/12/10/Kylin实战（七）：实现维度分桶/';
+          this.page.identifier = '2017/12/10/Kylin实战（七）：实现维度分桶/';
+          this.page.title = 'Kylin实战（七）：实现维度分桶';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

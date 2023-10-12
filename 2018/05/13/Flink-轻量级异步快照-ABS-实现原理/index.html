@@ -1,0 +1,859 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大数据,Flink,实时计算," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="准确一次(exactly once)的送达保证是实时计算的关键特性之一，这要求作业从失败恢复后的状态以及管道中的数据流要和失败时一致，通常这是通过定期对作业状态和数据流进行快照实现的。然而这种方式主要有两点不足：首先，快照进行期间常常要暂停数据流的摄入，造成额外延迟和吞吐量下降；其次，快照会过度谨慎地将管道里正在计算的数据也随着状态保存下来，导致快照过于庞大。针对以上两个问题，Apache Fli">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink 轻量级异步快照 ABS 实现原理">
+<meta property="og:url" content="https://link3280.github.io/2018/05/13/Flink-轻量级异步快照-ABS-实现原理/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="准确一次(exactly once)的送达保证是实时计算的关键特性之一，这要求作业从失败恢复后的状态以及管道中的数据流要和失败时一致，通常这是通过定期对作业状态和数据流进行快照实现的。然而这种方式主要有两点不足：首先，快照进行期间常常要暂停数据流的摄入，造成额外延迟和吞吐量下降；其次，快照会过度谨慎地将管道里正在计算的数据也随着状态保存下来，导致快照过于庞大。针对以上两个问题，Apache Fli">
+<meta property="og:image" content="https://link3280.github.io/img/flink/stream-barrier.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink/stream-aligning.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink/cyclic-dataflow.png">
+<meta property="og:updated_time" content="2019-04-14T13:06:00.919Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink 轻量级异步快照 ABS 实现原理">
+<meta name="twitter:description" content="准确一次(exactly once)的送达保证是实时计算的关键特性之一，这要求作业从失败恢复后的状态以及管道中的数据流要和失败时一致，通常这是通过定期对作业状态和数据流进行快照实现的。然而这种方式主要有两点不足：首先，快照进行期间常常要暂停数据流的摄入，造成额外延迟和吞吐量下降；其次，快照会过度谨慎地将管道里正在计算的数据也随着状态保存下来，导致快照过于庞大。针对以上两个问题，Apache Fli">
+<meta name="twitter:image" content="https://link3280.github.io/img/flink/stream-barrier.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2018/05/13/Flink-轻量级异步快照-ABS-实现原理/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Flink 轻量级异步快照 ABS 实现原理 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/05/13/Flink-轻量级异步快照-ABS-实现原理/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink 轻量级异步快照 ABS 实现原理</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-05-13T19:22:12+08:00">
+                2018-05-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/05/13/Flink-轻量级异步快照-ABS-实现原理/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/05/13/Flink-轻量级异步快照-ABS-实现原理/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>准确一次(exactly once)的送达保证是实时计算的关键特性之一，这要求作业从失败恢复后的状态以及管道中的数据流要和失败时一致，通常这是通过定期对作业状态和数据流进行快照实现的。然而这种方式主要有两点不足：首先，快照进行期间常常要暂停数据流的摄入，造成额外延迟和吞吐量下降；其次，快照会过度谨慎地将管道里正在计算的数据也随着状态保存下来，导致快照过于庞大。针对以上两个问题，Apache Flink（下简称 Flink）引入了异步屏障快照（Asynchronous Barrier Snapshot, ABS）。  </p>
+<a id="more"></a>
+<p>异步屏障快照是一种轻量级的快照技术，能以低成本备份 DAG（有向无环图）或 DCG（有向有环图）计算作业的状态，这使得计算作业可以频繁进行快照并且不会对性能产生明显影响。异步屏障快照核心思想是通过屏障消息（barrier）来标记触发快照的时间点和对应的数据，从而将数据流和快照时间解耦以实现异步快照操作，同时也大大降低了对管道数据的依赖（对 DAG 类作业甚至完全不依赖），减小了随之而来的快照大小。下面将逐步分析异步屏障快照的实现原理。</p>
+<h1 id="计算作业模型"><a href="#计算作业模型" class="headerlink" title="计算作业模型"></a>计算作业模型</h1><p>计算作业通常用一个图来表达，即:   </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">G = (T, E)</div></pre></td></tr></table></figure>
+<p>其中，T 为作业的子任务（Flink 中又称 Operator，算子）的集合，即图的节点，E 为子任务间的数据通道的集合，即图的边。</p>
+<p>上述是静态的作业模板，当实际执行时会生成一个作业实例，这可以用一个有状态的图来表示，即:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">G* = (T*, E*)</div></pre></td></tr></table></figure>
+<p>其中，T<em> 为每个算子状态的集合，E</em> 为每个数据通道内的具体数据。  </p>
+<p>因此，对计算作业进行快照备份可以分为对算子状态的备份和对数据通道内数据的备份两部分。其中算子状态最为关键，而数据通道状态只是作为补充，然而数据通道内的数据却通常比算子的状态大得多，会导致快照操作成本很高。那么有没有可能避免备份数据通道的状态呢？答案是肯定的。其中一个可行的方法就是将作业的执行划分为多个阶段（Stage），每个阶段对应一个数据流窗口以及所有相关的计算结果。一个阶段结束时所有算子的状态反应了当前时间点的历史状态，因此可以单独被用于表达作业状态。所以如何划分阶段是重中之重，这就涉及到核心概念屏障（Barrier）。</p>
+<h1 id="屏障"><a href="#屏障" class="headerlink" title="屏障"></a>屏障</h1><p>屏障是一种特殊的内部消息，用于将数据流从时间上切分为多个窗口，每个窗口对应一系列连续的快照中的一个。屏障由 JobManager 定时广播给计算任务所有的 Source，其后伴随数据流一起流至下游。每个 barrier 是属于当前快照的数据与属于下个快照的数据的分割点。</p>
+<p><img src="/img/flink/stream-barrier.png" alt="实时数据流屏障" title="图1.实时数据流屏障"></p>
+<p>如图1所示，每当接收到屏障，算子便会将对当前的状态做一次快照，成功后将屏障以广播形式传给下游。最后屏障会流至作业的 Sink，Sink 接受到屏障后即向 JobManager 确认，后者收到所有 Sink 的确认标志着一个完整快照的生成。快照完成后，当前的快照窗口随之关闭，算子不会再向上游请求早于这个时间的数据，因为这些数据已经流过整个作业，被转化为作业状态的一部分。  </p>
+<p><img src="/img/flink/stream-aligning.png" alt="快照时数据流校准" title="图2.快照时数据流校准"></p>
+<p>其中有种比较特殊的情况是一个算子接收了两个数据流，比如对它们进行 windowed join 的情况（如图2所示），这时屏障会驱使算子对两个数据流进行校准（Aligning）。如图2所示，校准的每个步骤如下:  </p>
+<ul>
+<li>从其中一个上游数据流接收到快照屏障 barrier n 后，算子会暂停对该数据流的处理，直到从另外一个数据流也接收到 barrier n 它才会重新开始处理对应该数据流。这种机制避免了两个数据流的效率不一致，导致算子的快照窗口包含不属于当前窗口的数据。  </li>
+<li>算子暂停对一个数据流的处理并不会阻塞该数据流，而是将数据暂时缓存起来，因为这些数据属于快照 n+1 ，而不是当前的快照 n。</li>
+<li>当另一个数据流的 barrier n 也抵达，算子会将所有正在处理的结果发至下游，随后做快照并发送 barrier n 到下游。</li>
+<li>最后，算子重新开始对所有数据流的处理，当然优先处理的是已经被缓存的数据。</li>
+</ul>
+<h1 id="送达语义"><a href="#送达语义" class="headerlink" title="送达语义"></a>送达语义</h1><p>对多数据流进行校准会导致木桶原理，算子总体的处理效率取决于输入数据流里最慢的那个。通常校准会带来数毫秒的延迟，这在大多数情况下是可以接受的。然而一些对延迟特别敏感的应用可能比起数据的准确性更需要低延迟，因此 Flink 允许用户切换到非校准模式，但是这将会令作业的送达语义由准确一次降级到至少一次。  </p>
+<p>当校准步骤被跳过，即使收到某个输入数据流的 barrier n 算子也会继续工作。这样的话，属于第 n+1 个快照的数据也会被算到第 n 个快照窗口的算子状态里。当使用这个快照进行恢复时，这部分数据便会被重复计算，因为它们已经存在于快照的状态里，但 barrier n 以后的数据还会重流一遍。  </p>
+<p>另外，因为校准只作用于多输入或多输出的算子，对于单个输入/输出数据流的算子，即使用户将送达语义设置为至少一次，实际上还是准确一次。</p>
+<h1 id="异步快照"><a href="#异步快照" class="headerlink" title="异步快照"></a>异步快照</h1><p>上文所述的屏障快照实际上仍是同步的，即在做快照的过程中算子会暂停处理新的数据，每次快照都会引入额外的数据延迟。实际上这是不必要的，快照可以完全交由后台异步实现，而实现这点算子必须可以提供一个状态对象，这个状态对象需要保证随后的修改不会影响当前的状态，比如 RockDB 的 copy-on-write 数据结构。完成这异步快照的对象称为 StateBackend（当然也可以是同步的，取决于具体实现），用户可以使用 Flink 内置的 StateBackend 或自定义。  </p>
+<p>当从输入数据流收到快照屏障，算子开始异步拷贝当前的状态，它会立刻将屏障传至下游，并继续常规的工作。当后台的状态拷贝完成后，算子向 JobManager 确认快照成功。因为异步拷贝存在丢失数据的风险且不能保证顺序，因此作业快照成功的条件也随之改为所有 Sink 确认收到屏障加上所有有状态的算子都成功完成快照。</p>
+<h1 id="状态对象"><a href="#状态对象" class="headerlink" title="状态对象"></a>状态对象</h1><p>如上文所述，作业的状态可以分为算子的状态和数据通道的数据，Flink 将这两者分别称为用户定义状态和系统状态，这有趣地体现了另外一个角度的观点: 从用户角度看，算子的状态是通过用户定义的作业图计算得出，是对用户可见的，而数据通道的缓存数据则处理更低的系统层面，是用户不可见的。  </p>
+<p>由于异步屏障快照技术不依赖于数据通道的缓存状态，在大多数的情况下我们并不需要对系统状态做快照，因此状态对象通常包含以下两者:  </p>
+<ul>
+<li>快照开始时，每个并行数据流 Source 对应的 offset 或 position。  </li>
+<li>每个有状态的算子所对应的持续化状态对象的指针。  </li>
+</ul>
+<p>而对于包含闭环的作业图，即 Cyclic Dataflows，Flink 需要额外对算子的某些数据通道状态做快照。这是因为处于闭环内的算子会多次计算下游回流的数据（作业图内这种边称为回边，back-edges），而恢复时重放数据流并不能恢复流经回边的数据，所以算子计算过的历史回流数据也需要作为快照的一部分保存起来。  </p>
+<p><img src="/img/flink/cyclic-dataflow.png" alt="闭环数据流的快照" title="图3.闭环数据流的快照"></p>
+<p>如图3所示，对 Flink 对闭环数据流的快照处理如下:<br>a) 当前快照窗口打开，正常处理输入数据流。<br>b) 收到来自所有数据流的屏障 n ，算子进行异步快照，在回边上的一个红色小球（循环数据）被保存到快照中。<br>c) 收到来自所有数据流的屏障 n+1 ，算子启动另一次异步快照。此时上个快照窗口的数据已经回流完毕，因此包含的三个红色小球均被保存到快照中。  </p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>Flink 通过 ABS 技术实现轻量级异步快照，大大降低了实时计算的作业快照的成本，这使得实时作业可以更频繁地进行快照。并且在常见的 DAG 作业中，作业缓存的数据将不会被保存到快照中，这意味着作业恢复期间不需要再对缓存数据进行补算，大大减短了故障恢复时间。相信 ABS 技术将会逐渐取代目前相对笨拙的全局作业快照，被更多计算引擎选作快照算法。</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><ol>
+<li><a href="https://arxiv.org/pdf/1506.08603.pdf" target="_blank" rel="external">Lightweight Asynchronous Snapshots for Distributed Dataflows</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.4/internals/stream_checkpointing.html" target="_blank" rel="external">Flink Documentation - Stream Checkpointing</a></li>
+<li><a href="https://www.slideshare.net/sbaltagi/unified-batch-and-realtime-stream-processing-using-apache-flink" target="_blank" rel="external">Unified Batch and Real-Time Stream Processing Using Apache Flink</a></li>
+</ol>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2018/05/13/Flink-轻量级异步快照-ABS-实现原理/" title="Flink 轻量级异步快照 ABS 实现原理">2018/05/13/Flink-轻量级异步快照-ABS-实现原理/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大数据/" rel="tag"># 大数据</a>
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+            <a href="/tags/实时计算/" rel="tag"># 实时计算</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/05/07/The-Dataflow-Model-论文总结/" rel="next" title="The Dataflow Model 论文总结">
+                <i class="fa fa-chevron-left"></i> The Dataflow Model 论文总结
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/06/01/Flink-Watermark-机制浅析/" rel="prev" title="Flink Watermark 机制浅析">
+                Flink Watermark 机制浅析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#计算作业模型"><span class="nav-number">1.</span> <span class="nav-text">计算作业模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#屏障"><span class="nav-number">2.</span> <span class="nav-text">屏障</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#送达语义"><span class="nav-number">3.</span> <span class="nav-text">送达语义</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#异步快照"><span class="nav-number">4.</span> <span class="nav-text">异步快照</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#状态对象"><span class="nav-number">5.</span> <span class="nav-text">状态对象</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">7.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2018/05/13/Flink-轻量级异步快照-ABS-实现原理/';
+          this.page.identifier = '2018/05/13/Flink-轻量级异步快照-ABS-实现原理/';
+          this.page.title = 'Flink 轻量级异步快照 ABS 实现原理';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

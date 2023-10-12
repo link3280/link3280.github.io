@@ -1,0 +1,909 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Flink," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="自 feature freezed 以后经过近一个月的努力，Flink 社区在十一月的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink 1.7 Release 解读">
+<meta property="og:url" content="https://link3280.github.io/2018/12/02/Flink-1-7-Release-解读/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="自 feature freezed 以后经过近一个月的努力，Flink 社区在十一月的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的">
+<meta property="og:image" content="https://link3280.github.io/img/Flink-1.7-release-announcement-blog-1-768x591.png">
+<meta property="og:updated_time" content="2019-04-14T13:03:47.216Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink 1.7 Release 解读">
+<meta name="twitter:description" content="自 feature freezed 以后经过近一个月的努力，Flink 社区在十一月的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的">
+<meta name="twitter:image" content="https://link3280.github.io/img/Flink-1.7-release-announcement-blog-1-768x591.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2018/12/02/Flink-1-7-Release-解读/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Flink 1.7 Release 解读 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/12/02/Flink-1-7-Release-解读/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink 1.7 Release 解读</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-12-02T13:04:43+08:00">
+                2018-12-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/02/Flink-1-7-Release-解读/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/12/02/Flink-1-7-Release-解读/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <center><p><img src="/img/Flink-1.7-release-announcement-blog-1-768x591.png" alt="Flink 1.7 Release"></p></center>
+
+<p>自 feature freezed 以后经过近一个月的努力，Flink 社区在十一月的最后一天终于发布 Flink 1.7.0 版本。该版本处理了 420 个 issue，其中新特性或者改进主要集中在 SQL 和 State 两个模块上，另外从 1.7 开始更多的 API （包括 REST、State 还有正在讨论的 runtime）会考虑版本兼容性，以便用户更重度地依赖 Flink 做上层的开发。</p>
+<a id="more"></a>
+<p>下文将选取一些笔者认为重要的新特性、improvement 和 bugfix 进行解读，详细的改动请参照 release notes<a href="https://issues.apache.org/jira/secure/ReleaseNote.jspa?projectId=12315522&amp;version=12343585" target="_blank" rel="external">1</a>。</p>
+<h2 id="SQL-模块"><a href="#SQL-模块" class="headerlink" title="SQL 模块"></a>SQL 模块</h2><h3 id="CEP-与-SQL-的集成"><a href="#CEP-与-SQL-的集成" class="headerlink" title="CEP 与 SQL 的集成"></a>CEP 与 SQL 的集成</h3><p>CEP (Complex Event Processing) 是 Flink 常见的使用场景，其 DSL 语法与 SQL 类似但仍需要以编程 API 的方式调用。因此在 SQL 里支持 CEP 将大大降低使用门槛，对于用户来说仅需学习一个新的 SQL 函数。在 2016 年年底国际标准组织(IOS)发布了 <a href="https://standards.iso.org/ittf/PubliclyAvailableStandards/c065143_ISO_IEC_TR_19075-5_2016.zip" target="_blank" rel="external">Row Pattern Recognition in SQL [3]</a>，这为在 SQL 中实现 CEP 奠定了基础。 </p>
+<p>Flink CEP 的 SQL 支持是基于 Apache Calcite 的新函数 <code>MATCH_RECOGNIZE</code> 实现的，具体语法见下面的案例。场景是检测某个商品最近一次连续降价的开始时间和结束时间，给定输入为:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">// 输入</div><div class="line">symbol         rowtime         price    tax</div><div class="line">======  ====================  ======= =======</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:00&apos;   12      1</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:01&apos;   17      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:02&apos;   19      1</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:03&apos;   21      3</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:04&apos;   25      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:05&apos;   18      1</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:06&apos;   15      1</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:07&apos;   14      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:08&apos;   24      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:09&apos;   25      2</div><div class="line">&apos;ACME&apos;  &apos;01-Apr-11 10:00:10&apos;   19      1</div></pre></td></tr></table></figure>
+<p>CEP SQL 语句如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">SELECT *</div><div class="line">FROM Ticker</div><div class="line">MATCH_RECOGNIZE (</div><div class="line">    PARTITION BY symbol</div><div class="line">    ORDER BY rowtime</div><div class="line">    MEASURES</div><div class="line">        START_ROW.rowtime AS start_tstamp,</div><div class="line">        LAST(PRICE_DOWN.rowtime) AS bottom_tstamp,</div><div class="line">        LAST(PRICE_UP.rowtime) AS end_tstamp</div><div class="line">    ONE ROW PER MATCH</div><div class="line">    AFTER MATCH SKIP TO LAST PRICE_UP</div><div class="line">    PATTERN (START_ROW PRICE_DOWN+ PRICE_UP)</div><div class="line">    DEFINE</div><div class="line">        PRICE_DOWN AS</div><div class="line">            (LAST(PRICE_DOWN.price, 1) IS NULL AND PRICE_DOWN.price &lt; START_ROW.price) OR</div><div class="line">                PRICE_DOWN.price &lt; LAST(PRICE_DOWN.price, 1),</div><div class="line">        PRICE_UP AS</div><div class="line">            PRICE_UP.price &gt; LAST(PRICE_DOWN.price, 1)</div><div class="line">    ) MR;</div></pre></td></tr></table></figure>
+<p>SQL 语句具体的执行顺序如下: </p>
+<ol>
+<li>依据 <code>PARTITION BY</code> 和 <code>ORDER BY</code> 语句将 <code>MATCH_RECOGNIZE</code> 语句的输入数据按 Key 逻辑切分和排序。</li>
+<li>用 <code>PATTERN</code> 语句定义模式序列，语法与正则表达式一致。</li>
+<li>根据 <code>DEFINE</code> 语句的条件将一行数据映射为模式变量，供后续使用。</li>
+<li>根据 <code>MEASURES</code> 语句将模式变量进行表达式计算转换为最终数据结果。</li>
+</ol>
+<p>上述案例的对应输出如下，分别是(商品标识, 降价开始时间, 最低价时间, 价格回升时间):</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">// 输出</div><div class="line"> symbol       start_tstamp       bottom_tstamp         end_tstamp</div><div class="line">=========  ==================  ==================  ==================</div><div class="line">ACME       01-APR-11 10:00:04  01-APR-11 10:00:07  01-APR-11 10:00:08</div></pre></td></tr></table></figure>
+<h3 id="Streaming-SQL-支持-Temporal-Tables-和-Temporal-Joins"><a href="#Streaming-SQL-支持-Temporal-Tables-和-Temporal-Joins" class="headerlink" title="Streaming SQL 支持 Temporal Tables 和 Temporal Joins"></a>Streaming SQL 支持 Temporal Tables 和 Temporal Joins</h3><p>Temporal Table 是 Flink 1.7 版本引入的新特性，简单来说它是有时间版本的 Streaming Table，可以用于基于时间版本的 Join（Temporal Joins）。</p>
+<p>在之前的版本，Streaming SQL 中任何对 Table 的更新都会触发 Join 结果的更新，这意味着我们无法反映历史版本数据。举个例子，我们需要将订单中的价格按实时汇率转换为本地货币，其中订单数据来自是一个只会追加（append-only）的交易订单数据流，货币汇率是依据实时更新事件的数据流。此前如果直接将两个数据流 join 起来，当汇率进行变化时，之前订单的本地货币金额也会随之更新，这显然是不符合需求的。</p>
+<p>为了实现支持时间版本的 Join，我们需要保存其中一个（维度）表的全部时间版本，然后根据事件数据流的时间决定具体使用哪个一个版本的数值。这体现在 SQL 上新增了一个 UDF API 来定义 Temporal Table，这需要配合 <code>LATERAL TABLE</code> 使用。</p>
+<p>首先需要在 Table API 注册目标表并调用 API 创建针对该表的 UDF:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">// 创建汇率历史表</div><div class="line">DataStream&lt;Tuple2&lt;String, Long&gt;&gt; ratesHistoryStream = env.fromCollection(ratesHistoryData);</div><div class="line">Table ratesHistory = tEnv.fromDataStream(ratesHistoryStream, &quot;r_currency, r_rate, r_proctime.proctime&quot;);</div><div class="line"></div><div class="line">tEnv.registerTable(&quot;RatesHistory&quot;, ratesHistory);</div><div class="line"></div><div class="line">// 创建并注册该表的 temporal table function</div><div class="line">// 将 `r_proctime` 作为时间字段，`r_currency` 作为主键</div><div class="line">TemporalTableFunction rates = ratesHistory.createTemporalTableFunction(&quot;r_proctime&quot;, &quot;r_currency&quot;); // &lt;==== (1)</div><div class="line">tEnv.registerFunction(&quot;Rates&quot;, rates);</div></pre></td></tr></table></figure>
+<p>然后可以在 SQL 里使用 <code>Rates</code> UDF：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">SELECT</div><div class="line">  SUM(o.amount * r.rate) AS amount</div><div class="line">FROM Orders AS o</div><div class="line">LATERAL JOIN (TABLE Rates(o.rowtime)) AS r</div><div class="line">ON r.currency = o.currency;</div></pre></td></tr></table></figure>
+<h3 id="新增-SQL-内置函数"><a href="#新增-SQL-内置函数" class="headerlink" title="新增 SQL 内置函数"></a>新增 SQL 内置函数</h3><table>
+<thead>
+<tr>
+<th>函数名</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TO_BASE64(string)</td>
+<td>Returns the base64-encoded result from string; returns NULL if string is NULL.</td>
+</tr>
+<tr>
+<td>LOG2(numeric)</td>
+<td>Returns the base 2 logarithm of numeric.</td>
+</tr>
+<tr>
+<td>LTRIM(string)</td>
+<td>Returns a string that removes the left whitespaces from string.</td>
+</tr>
+<tr>
+<td>RTRIM(string)</td>
+<td>Returns a string that removes the right whitespaces from string.</td>
+</tr>
+<tr>
+<td>REPEAT(string, integer)</td>
+<td>Returns a string that repeats the base string integer times.</td>
+</tr>
+<tr>
+<td>REPLACE(string1, string2, string3)</td>
+<td>Returns a new string which replaces all the occurrences of string2 with string3 (non-overlapping) from string1.</td>
+</tr>
+<tr>
+<td>COSH(numeric)</td>
+<td>Returns the hyperbolic cosine of NUMERIC.</td>
+</tr>
+<tr>
+<td>SINH(numeric)</td>
+<td>Returns the hyperbolic sine of numeric.</td>
+</tr>
+<tr>
+<td>TANH(numeric)</td>
+<td>Returns the hyperbolic tangent of numeric.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="SQL-Client-优化"><a href="#SQL-Client-优化" class="headerlink" title="SQL Client 优化"></a>SQL Client 优化</h3><p>SQL Client 是 Flink 1.5.0 引入的实验性特性，目的是为用户提供执行探索性查询的 SQL shell，而在 Flink 1.7.0 版本中 SQL Client 得到进一步的改进。Flink SQL 一直缺乏 DDL 的实现（目前正在开发中），定义表是通过启动 SQL Client 时指定的配置文件来完成，因此创建数据源一直是个比较繁琐的操作，尤其是在探索性的场景中，用户一般需要经常变换数据源或者表格式。不过现在虽然仍不支持在 SQL Client Session 中创建表，但可以用视图(View)来缓解这个问题。SQL Client 可以在配置文件或者 Session 中创建虚拟视图。视图会立即被解析和校验，但是”懒执行”的，即知道被调用输出结果的时候才会真正被计算。</p>
+<h2 id="State-模块"><a href="#State-模块" class="headerlink" title="State 模块"></a>State 模块</h2><h3 id="State-Evolution"><a href="#State-Evolution" class="headerlink" title="State Evolution"></a>State Evolution</h3><p>对于 Stateful 作业来说 State 是极为重要的信息，用户一般会期望可以在程序升级、State Schema 变化的情况下，原有的 State 仍可以向后兼容。原先的 State Schema 变化的兼容性需要依赖序列化器本身提供，换句话说我们是不能直接将 State 迁移到一个不兼容的序列号器上的，而是需要经过以下的步骤:</p>
+<ol>
+<li>用旧反序列化器读取 State。</li>
+<li>实现一个“迁移 map 函数”将每个 State 对象转换为新序列化器格式。</li>
+<li>用新序列化器将 State 写回外部存储。</li>
+</ol>
+<p>State Evolution 的目的在于封装整个流程，只暴露简单接口给用户。因为步骤 2 根据不同的序列号器/反序列化器不同而不同，所以目前限制了 State Evolution 只对方便灵活改变 Schema 的 Avro 类型的 State 有效，不过之后会拓展到更多的 State 类型。</p>
+<h3 id="Local-Recovery"><a href="#Local-Recovery" class="headerlink" title="Local Recovery"></a>Local Recovery</h3><p>Flink 1.7.0 加入了 State 的 Local Recovery 特性，即每次 checkpoint 时 TaskManager 都会本地保存一份本地的 State，当作业重启恢复时 Flink 调度器会优先考虑将 Task State 的本地性，这样可以减少网络流量提高恢复的效率，对于并行度较高的作业来说是十分重要的。</p>
+<p>值得注意的是在 1.7.0 版本 Flink 的 failover strategy 因为重大的 bug 被暂时移除了<a href="RestartPipelinedRegionStrategy does not restore state">[6]</a>。因此基本所有的 Flink 都是全局恢复模式，一个 task 的失败会导致全部 task 的重新调度，Local Recovery 在这种场景下可以大大减少恢复时长和减缓网络压力。</p>
+<h3 id="修复-Cancel-with-Savepoint-连接过早关闭的问题"><a href="#修复-Cancel-with-Savepoint-连接过早关闭的问题" class="headerlink" title="修复 Cancel with Savepoint 连接过早关闭的问题"></a>修复 Cancel with Savepoint 连接过早关闭的问题</h3><p>这是由于在 per-job cluster 模式下，cancel with savepoint 会导致 cluster 在取消作业后马上关闭，但这是 Flink Client 可能还处在轮询 savepoint 路径的过程中。这会导致 <code>java.net.ConnectException</code>，并且 Client 端无法得到 savepoint 的路径。这也是我们在做 Flink 作业平台时遇到的一个问题，并在内部分支的 1.5.3 版本和 1.6.0 版本用 <code>closeTimeWait</code> 的方式来简单修复。Flink 1.7 的实现会更加优雅: 用 CompletableFuture 确保 REST Server 在处理完所有的 pending 请求后再关闭，以保证 Client 在 Cluster 关闭前可以轮询到 Savepoint 路径。详情可见 [FLINK-10309]<a href="https://issues.apache.org/jira/browse/FLINK-10309" target="_blank" rel="external">[8]</a></p>
+<h2 id="Connector-模块"><a href="#Connector-模块" class="headerlink" title="Connector 模块"></a>Connector 模块</h2><h3 id="Exactly-once-S3-StreamingFileSink"><a href="#Exactly-once-S3-StreamingFileSink" class="headerlink" title="Exactly-once S3 StreamingFileSink"></a>Exactly-once S3 StreamingFileSink</h3><p>自 Flink 1.6 引入的 StreamingFileSink 现在新增了 S3 的 exactly-once 支持。此前用户需要使用 BucketingFileSink 来写 S3，而 BucketingFileSink 并不支持 Flink FileSystem，因此许多 Flink 层面的支持都没有办法使用，而现在用户可以安全地迁移到 StreamingFileSink 上。</p>
+<h3 id="Kafka-2-0-Connector"><a href="#Kafka-2-0-Connector" class="headerlink" title="Kafka 2.0 Connector"></a>Kafka 2.0 Connector</h3><p>Flink 1.7 将抛弃掉针对每个版本 Kafka 定制 connector 的模式，转而提供新的 Kafka connector (modern Kafka connector) 来支持 1.0+ 版本的 Kafka <a href="https://blog.csdn.net/yanghua_kobe/article/details/83210897" target="_blank" rel="external">[7]</a>。新 connector 由腾讯的工程师团队贡献，对不同版本的 Kafka Client 实现了一个统一的 Facade，可以自动适配不同版本的 Kafka broker。不过由于兼容性问题，1.0 以下版本的 Kafka client 并不在支持列表内，而对应的 connector 也将一直保留。</p>
+<h2 id="Scala-2-12-支持"><a href="#Scala-2-12-支持" class="headerlink" title="Scala 2.12 支持"></a>Scala 2.12 支持</h2><p>Flink 1.7 全面支持了 Scala 2.12，但由于 Scala 2.12 与 Scala 2.11 的语法有不兼容，所以部分 Public API 的一致性会被破坏，迁移到新版本的 Scala 用户要注意。</p>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ol>
+<li><a href="https://issues.apache.org/jira/secure/ReleaseNote.jspa?projectId=12315522&amp;version=12343585" target="_blank" rel="external">Flink 1.7.0 Release Notes</a></li>
+<li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-20%3A+Integration+of+SQL+and+CEP" target="_blank" rel="external">FLIP-20: Integration of SQL and CEP</a></li>
+<li><a href="https://standards.iso.org/ittf/PubliclyAvailableStandards/c065143_ISO_IEC_TR_19075-5_2016.zip" target="_blank" rel="external">Row Pattern Recognition in SQL</a></li>
+<li><a href="https://docs.google.com/document/d/1KaAkPZjWFeu-ffrC9FhYuxE6CIKsatHTTxyrxSBR8Sk/edit#heading=h.96en6mr8aklf" target="_blank" rel="external">Enrichment joins with Table Version Functions in Flink</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.7/dev/stream/state/schema_evolution.html" target="_blank" rel="external">State Schema Evolution</a></li>
+<li><a href="https://issues.apache.org/jira/browse/FLINK-10712" target="_blank" rel="external">FLINK-10712 RestartPipelinedRegionStrategy does not restore state</a></li>
+<li><a href="https://blog.csdn.net/yanghua_kobe/article/details/83210897" target="_blank" rel="external">Flink即将在1.7版本发布全新的Kafka连接器</a></li>
+<li><a href="https://issues.apache.org/jira/browse/FLINK-10309" target="_blank" rel="external">FLINK-10309 Cancel with savepoint fails with java.net.ConnectException when using the per job-mode
+</a></li>
+</ol>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2018/12/02/Flink-1-7-Release-解读/" title="Flink 1.7 Release 解读">2018/12/02/Flink-1-7-Release-解读/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/10/28/Flink-Event-Time-倾斜/" rel="next" title="Flink Event Time 倾斜">
+                <i class="fa fa-chevron-left"></i> Flink Event Time 倾斜
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/" rel="prev" title="Flink on YARN Security 浅析 (YARN Part)">
+                Flink on YARN Security 浅析 (YARN Part) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#SQL-模块"><span class="nav-number">1.</span> <span class="nav-text">SQL 模块</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CEP-与-SQL-的集成"><span class="nav-number">1.1.</span> <span class="nav-text">CEP 与 SQL 的集成</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Streaming-SQL-支持-Temporal-Tables-和-Temporal-Joins"><span class="nav-number">1.2.</span> <span class="nav-text">Streaming SQL 支持 Temporal Tables 和 Temporal Joins</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#新增-SQL-内置函数"><span class="nav-number">1.3.</span> <span class="nav-text">新增 SQL 内置函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SQL-Client-优化"><span class="nav-number">1.4.</span> <span class="nav-text">SQL Client 优化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#State-模块"><span class="nav-number">2.</span> <span class="nav-text">State 模块</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#State-Evolution"><span class="nav-number">2.1.</span> <span class="nav-text">State Evolution</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Local-Recovery"><span class="nav-number">2.2.</span> <span class="nav-text">Local Recovery</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#修复-Cancel-with-Savepoint-连接过早关闭的问题"><span class="nav-number">2.3.</span> <span class="nav-text">修复 Cancel with Savepoint 连接过早关闭的问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Connector-模块"><span class="nav-number">3.</span> <span class="nav-text">Connector 模块</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Exactly-once-S3-StreamingFileSink"><span class="nav-number">3.1.</span> <span class="nav-text">Exactly-once S3 StreamingFileSink</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kafka-2-0-Connector"><span class="nav-number">3.2.</span> <span class="nav-text">Kafka 2.0 Connector</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Scala-2-12-支持"><span class="nav-number">4.</span> <span class="nav-text">Scala 2.12 支持</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文献"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2018/12/02/Flink-1-7-Release-解读/';
+          this.page.identifier = '2018/12/02/Flink-1-7-Release-解读/';
+          this.page.title = 'Flink 1.7 Release 解读';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

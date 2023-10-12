@@ -1,0 +1,820 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Hive," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]Hive权限控制官方文档">
+<meta property="og:url" content="https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
+<meta property="og:updated_time" content="2017-12-17T05:51:39.461Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[译]Hive权限控制官方文档">
+<meta name="twitter:description" content="翻译自：https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>[译]Hive权限控制官方文档 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">[译]Hive权限控制官方文档</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-06-15T22:43:32+08:00">
+                2017-06-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hive/" itemprop="url" rel="index">
+                    <span itemprop="name">Hive</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/06/15/[译]Hive权限控制官方文档/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/06/15/[译]Hive权限控制官方文档/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>翻译自：<a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization" target="_blank" rel="external">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization</a></p>
+<a id="more"></a>
+<h1 id="使用案例"><a href="#使用案例" class="headerlink" title="使用案例"></a>使用案例</h1><ol>
+<li>Hive作为表存储层。这是在使用Apache Pig，MapReduce和其他MMP数据库(Cloudera Impala，Facebook Presto，Spark SQL等)时很常见。这种情况下，Hive提供了表抽象和存储上的元数据(尤其是对于HDFS)。这些用户可以直接访问HDFS和metastore服务器(它为Hive元数据提供了访问接口)。HDFS的访问是通过HDFS访问控制授权的，而元数据的访问需要通过Hive配置来授权。</li>
+<li>Hive作为SQL引擎。这是Hive最常见的情况。下面是对于SQL用户和BI工具来说的”Hive界面”，可以分为两个子文件夹：<br>a. Hive命令行用户。这些用户拥有直接访问HDFS和Hive metastore的权限，这跟案例1很相似。注意，不久后Hive CLI会正式被弃用以支持Beeline。<br>b. ODBC/JDBC和其他HiveServer2 API的用户(Beeline CLI就是一个例子)。这些用户可以通过HiveServer2访问所有数据和元数据，但不能直接访问HDFS或者metastore。</li>
+</ol>
+<h1 id="权限模型概况"><a href="#权限模型概况" class="headerlink" title="权限模型概况"></a>权限模型概况</h1><h2 id="基于存储的Metastore-Server权限控制"><a href="#基于存储的Metastore-Server权限控制" class="headerlink" title="基于存储的Metastore Server权限控制"></a>基于存储的Metastore Server权限控制</h2><p>在案例1和案例2a中，用户可以不经Hive配置控制直接访问数据。而在真正访问表的存储文件时，HDFS访问权限作为其中一个权限数据源，会对用户操作进行访问校验。通过启用基于存储的Metastore Server权限控制，你可以将它作为唯一数据源，保证数据一致性和元数据授权策略。为了要控制对库/表/分区等元对象的访问， 该权限模型会检查你是否在文件系统上对应的目录有相应的权限。在确保查询以终端用户方式运行的情况下，你也可以通过HiveServer2(在下文的案例2b)来保护访问接口。(在HiveServer2 配置中的hive.server2.enable.doAs 选项应该为true，这也是默认值)。<br>注意，使用HDFS ACL(在Hadoop 2.4以上版本可用)你可以很灵活地控制文件系统的权限，同时为基于存储的权限控制提供更多的灵活性。这项功能在Hive 0.14可用(HIVE-7583)。</p>
+<h2 id="基于SQL标准的HiveServer2权限控制"><a href="#基于SQL标准的HiveServer2权限控制" class="headerlink" title="基于SQL标准的HiveServer2权限控制"></a>基于SQL标准的HiveServer2权限控制</h2><p>虽然基于存储的权限控制可以提供数据库/表/分区级别的权限控制，但更细粒度的权限控制，比如列和视图就没办法做到了，因为文件系统的权限控制是到文件级别的，要求精确权限控制的前提是，有一个能够提供用户有权限(有需要)访问的列和行的数据服务器。但对于文件系统来说，整个文件都是为用户服务的。HiveServer2满足了这个需求，因为它的API有行和列的概念(通过使用SQL)，能够仅提供你的查询需要的行和列。<br>基于SQL标准的权限控制(在Hive 0.13.0引入，HIVE-5837)可以用于实现精确权限控制。它基于SQL标准使用大家熟悉的grant/revoke语句来控制访问。这需要通过HiveServer2配置来启用。<br>注意该权限模型不能用于案例2a(Hive命令行)，这是因为用户可以直接访问HDFS，并能理所当然地绕过基于SQL标准的权限校验，甚至将它关闭。这种情况下关闭它可以避免给用户安全访问的错觉。</p>
+<h2 id="默认的Hive授权-遗留模式"><a href="#默认的Hive授权-遗留模式" class="headerlink" title="默认的Hive授权(遗留模式)"></a>默认的Hive授权(遗留模式)</h2><p>Hive默认的授权模型是Hive早期版本曾使用过的。然后这个模型缺乏完整的访问控制模式，留下了许多安全隐患。比如，需要将权限授予一个未定义的用户，或者任何用户都可以授权自己访问数据表或数据库的权限。这个模型与基于SQL标准的授权模型相似，也提供了基于grant/revoke语句的访问控制。然而，该访问控制与基于SQL标准的授权模型不同，并且它们也不兼容。该模型对于Hive命令行用户同样适用。不过，由于在上述基于SQL标准授权模型的讨论中提到的原因，该模型用在Hive命令行并不安全。</p>
+<h1 id="满足多种案例的授权需求"><a href="#满足多种案例的授权需求" class="headerlink" title="满足多种案例的授权需求"></a>满足多种案例的授权需求</h1><p>使用基于存储的授权模型是满足以上所有案例的简单方式。如果你需要对SQL用户进行精准的访问控制，你也可以同时在HiveServer2启用基于SQL标准的授权模型。也就是说，你可以对metastore API调用启用基于存储的授权模型，同时对HiveServer2启用基于SQL标准的授权模型。</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/06/15/[译]Hive权限控制官方文档/" target="_blank" rel="external">时间与精神的小屋 - [译]Hive权限控制官方文档</a></em></font>
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2017/06/15/[译]Hive权限控制官方文档/" title="[译]Hive权限控制官方文档">2017/06/15/[译]Hive权限控制官方文档/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hive/" rel="tag"># Hive</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/05/14/浅谈索引的本质/" rel="next" title="浅谈索引的本质">
+                <i class="fa fa-chevron-left"></i> 浅谈索引的本质
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/07/22/curl模拟REST请求/" rel="prev" title="curl模拟REST请求">
+                curl模拟REST请求 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#使用案例"><span class="nav-number">1.</span> <span class="nav-text">使用案例</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#权限模型概况"><span class="nav-number">2.</span> <span class="nav-text">权限模型概况</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#基于存储的Metastore-Server权限控制"><span class="nav-number">2.1.</span> <span class="nav-text">基于存储的Metastore Server权限控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#基于SQL标准的HiveServer2权限控制"><span class="nav-number">2.2.</span> <span class="nav-text">基于SQL标准的HiveServer2权限控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#默认的Hive授权-遗留模式"><span class="nav-number">2.3.</span> <span class="nav-text">默认的Hive授权(遗留模式)</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#满足多种案例的授权需求"><span class="nav-number">3.</span> <span class="nav-text">满足多种案例的授权需求</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2017/06/15/[译]Hive权限控制官方文档/';
+          this.page.identifier = '2017/06/15/[译]Hive权限控制官方文档/';
+          this.page.title = '[译]Hive权限控制官方文档';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,1002 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Flink," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="有状态的计算作为容错以及数据一致性的保证，是当今实时计算必不可少的特性之一，流行的实时计算引擎包括 Google Dataflow、Flink、Spark (Structure) Streaming、Kafka Streams 都分别提供对内置 State 的支持。State 的引入使得实时应用可以不依赖外部数据库来存储元数据及中间数据，部分情况下甚至可以直接用 State 存储结果数据，这让业界">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink State As Database">
+<meta property="og:url" content="https://link3280.github.io/2019/06/02/Flink-State-As-Database/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="有状态的计算作为容错以及数据一致性的保证，是当今实时计算必不可少的特性之一，流行的实时计算引擎包括 Google Dataflow、Flink、Spark (Structure) Streaming、Kafka Streams 都分别提供对内置 State 的支持。State 的引入使得实时应用可以不依赖外部数据库来存储元数据及中间数据，部分情况下甚至可以直接用 State 存储结果数据，这让业界">
+<meta property="og:image" content="https://link3280.github.io/img/QS-NoKV-Architecture-QS-Post-1.png">
+<meta property="og:updated_time" content="2019-06-02T07:07:37.664Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink State As Database">
+<meta name="twitter:description" content="有状态的计算作为容错以及数据一致性的保证，是当今实时计算必不可少的特性之一，流行的实时计算引擎包括 Google Dataflow、Flink、Spark (Structure) Streaming、Kafka Streams 都分别提供对内置 State 的支持。State 的引入使得实时应用可以不依赖外部数据库来存储元数据及中间数据，部分情况下甚至可以直接用 State 存储结果数据，这让业界">
+<meta name="twitter:image" content="https://link3280.github.io/img/QS-NoKV-Architecture-QS-Post-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2019/06/02/Flink-State-As-Database/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Flink State As Database | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2019/06/02/Flink-State-As-Database/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink State As Database</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-06-02T15:02:03+08:00">
+                2019-06-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/06/02/Flink-State-As-Database/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2019/06/02/Flink-State-As-Database/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>有状态的计算作为容错以及数据一致性的保证，是当今实时计算必不可少的特性之一，流行的实时计算引擎包括 Google Dataflow、Flink、Spark (Structure) Streaming、Kafka Streams 都分别提供对内置 State 的支持。State 的引入使得实时应用可以不依赖外部数据库来存储元数据及中间数据，部分情况下甚至可以直接用 State 存储结果数据，这让业界不禁思考: State 和 Database 是何种关系？有没有可能用 State 来代替数据库呢？</p>
+<a id="more"></a>
+<p>在这个课题上，Flink 社区是比较早就开始探索的。总体来说，Flink 社区的努力可以分为两条线: 一是在作业运行时通过作业查询接口访问 State 的能力，即 QueryableState；二是通过 State 的离线 dump 文件（Savepoint）来离线查询和修改 State 的能力，即即将引入的 Savepoint Connector。</p>
+<h1 id="QueryableState"><a href="#QueryableState" class="headerlink" title="QueryableState"></a>QueryableState</h1><p>在 2017 年发布的 Flink 1.2 版本，Flink 引入了 QueryableState 的特性以允许用户通过特定的 client 查询作业 State 的内容 [1]，这意味着 Flink 应用可以在完全不依赖 State 存储介质以外的外部存储的情况下提供实时访问计算结果的能力。</p>
+<p><img src="/img/QS-NoKV-Architecture-QS-Post-1.png" alt="只通过 Queryable State 提供实时数据访问" title="只通过 Queryable State 提供实时数据访问"></p>
+<p>然而，QueryableState 虽然设想上比较理想化，但由于依赖底层架构的改动较多且功能也比较受限，它一直处于 Beta 版本并不能用于生产环境。针对这个问题，在前段时间腾讯的工程师杨华提出 QueryableState 的改进计划 [2]。在邮件列表中，社区就 QueryableState 是否可以用于代替数据库作了讨论并出现了不同的观点。笔者结合个人见解将 State as Database 的主要优缺点整理如下。</p>
+<p>优点: </p>
+<ul>
+<li>更低的数据延迟。一般情况下 Flink 应用的计算结果需要同步到外部的数据库，比如定时触发输出窗口计算结果，而这种同步通常是定时的会带来一定的延迟，导致计算是实时的而查询却不是实时的尴尬局面，而直接 State 则可以避免这个问题。</li>
+<li>更强的数据一致性保证。根据外部存储的特性不同，Flink Connector 或者自定义的 SinkFunction 提供的一致性保障也有所差别。比如对于不支持多行事务的 HBase，Flink 只能通过业务逻辑的幂等性来保障 Exactly-Once 投递。相比之下 State 则有妥妥的 Exactly-Once 投递保证。</li>
+<li>节省资源。因为减少了同步数据到外部存储的需要，我们可以节省序列化和网络传输的成本，另外当然还可以节省数据库成本。</li>
+</ul>
+<p>缺点:</p>
+<ul>
+<li>SLA 保障不足。数据库技术已经非常成熟，在可用性、容错性和运维上都很多的积累，在这点上 State 还相当于是处于原始人时期。另外从定位上来看，Flink 作业有版本迭代维护或者遇到错误自动重启带来的 down time，并不能达到数据库在数据访问上的高可用性。</li>
+<li>可能导致作业的不稳定。未经过考虑的 Ad-hoc Query 可能会要求扫描并返回夸张量级的数据，这会系统带来很大的负荷，很可能影响作业的正常执行。即使是合理的 Query，在并发数较多的情况下也可能影响作业的执行效率。</li>
+<li>存储数据量不能太大。State 运行时主要存储在 TaskManager 本地内存和磁盘，State 过大会造成 TaskManager OOM 或者磁盘空间不足。另外 State 大意味着 checkpoint 大，导致 checkpoint 可能会超时并显著延长作业恢复时长。</li>
+<li>只支持最基础的查询。State 只能进行最简单的数据结构查询，不能像关系型数据库一样提供函数等计算能力，也不支持谓词下推等优化技术。</li>
+<li>只可以读取，不能修改。State 在运行时只可以被作业本身修改，如果实在要修改 State 只能通过下文的 Savepoint Connector 来实现。</li>
+</ul>
+<p>总体来说，目前 State 代替数据库的缺点还是远多于其优点，不过对于某些对数据可用性要求不高的作业来说，使用 State 作为数据库还是完全合理的。由于定位上的不同，Flink State 在短时间内很难看到可以完全替代数据库的可能性，但在数据访问特性上 State 往数据库方向发展是无需质疑的。</p>
+<h1 id="Savepoint-Connector"><a href="#Savepoint-Connector" class="headerlink" title="Savepoint Connector"></a>Savepoint Connector</h1><p>Savepoint Connector 是社区最近提出的一个新特性（见 FLIP-42 [3]），用于离线对 State 的 dump 文件 Savepoint 进行分析、修改或者直接根据数据构建出一个初始的 Savepoint。Savepoint Connector 属于 Flink State Evolution 的 State Management。如果说 QueryableState 是 DSL 的话，Flink State Evolution 就是 DML，而 Savepoint Connector 就是 DML 中最为重要的部分。</p>
+<p>Savepoint Connector 的前身是第三方的 Bravo 项目 [4]，主要思路提供 Savepoint 和 DataSet 相互转换的能力，典型应用是 Savepoint 读取成 DataSet，在 DataSet 上进行修改，然后再写为一个新的 Savepoint。这适合用于以下的场景:</p>
+<ul>
+<li>分析作业 State 以研究其模式和规律</li>
+<li>排查问题或者审计</li>
+<li>为新的应用构建的初始 State</li>
+<li>修改 Savepoint，比如:<ul>
+<li>改变作业最大并行度</li>
+<li>进行巨大的 Schema 改动</li>
+<li>修正有问题的 State</li>
+</ul>
+</li>
+</ul>
+<p>Savepoint 作为 State 的 dump 文件，通过 Savepoint Connector 可以暴露数据查询和修改功能，类似于一个离线的数据库，但 State 的概念和典型关系型数据的概念还是有很多不同，FLIP-43 也对这些差异进行了类比和总结。</p>
+<p>首先 Savepoint 是多个 operator 的 state 的物理存储集合，不同 operator 的 state 是独立的，这类似于数据库下不同 namespace 之间的 table。我们可以得到 Savepoint 对应数据库，单个 operator 对应 Namespace。</p>
+<table>
+<thead>
+<tr>
+<th>Database</th>
+<th>Savepoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Namespace</td>
+<td>Uid</td>
+</tr>
+<tr>
+<td>Table</td>
+<td>State</td>
+</tr>
+</tbody>
+</table>
+<p>但就 table 而言，其在 Savepoint 里对应的概念根据 State 类型的不同而有所差别。State 有 Operator State、Keyed State 和 Broadcast State 三种，其中 Operator State 和 Broadcast State 属于 non-partitioned state，即没有按 key 分区的 state，而相反地 Keyed State 则属于 partitioned state。对于 non-partitioned state 来说，state 是一个 table，state 的每个元素即是 table 里的一行；而对于 partitioned state 来说，同一个 operator 下的所有 state 对应一个 table。 这个 table 像是 HBase 一样有个 row key，然后每个具体的 state 对应 table 里的一个 column。</p>
+<p>举个例子，假设有一个游戏玩家得分和在线时长的数据流，我们需要用 Keyed State 来记录玩家所在组的分数和游戏时长，用 Operator State 记录玩家的总得分和总时长。</p>
+<p>在一段时间内数据流的输入如下:</p>
+<table>
+<thead>
+<tr>
+<th>user_id</th>
+<th>user_name</th>
+<th>user_group</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1001</td>
+<td>Paul</td>
+<td>A</td>
+<td>5,000</td>
+</tr>
+<tr>
+<td>1002</td>
+<td>Charlotte</td>
+<td>A</td>
+<td>3,600</td>
+</tr>
+<tr>
+<td>1003</td>
+<td>Kate</td>
+<td>C</td>
+<td>2,000</td>
+</tr>
+<tr>
+<td>1004</td>
+<td>Robert</td>
+<td>B</td>
+<td>3,900</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>user_id</th>
+<th>user_name</th>
+<th>user_group</th>
+<th>time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1001</td>
+<td>Paul</td>
+<td>A</td>
+<td>1,800</td>
+</tr>
+<tr>
+<td>1002</td>
+<td>Charlotte</td>
+<td>A</td>
+<td>1,200</td>
+</tr>
+<tr>
+<td>1003</td>
+<td>Kate</td>
+<td>C</td>
+<td>600</td>
+</tr>
+<tr>
+<td>1004</td>
+<td>Robert</td>
+<td>B</td>
+<td>2,000</td>
+</tr>
+</tbody>
+</table>
+<p>用 Keyed State ，我们分别注册 <code>group_score</code> 和 <code>group_time</code> 两个 MapState<string, integer=""> 表示组总得分和组总时长，并根据 <code>user_group</code> keyby 数据流之后将两个指标的累积值更新到 State 里，得到的表如下:</string,></p>
+<table>
+<thead>
+<tr>
+<th>user_group</th>
+<th>group_score</th>
+<th>group_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>8,600</td>
+<td>3,000</td>
+</tr>
+<tr>
+<td>C</td>
+<td>2,00</td>
+<td>600</td>
+</tr>
+<tr>
+<td>B</td>
+<td>3,900</td>
+<td>2,000</td>
+</tr>
+</tbody>
+</table>
+<p>相对地，假如用 Operator State 来记录总得分和总时长（并行度设为 1），我们注册 <code>total_score</code> 和 <code>total_time</code> 两个 State，得到的表有两个:</p>
+<table>
+<thead>
+<tr>
+<th>total_score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>14,500</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>total_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5,600</td>
+</tr>
+</tbody>
+</table>
+<p>至此 Savepoint 和 Database 的对应关系应该是比较清晰明了的。而对于 Savepoint 来说还有不同的 StateBackend 来决定 State 具体如何持续化，这显然对应的是数据库的存储引擎。在 MySQL 中，我们可以通过简单的一行命令 <code>ALTER TABLE xxx ENGINE = InnoDB;</code> 来改变存储引擎，在背后 MySQL 会自动完成繁琐的格式转换工作。而对于 Savepoint 来说，由于 StateBackend 各自的存储格式不兼容，目前尚不能方便地切换 StateBackend。为此，社区在不久前创建 FLIP-41 [5] 来进一步完善 Savepoint 的可操作性。Savepoint 相关的这两个 FLIP 的目标版本都是预计在 7 月发布的 1.9 版本，敬请期待。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>State as Database 是实时计算发展的大趋势，它并不是要代替数据库的使用，而是借鉴数据库领域的经验拓展 State 接口使其操作方式更接近我们熟悉的数据库。对于 Flink 而言，State 的外部使用可以分为在线的实时访问和离线的访问和修改，分别将由 Queryable State 和 Savepoint Connector 两个特性支持。</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><ol>
+<li><a href="https://www.ververica.com/blog/queryable-state-use-case-demo" target="_blank" rel="external">Queryable State in Apache Flink® 1.2.0: An Overview &amp; Demo</a></li>
+<li><a href="http://apache-flink-mailing-list-archive.1008284.n3.nabble.com/DISCUSS-Improve-Queryable-State-and-introduce-a-QueryServerProxy-component-td28578.html#a28581" target="_blank" rel="external">Improve Queryable State and Introduce a QueryServerProxy Component</a></li>
+<li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-43%3A+Savepoint+Connector" target="_blank" rel="external">FLIP-43: Savepoint Connector</a></li>
+<li><a href="https://github.com/king/bravo" target="_blank" rel="external">Bravo: Utilities for processing Flink checkpoints/savepoints</a></li>
+<li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-41%3A+Unify+Keyed+State+Snapshot+Binary+Format+for+Savepoints" target="_blank" rel="external">FLIP-41: Unify Keyed State Snapshot Binary Format for Savepoints</a></li>
+</ol>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2019/06/02/Flink-State-As-Database/" title="Flink State As Database">2019/06/02/Flink-State-As-Database/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/04/14/Flink-1-8-Release-解读/" rel="next" title="Flink 1.8 Release 解读">
+                <i class="fa fa-chevron-left"></i> Flink 1.8 Release 解读
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/07/11/Flink-非-JVM-语言支持计划/" rel="prev" title="Flink 非 JVM 语言支持计划">
+                Flink 非 JVM 语言支持计划 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#QueryableState"><span class="nav-number">1.</span> <span class="nav-text">QueryableState</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Savepoint-Connector"><span class="nav-number">2.</span> <span class="nav-text">Savepoint Connector</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">4.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2019/06/02/Flink-State-As-Database/';
+          this.page.identifier = '2019/06/02/Flink-State-As-Database/';
+          this.page.title = 'Flink State As Database';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

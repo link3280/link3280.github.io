@@ -1,0 +1,806 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="区块链,比特币," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="随着比特币过去一年的暴涨，区块链这项沉寂了数年的技术重新回到公众视野，代替AI成为了当下投资人最喜爱的概念。先不谈市场上各种靠谱或离谱的蹭热度行为，区块链技术作为一个P2P的分布式数据库无疑是一项革命性的发明。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="浅析区块链">
+<meta property="og:url" content="https://link3280.github.io/2018/01/14/浅析区块链/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="随着比特币过去一年的暴涨，区块链这项沉寂了数年的技术重新回到公众视野，代替AI成为了当下投资人最喜爱的概念。先不谈市场上各种靠谱或离谱的蹭热度行为，区块链技术作为一个P2P的分布式数据库无疑是一项革命性的发明。">
+<meta property="og:updated_time" content="2018-01-15T15:17:48.206Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="浅析区块链">
+<meta name="twitter:description" content="随着比特币过去一年的暴涨，区块链这项沉寂了数年的技术重新回到公众视野，代替AI成为了当下投资人最喜爱的概念。先不谈市场上各种靠谱或离谱的蹭热度行为，区块链技术作为一个P2P的分布式数据库无疑是一项革命性的发明。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2018/01/14/浅析区块链/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>浅析区块链 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2018/01/14/浅析区块链/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">浅析区块链</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-01-14T22:25:23+08:00">
+                2018-01-14
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/区块链/" itemprop="url" rel="index">
+                    <span itemprop="name">区块链</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/01/14/浅析区块链/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2018/01/14/浅析区块链/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>随着比特币过去一年的暴涨，区块链这项沉寂了数年的技术重新回到公众视野，代替AI成为了当下投资人最喜爱的概念。先不谈市场上各种靠谱或离谱的蹭热度行为，区块链技术作为一个P2P的分布式数据库无疑是一项革命性的发明。</p>
+<a id="more"></a>
+<p>区块链起源于2009年中本聪发表的比特币白皮书。不同于传统金融系统依赖相对安全的中心节点确保数据完整性，比特币被设计为在不可靠的网络上运行，系统中可能存在恶意节点故意篡改数据库记录以获利，因此如何确保记录的准确性是比特币最关键的问题。针对这个问题，比特币创始人中本聪发明了一种通过依赖计算能力来判断正确记录的技术，由于其中用到的块(block)和链(chain)的概念，这项技术被后人称为区块链(block chain)。</p>
+<p>区块链系统拥有多个节点（在比特币中常被称为矿机），负责维护全局的事务记录。当系统中出现新的事务，比如比特币交易，事务会被广播到所有的节点。节点收到事务之后会缓存下来，一定时间间隔后（比特币为10分钟）会用缓存的事务生成一个块(block)。此时事务属于未确认的状态，任意一个节点都可以检验并确认这个块内的事务，并同步给其他节点。如果一个块被确认，里面的事务便会被系统承认并且是不可回滚的，这保证了系统事务的可靠性。此外，每个节点会维护一个链表(chain)，也就是区块链中的链，被确认的块会被追加到节点维护的链表(chain)末端。</p>
+<p>那么现在问题来了：如果有节点恶意修改缓存的事务并确认怎么办？区块链提供了两个机制来防止这种攻击：</p>
+<ol>
+<li>节点收到其他节点宣称正确的块时，需要和本地已经确认的事务进行校验，确保没有冲突。</li>
+<li>节点生成一个新的待确认块时，需要加上链上最后一个块的哈希值，即每一个块都是对前一个块的确认。这可以得出一个结论：最长的链最为准确。当有两个节点同时提交不一致的两个块并且都没有校验错误时，剩余节点不能判断谁是诚实的谁是恶意的。这时它们会以自己收到的第一个版本为准，即部分节点承认了Block A，部分节点承认了Block B，导致全局数据出现不一致。此时，区块链会拒绝确认其中任何一个块，而是等待下一个块Block C的计算结果。如果Block C依赖于Block A则AC长于B，于是确认AC；反之则确认BC。如果第二个待确认块也出现了多个块的情况，则重复这个步骤直至链长不同。</li>
+</ol>
+<p>基于上述规则，恶意节点已经无法通过一次新块确认篡改数据了，但它依然能不断地尝试提交错误的块来产生和正确的链同样长的假链，导致系统无法确认任何事务，也就是典型的DDoS攻击，或者更过分地在一次计算中提交多个块，导致其他节点误以为这是更准确的链以篡改数据。对此，区块链引入了工作量证明（Proof-of-Work）机制。</p>
+<blockquote>
+<p>工作量证明（Proof-of-Work，PoW）是一种对应服务与资源滥用、或是阻断服务攻击的经济对策。一般是要求用户进行一些耗时适当的复杂运算，并且答案能被服务方快速验算，以此耗用的时间、设备与能源做为担保成本，以确保服务与资源是被真正的需求所使用。  —— 维基百科</p>
+</blockquote>
+<p>打个比方，就像结婚的时候给老婆买钻戒，虽然学过化学的你知道钻石不过是随处可见的碳元素，但为了证明你对她的爱你还是不得不忍痛买个大钻戒。区块链当然不会要求一枚钻戒，但它规定了想要确认一个块必须先计算一个nonce值，这个值加上前面说过的<code>前一个块的哈希值</code>和<code>缓存的所有事务</code>再进行哈希结果需要全部为0比特。因为哈希函数是单向的，所以节点必须暴力(brute force)计算这个nonce。最先找到合适nonce值的节点才可以将它的计算结果广播给其他节点，计算力更强的节点有更大的机会确认新块。</p>
+<p>突然间确认新块变成了计算力的竞赛。所以如果恶意节点想要攻击区块链，它必须有最强大的计算力。如果企图篡改新的事务，恶意节点必须生成一条长于正常链的假链，那么以上个块被确认的时间点为起点，恶意节点需要顺序计算出至少两个新块的nonce，并且时间需要比正常节点处理一个新块要短。要做到这点，有种出名的攻击称为<code>51%攻击</code>，即攻击者拥有区块链系统内一半以上的计算力。因此区块链系统的总计算力越大越难攻击。</p>
+<p>为了鼓励更多机器参与到区块链系统，中本聪还想出一种激励机制，即确认新块会获得奖励，在比特币中相当于将铸币税分散给区块链参与者。这与20世纪初大批淘金者到旧金山挖金矿，并将其铸成金币流入货币市场的状况十分相像，因此参与区块链系统又被称为挖矿。不过不同的是，20世纪是金本位，如今可以说是计算力本位了（但是投入的计算力不能像金币一样熔成金条退出流通）。</p>
+<p>虽然由于块大小的限制（比特币中块不能大于2MB），区块链技术目前还难以大规模应用，而且消耗大量计算力来维持系统运作也广受诟病，但是区块链有一点不可忽视：它有着互联网的基因——去中心化。近几年互联网的格局渐渐出现马太效应，大数据、人工智能和云计算的资源都是向巨头倾斜，整个互联网似乎有重新中心化的趋势。然而如果中心化趋势不能扭转，互联网便会逐渐失去活力，成为下一个电视台。因此区块链尽管不成熟却称得上一股清流。希望区块链在未来有更好的发展。</p>
+<p>参考文献：<br>1.<a href="https://bitcoin.org/bitcoin.pdf" target="_blank" rel="external">Bitcoin White Paper</a>, bitcoin.org<br>2.<a href="https://zh.wikipedia.org/wiki/%E5%B7%A5%E4%BD%9C%E9%87%8F%E8%AD%89%E6%98%8E" target="_blank" rel="external">维基百科-工作量证明</a>，维基百科<br>3.<a href="https://en.wikipedia.org/wiki/Blockchain" target="_blank" rel="external">Wikipidae-BlockChain</a>, Wikipedia<br>4.<a href="http://bitcoinfees.com/" target="_blank" rel="external">BitcoinFees</a>, bitcoinfees.com</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2018/01/14/浅析区块链/" target="_blank" rel="external">时间与精神的小屋 - 浅析区块链</a></em></font>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2018/01/14/浅析区块链/" title="浅析区块链">2018/01/14/浅析区块链/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/区块链/" rel="tag"># 区块链</a>
+          
+            <a href="/tags/比特币/" rel="tag"># 比特币</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/12/24/关于Learned-Indexes的思考/" rel="next" title="关于Learned Indexes的思考">
+                <i class="fa fa-chevron-left"></i> 关于Learned Indexes的思考
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/01/20/Kylin实战（八）：查询优化技术/" rel="prev" title="Kylin实战（八）：查询优化技术">
+                Kylin实战（八）：查询优化技术 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <section class="site-overview sidebar-panel sidebar-panel-active">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2018/01/14/浅析区块链/';
+          this.page.identifier = '2018/01/14/浅析区块链/';
+          this.page.title = '浅析区块链';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,901 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Flink," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="对于大多数 Flink 应用开发者而言，无论使用高级的 Table API 或者是底层的 DataStream/DataSet API，Source 都是首先接触到且使用最多的 Operator 之一。然而其实从 2018 年 10 月开始，Flink 社区就开始计划重构这个稳定了多年的 Source 接口[1]，以满足更大规模数据以及对接更丰富的 connector 的要求，另外还有更重要的一个">
+<meta property="og:type" content="article">
+<meta property="og:title" content="漫谈 Flink Source 接口重构">
+<meta property="og:url" content="https://link3280.github.io/2020/02/11/漫谈-Flink-Source-接口重构/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="对于大多数 Flink 应用开发者而言，无论使用高级的 Table API 或者是底层的 DataStream/DataSet API，Source 都是首先接触到且使用最多的 Operator 之一。然而其实从 2018 年 10 月开始，Flink 社区就开始计划重构这个稳定了多年的 Source 接口[1]，以满足更大规模数据以及对接更丰富的 connector 的要求，另外还有更重要的一个">
+<meta property="og:image" content="https://link3280.github.io/img/flip-27/img1.datastream_source.png">
+<meta property="og:image" content="https://link3280.github.io/img/flip-27/img2.dataset_source.png">
+<meta property="og:image" content="https://link3280.github.io/img/flip-27/img3.function_api.png">
+<meta property="og:image" content="https://link3280.github.io/img/flip-27/img4.split-enumerator-reader.png">
+<meta property="og:image" content="https://link3280.github.io/img/flip-27/img5.source_component_rpc.png">
+<meta property="og:image" content="https://link3280.github.io/img/flip-27/img6.single_split.png">
+<meta property="og:image" content="https://link3280.github.io/img/flip-27/img7.multi_split_multiplexed.png">
+<meta property="og:image" content="https://link3280.github.io/img/flip-27/img8.multi_split_multi_threaded.png">
+<meta property="og:updated_time" content="2020-02-11T12:27:30.984Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="漫谈 Flink Source 接口重构">
+<meta name="twitter:description" content="对于大多数 Flink 应用开发者而言，无论使用高级的 Table API 或者是底层的 DataStream/DataSet API，Source 都是首先接触到且使用最多的 Operator 之一。然而其实从 2018 年 10 月开始，Flink 社区就开始计划重构这个稳定了多年的 Source 接口[1]，以满足更大规模数据以及对接更丰富的 connector 的要求，另外还有更重要的一个">
+<meta name="twitter:image" content="https://link3280.github.io/img/flip-27/img1.datastream_source.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2020/02/11/漫谈-Flink-Source-接口重构/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>漫谈 Flink Source 接口重构 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2020/02/11/漫谈-Flink-Source-接口重构/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">漫谈 Flink Source 接口重构</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-02-11T20:24:52+08:00">
+                2020-02-11
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2020/02/11/漫谈-Flink-Source-接口重构/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2020/02/11/漫谈-Flink-Source-接口重构/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>对于大多数 Flink 应用开发者而言，无论使用高级的 Table API 或者是底层的 DataStream/DataSet API，Source 都是首先接触到且使用最多的 Operator 之一。然而其实从 2018 年 10 月开始，Flink 社区就开始计划重构这个稳定了多年的 Source 接口[1]，以满足更大规模数据以及对接更丰富的 connector 的要求，另外还有更重要的一个目的: 统一流批两种计算模式。重构后的 Source 接口在概念和使用方式上都会有较大不同，无论对 Flink 应用开发者还是 Flink 社区贡献者来说都是十分值得关注的，所以本文将从”为什么要这样设计”的角度来谈谈 Source 接口重构的前因后果。这会涉及到较多的底层架构内容，要求读者有一定的基础或者有探索的兴趣。</p>
+<a id="more"></a>
+<h1 id="现有-Source-接口"><a href="#现有-Source-接口" class="headerlink" title="现有 Source 接口"></a>现有 Source 接口</h1><p>目前（Flink 1.9）Source 接口分为 DataStream/DataSet/Table API 三个不同的栈，但因为 Table API 是基于前两者的封装，我们在讨论底层接口的时候可以先排除掉它。Source 接口在 DataStream/DataSet API 中同样是负责数据的生成或摄入，但除此之外的功能有不小的差异。</p>
+<h2 id="DataStream-API"><a href="#DataStream-API" class="headerlink" title="DataStream API"></a>DataStream API</h2><p>在 DataStream API 中 Source 对应的核心接口为 SourceFunction 以及 SourceContext。前者直接继承 Function 接口与 Operator 交互，负责通用的状态管理（比如初始化或取消）；后者代表运行时的上下文，负责与单条记录级别的数据的交互。此外还有其他一些辅助类型的类或接口，整体的类图设计如下:</p>
+<center><p><img src="/img/flip-27/img1.datastream_source.png" alt="图一. DataStream API 的 Source 接口" title="图一. DataStream API 的 Source 接口"></p></center>
+
+<p>其中 ParallelSourceFunction 进一步继承 SourceFunction，标记该 Source 为可并行化的，否则直接实现 SourceFunction 的 Source 的并行度只能为 1。而 RichParallelSourceFunction 则是在 ParallelSourceFunction 基础之上再结合 AbstractRichFunction，提供有状态的并行 Source 基类。用户要实现一个 Source，可以选择 SourceFunction、ParallelSourceFunction 或<br>RichParallelSourceFunction 中任意一个来作为切入口。但值得注意的是，如果 Source 是有状态的，那么为了保证一致性，状态的更新和正常的数据输出是不可以并行的。为此，SourceContext 提供了 Checkpoint 锁来方便 Source 进行同步阻塞。</p>
+<p>运行时，Source 主要通过 SourceContext 来控制数据的输出。从 SourceContext 接口的方法即可以看出，Source 在接受到数据后的主要工作有以下几点:</p>
+<ol>
+<li>从外部摄入数据或生成数据，输出到下游。</li>
+<li>为数据生成 Event Time Timestamp（仅在 Time Characteristic 为 Event Time 时有用），比如 Kafka Source 的 Partition 级别的 Event time。</li>
+<li>计算 Watermark 并输出（仅在 Time Charateristic 为 Event Time 时有用）。</li>
+<li>当暂时不会有新数据时将自己标记为 Idle，以避免下游一直等待自己的 Watermark。</li>
+</ol>
+<h2 id="DataSet-API"><a href="#DataSet-API" class="headerlink" title="DataSet API"></a>DataSet API</h2><p>在 DataSet API 中 Source 对应的核心接口为 InputFormat。InputFormat 命名风格上借鉴了 Hadoop 的风格，在功能上也比较相近，具体有以下三点: </p>
+<ol>
+<li>描述输入的数据如何被划分为不同的 InputSplit（继承于 InputSplitSource）。</li>
+<li>描述如何从单个 InputSplit 读取记录，具体包括如何打开一个分配到的 InputSplit，如何从这个 InputSplit 读取一条记录，如何得知记录已经读完和如何关闭这个 InputSplit。</li>
+<li>描述如何获取输入数据的统计信息（比如文件的大小、记录的数目），以帮助更好地优化执行计划。</li>
+</ol>
+<p>第 1、3 两点功能会被 JobManager (JobMaster) 在调度 Exection 时使用，而第 2 点读取数据功能则会在运行时被 TaskManager 使用。</p>
+<p>围绕 InputFormat，DataSet 还提供一系列接口，总体的类图如下:</p>
+<center><p><img src="/img/flip-27/img2.dataset_source.png" alt="图二. DataSet API 的 Source 接口" title="图二. DataSet API 的 Source 接口"></p></center>
+
+<ul>
+<li>InputSplitSource 为 InputFormat 的超类，负责划分 InputSplit （第一点功能），不再赘述。</li>
+<li>InputSplit 表示一个逻辑分区，必要的信息其实只有 Split 的 ID（或者下标），InputFormat 会根据这个 ID 来读取输入数据的对应分区。</li>
+<li>RichInputFormat 拓展 InputFormat，加上 <code>openInputFormat()</code> 和 <code>closeInputFormat()</code> 方法来管理运行时的状态。比起 InputFormat 的 <code>open()</code> 和 <code>close()</code> 是在每个 InputSplit 级别调用，它们是在每次 Task Exectuion 级别调用，而每次  Task Exectuion 可以读多个 InputSplit。比如 TaskManager 要读取 HBase Table，那么它要打开和关闭一个 HTable 的连接，这个连接可以在多读多个 TableInputSplit 时复用。</li>
+<li>ReplicatingInputFormat 拓展 RichInputFormat，为输入数据提供广播的能力。换句话说，通过 ReplicatingInputFormat 输入的数据会被每个实例重复读取，典型的应用是 Join 操作。</li>
+</ul>
+<p>有趣的是，除了上述典型的 DataSet 场景，InputFormat 还可以在 Streaming 场景中使用。通过 <code>StreamExecutionEnvironment#createInput(InputFormat)</code>，Flink 可以持续监控一个文件系统目录。InputFormat 会被传递给 <code>ContinuousFileReaderOperator</code>，后者是一个非并行化的算子（并行度只能为 1），会将目录新增的文件作为 <code>FileInputSplit</code> 传递给下游的 <code>ContinuousFileReaderOperator</code>，然后 <code>ContinuousFileReaderOperator</code> 再使用 InputFormat 来读取这些 InputSplit。所以虽然架构设计上不是特别一致，但 InputFormat 一定程度上是体现了流批统一的思想的。</p>
+<h1 id="存在的问题"><a href="#存在的问题" class="headerlink" title="存在的问题"></a>存在的问题</h1><h2 id="不符合流批一体要求"><a href="#不符合流批一体要求" class="headerlink" title="不符合流批一体要求"></a>不符合流批一体要求</h2><p>首先，目前的 Source 接口栈最显而易见的问题 DataStream 和 DataSet 在 API 设计上的不统一。这个很大程度上是出于历史原因，在 Flink 最初开发之时业界普遍认为批处理和流处理是相对独立的，而直到 2016 年 Google 《The Dataflow Model》等文章的发表，业界才有比较完整的理论支持来统一两者。所以 Flink 社区当时分离开 DataStream 和 DataSet 来分别迭代开发也十分正常，但这也成了流批融合的新趋势下的负担。</p>
+<p>现在的状况是 DataStream 和 DataSet 共享很多相同的代码，比如面向用户代码 UDF 的基础接口 Function 或计算逻辑的通用 RichFunction 都代码在 <code>flink-core</code> 中，但分场景使用的代码则分别存在于 <code>flink-java</code> 和 <code>flink-streaming-java</code> 中。典型的是两者在 Operator 上也是不同的，前者使用 <code>org.apache.flink.api.java.operators.Operator</code> 作为基类，而后者使用的是 <code>org.apache.flink.streaming.api.operators.StreamOperator</code>。StreamSource 和 DataSource 是 DataStream 和 DataSet 代表数据源的 Operator，它们分别封装了上文所说的 SourceFunction 和 InputFormat 两个接口。总体的关系大致如下（省去了部分非关键的类或接口）。</p>
+<center><p><img src="/img/flip-27/img3.function_api.png" alt="图三. DataStream 与 DataSet Source 接口的关系" title="图三. DataStream 与 DataSet Source 接口的关系"></p></center>
+
+<p>从图中可以方便地看到一个很不协调的地方便是 StreamSource 属于 AbstractUdfStreamOperator，因此可以直接使用 Function 接口，但是 DataSource 却不属于 SingleInputUdfOperator （这里应该是 AbstractUdfOperator 才合理，但 DataSet API 没有提供这层抽象），因此具体的读取数据源逻辑不是写在 Function 中，而是写在 InputFormat 中，这就造成需要为同一种外部存储系统开发维护两套重复性很高 Source。</p>
+<h2 id="不便动态发现数据源变更"><a href="#不便动态发现数据源变更" class="headerlink" title="不便动态发现数据源变更"></a>不便动态发现数据源变更</h2><p>分布式存储系统通常都以某种”存储块”的方式来实现水平拓展，这种”存储块”在不同系统中有不同的命名，常见的有 Split/Partition/Shard，下游的计算引擎也会按照这些”存储块”的粒度进行工作分配。</p>
+<p>在批处理计算中，输入数据源以作业启动时读取的元数据为准， Split 的数目不会在运行时改变，不需要动态监控数据源变化，但需要根据 TaskManager 处理的进度来动态分配 Split。因此 Flink DataSet 的做法是抽象出 Split Assigner（属于 InputFormat 的一部分）。作业启动时 Split Assigner 会读取数据源的元数据，随后一直运行在 JobManager 端负责将现有 Split 分配给空余的 TaskManager，直至所有的 Split 都完成处理 。</p>
+<p>而实时流处理则却通常要动态发现新增的 Split，然后分配到现有的 TaskManager 上，比如 Kafka 的 Partition Discovery，同时也需要动态分配新 Partition 这样的一个机制。通常来说 Source 需要在初始化时新建一个线程来负责检测数据源的变更，若有则需要重新调整工作分配。不过与 DataSet 统一 JobManager 端中心化分配不同，DataStream 做动态检测的线程运行在每个 TaskManager 上，新发现的 Partition 是依靠每个 SubTask 按预先的规则分配。这样背后的原因是，InputFormat 设计了一部分逻辑运行在 JobManager 上，而 SourceFunction 则完全运行在 TaskManager 上，缺乏一个中心化的管理者。</p>
+<h2 id="不便-Source-Subtask-间的协作"><a href="#不便-Source-Subtask-间的协作" class="headerlink" title="不便 Source Subtask 间的协作"></a>不便 Source Subtask 间的协作</h2><p>不同于 DataSet 中 Source Subtask 之间几乎是完全独立的，DataStream 中 Source Subtask 通常需要某种程度上的协作，比如不同 Subtask 之间的 Event Time 对齐。 </p>
+<p>Event Time 对齐的背景是 Subtask 间的 Event Time 进度可能是不同的，但下游 Watermark 总是取最低者，这就导致对于基于 Watermark 的算子来说，它一直从 Event Time 快的 Subtask 摄入数据但这些数据总是得不到清理，进一步造成该算子的 State 逐渐膨胀。</p>
+<p>解决这个问题的思路是，在一个 Source Subtask 自己 Event Time 明显先进于其他 Source Subtask 时，与其继续摄入数据并让下游自己缓存，不如直接阻塞自己的消费来等其他 Source Subtask 跟上，这就称为 Event Time 对齐。</p>
+<p>Event Time 对齐要求 Source Subtask 间的协作，通常需要在 Master 节点上新增一个协调者（Coordinator），由协调者来管控 Split/Partition 的元数据（这点在目前的 SourceFunction 接口上是做不到的），来判定某个 Source Subtask 是否需要阻塞。另外，相似的协作需求还有 Work Stealing 等。</p>
+<h2 id="容易造成瓶颈的-Checkpoint-Lock"><a href="#容易造成瓶颈的-Checkpoint-Lock" class="headerlink" title="容易造成瓶颈的 Checkpoint Lock"></a>容易造成瓶颈的 Checkpoint Lock</h2><p>在 DataStream 作业中，为了保证 State 更新和输出记录的一致性，两者是要通过 Checkpoint Lock 来进行同步的。SourceFunction 可以通过 SourceContext 来获取 Checkpoint Lock，例如如下代码:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">public void run(SourceContext&lt;T&gt; ctx) &#123;</div><div class="line">    while (isRunning) &#123;</div><div class="line">        synchronized (ctx.getCheckpointLock()) &#123;</div><div class="line">            ctx.collect(count);</div><div class="line">            count++;</div><div class="line">        &#125;</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>而问题在于这个锁并不是公平锁，也就是说 SourceFunction 有可能一直占据 Checkpoint Lock 导致 Checkpoint 被阻塞。另外这种比较重度的锁也不符合 actor 或者说 mailbox 模式的非阻塞设计。</p>
+<h2 id="线程缺乏统一管理"><a href="#线程缺乏统一管理" class="headerlink" title="线程缺乏统一管理"></a>线程缺乏统一管理</h2><p>在 DataStream 应用中，Source 通常会需要一些 IO 线程来避免阻塞 Task 主线程，而这些线程目前是每个 Source 独立实现，这就造成各个 Source 需要自己设计复杂的线程模型。比如常用的 Kafka Connector，每个 FlinkKafkaConsumer 会额外启动一个 Fetcher 线程负责调用 Kafka Consumer API 进行消费，然后通过阻塞队列交给 TaskThread 来进行消费。</p>
+<h1 id="改进思路"><a href="#改进思路" class="headerlink" title="改进思路"></a>改进思路</h1><h2 id="统一流批-Source-接口"><a href="#统一流批-Source-接口" class="headerlink" title="统一流批 Source 接口"></a>统一流批 Source 接口</h2><p>作为统一流批处理算子的最前一环，Source 接口首先需要被按照 Flink 推崇的”批处理是流处理的特例”的思想重新设计。按照社区长期目标，Flink 会新增 BoundedDataStream 来逐步取代 DataSet，而 BoundedDataStream 基于目前的 DataStream API，算子基本可以复用。</p>
+<p>按照 FLIP-27，新的 Source 接口暂停名为 <code>Source</code>，它类似一个工厂类，主要构造 <code>SplitEnumerator</code> 和 <code>SplitReader</code>（该两者的作用将在下一节提及），并且可以同时为流批服务。<code>Source</code> 的使用方式将大致如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();</div><div class="line"> </div><div class="line">FileSource&lt;MyType&gt; theSource = new ParquetFileSource(&quot;fs:///path/to/dir&quot;, AvroParquet.forSpecific(MyType.class));</div><div class="line"> </div><div class="line">// The returned stream will be a DataStream if theSource is unbounded.</div><div class="line">// After we add BoundedDataStream which extends DataStream, the returned stream will be a BoundedDataStream.</div><div class="line">// This allows users to write programs working in both batch and stream execution mode.</div><div class="line">DataStream&lt;MyType&gt; stream = env.source(theSource);</div><div class="line"> </div><div class="line">// Once we add bounded streams to the DataStream API, we will also add the following API.</div><div class="line">// The parameter has to be bounded otherwise an exception will be thrown.</div><div class="line">BoundedDataStream&lt;MyType&gt; batch = env.boundedSource(theSource);</div></pre></td></tr></table></figure>
+<p>值得注意的是，<code>ExecutionEnvironment</code> 将根据 <code>Source#isBounded</code> 直接返回 DataStream 或者 BoundedDataStream，无需用户切换 Environmnet。</p>
+<h2 id="独立出数据源的工作发现和分配"><a href="#独立出数据源的工作发现和分配" class="headerlink" title="独立出数据源的工作发现和分配"></a>独立出数据源的工作发现和分配</h2><p>在底层，<code>Source</code> 构造出的 <code>SplitEnumerator</code> 和 <code>SplitReader</code> 将分别负责发现和分配 Split 和 Split 的实际读取处理。相比之下，目前在 DataSet API 中的发现和分配 Split 由 JobManager 统一负责，而 DataStream 的对应工作则由 TaskManager 各自完成。</p>
+<center><p><img src="/img/flip-27/img4.split-enumerator-reader.png" alt="图四. SplitEnumerator 和 SplitReader" title="图四. SplitEnumerator 和 SplitReader"></p></center>
+
+<p><code>SplitEnumerator</code> 在作业启动时以单并行度运行，读取数据源元数据并构建 Split，按照分配策略将 Split 分配给 SplitReader，类似于现在 InputFormat 构造的 <code>SplitAssigner</code>，但不同点在于还要额外管理 DataStream 的管理工作，比如 Checkpoint 和 Watermark。<code>SplitEnumerator</code> 有三种现实方案: 运行在 JobManager 上（目前 <code>SplitAssigner</code> 的做法），或者以一个单并行度 Task 的方式运行在 TaskManager 上（类似目前 <code>ContinuousFileMonitoringFunction</code> 的做法），或者以一个新独立组件的方式运行。目前社区是比较偏向使用独立组件的方式，但未完全确定。感兴趣的读者可以研究下各种方案的优劣，相信可以从中学到不少东西。</p>
+<p><code>SplitReader</code> 负责的工作则类似目前 DataStream 的 SourceFunction，不同点在于除了被动地接受 Split，<code>SplitReader</code> 还可以主动向 <code>SplitEnumerator</code> 请求 Split，这主要是满足批处理场景的需求。</p>
+<p>通过这样的清晰分工，Source 的抽象性大大提升，新 Source 的开发和现有 Source 的迭代都更有规范可遵循，对用户来说也更容易理解。</p>
+<h2 id="新增-Source-Subtask-间的通信机制"><a href="#新增-Source-Subtask-间的通信机制" class="headerlink" title="新增 Source Subtask 间的通信机制"></a>新增 Source Subtask 间的通信机制</h2><p>按照新架构，在运行期间 <code>SplitEnumerator</code> 和 <code>SplitReader</code> 不时会需要通信协作，比如分配新 Split 或 Event Time 对齐。这个通信将复用大部分现有的 JobManager 和 TaskManager 的 RPC 机制（基于 <code>SplitEnumerator</code> 以独立组件运行在 JobManager 端的方案），在这基础上加上 Operator 级别的协调者，比如上文提到的 Source 协调者。</p>
+<center><p><img src="/img/flip-27/img5.source_component_rpc.png" alt="图五. Source 组件间的通信" title="图五. Source 组件间的通信"></p></center>
+
+<p>其中 SourceEvent 是 <code>SplitEnumerator</code> 和 <code>SplitReader</code> 通信的消息，比如 <code>SplitEnumerator</code> 新分配 Split 或者 <code>SplitReader</code> 处理完已分配 Split 主动请求新 Split。而 OperatorEvent 则是更通用化的 Operator 协调者与 Operator 通信的消息。</p>
+<h2 id="SplitReader-线程模型"><a href="#SplitReader-线程模型" class="headerlink" title="SplitReader 线程模型"></a>SplitReader 线程模型</h2><p>上文提到 Checkpoint Lock 是现在 Source 的瓶颈之一，这是因为 Checkpoint 和计算任务是由不同线程来执行，而新接口将遵循单线程的 actor/mailbox 模式，所以不再需要  Checkpoint Lock 来同步线程。</p>
+<p>根据 FLIP-27 的设计，<code>SplitReader</code> 将调用外部存储系统客户端 API 读取数据，转换为目标数据类型后，push 到一个缓冲区（Buffer 或者 Queue），然后 Flink 内部的 Source Loop 线程再读取这个缓冲中的数据。</p>
+<p>根据外部存储系统客户端的 API 调用方式（阻塞、非阻塞、异步）和 Flink 执行模式（流处理/批处理）的不同，Source 可以分为以下几种模式:</p>
+<p>1) 单 Split 串行</p>
+<center><p><img src="/img/flip-27/img6.single_split.png" alt="图六. 单 Split 串行" title="图六. 单 Split 串行"></p></center>
+
+<p>这种模式通常符合批处理场景，比如 File Source、Database Source。工作流程是作业启动时 <code>SplitEnumerator</code> 会将 Split 分配到每个 <code>SplitReader</code> 的 Split Queue 中，然后 <code>SplitReader</code> 会逐一串行处理，并输出到 Buffer 供后续线程读取。</p>
+<p>2）多 Split 多路复用</p>
+<center><p><img src="/img/flip-27/img7.multi_split_multiplexed.png" alt="图七. 多 Split 多路复用" title="图七. 多 Split 多路复用"></p></center>
+
+<p>多 Split 多路复用通常适用于流处理场景一个客户端可以处理多个 Split 的情况。典型的例子就是单个 Kafka Consumer 可以消费多个 Topic 的多个 Partition。工作流程是作业启动时 <code>SplitEnumerator</code> 会批量分配现有 Split 给 <code>SplitReader</code>，后者启动一个 IO 线程读取所有的 Split，处理后输出到 Buffer 或 Queue 供后续线程读取。</p>
+<p>3) 多 Split 多线程</p>
+<center><p><img src="/img/flip-27/img8.multi_split_multi_threaded.png" alt="图八. 多 Split 多线程" title="图八. 多 Split 多线程"></p></center>
+
+<p>多 Split 多线程通常适用于流处理场景每个客户端只处理单个 Split 的情况，比如 Kinesis Consumer 会为每个 Kinesis Shard 单独起一个线程来读取数据。工作流程类似于 Kafka，不过每条 IO 线程都有单独的输出队列，这样下游可以选择性地读取某个 Shard 的数据，这对于 Event Time 对齐的特性十分重要。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>综上所述，目前的 Source 接口不符合流批的发展趋势，同时因为缺乏 Flink 引擎内置线程模型的支持，开发新的 Source 和为现有 Source 开发 Event Time 对齐等功能都十分不方便。为此 Flink 社区起草了 FLIP-27 来重构 Source 接口，核心是统一流批两种执行模式的 Source 架构，但底层的调度和算法则根据 Source 类型来判断。新接口的核心是 <code>SplitEnumerator</code> 和 <code>SplitReader</code>，前者负责发现和分配 Split、触发 Checkpoint 等管理工作， 后者负责 Split 的实际读取处理。此外，新增 Operator 间的通信机制，让 Source Subtask 之间可以协调完成 Event Time 对齐等新特性。最后，<code>SplitReader</code> 底层封装了通用的线程模型，相比目前的 <code>SourceFunction</code> 大大简化了 Source 的实现。</p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
+<li><a href="https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=95653748" target="_blank" rel="external">FLIP-27: Refactor Source Interface</a></li>
+<li><a href="https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=95653748#FLIP-27:RefactorSourceInterface-where_run_enumerator" target="_blank" rel="external">Where To Run Enumerator</a></li>
+<li><a href="https://lists.apache.org/thread.html/70484d6aa4b8e7121181ed8d5857a94bfb7d5a76334b9c8fcc59700c@%3Cdev.flink.apache.org%3E" target="_blank" rel="external">[DISCUSS] FLIP-27: Refactor Source Interface</a></li>
+</ol>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2020/02/11/漫谈-Flink-Source-接口重构/" title="漫谈 Flink Source 接口重构">2020/02/11/漫谈-Flink-Source-接口重构/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/01/16/Flink-DataStream-关联维表实战/" rel="next" title="Flink DataStream 关联维表实战">
+                <i class="fa fa-chevron-left"></i> Flink DataStream 关联维表实战
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/02/26/Flink-Table-的三种-Sink-模式/" rel="prev" title="Flink Table 的三种 Sink 模式">
+                Flink Table 的三种 Sink 模式 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#现有-Source-接口"><span class="nav-number">1.</span> <span class="nav-text">现有 Source 接口</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#DataStream-API"><span class="nav-number">1.1.</span> <span class="nav-text">DataStream API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#DataSet-API"><span class="nav-number">1.2.</span> <span class="nav-text">DataSet API</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#存在的问题"><span class="nav-number">2.</span> <span class="nav-text">存在的问题</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#不符合流批一体要求"><span class="nav-number">2.1.</span> <span class="nav-text">不符合流批一体要求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#不便动态发现数据源变更"><span class="nav-number">2.2.</span> <span class="nav-text">不便动态发现数据源变更</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#不便-Source-Subtask-间的协作"><span class="nav-number">2.3.</span> <span class="nav-text">不便 Source Subtask 间的协作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#容易造成瓶颈的-Checkpoint-Lock"><span class="nav-number">2.4.</span> <span class="nav-text">容易造成瓶颈的 Checkpoint Lock</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#线程缺乏统一管理"><span class="nav-number">2.5.</span> <span class="nav-text">线程缺乏统一管理</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#改进思路"><span class="nav-number">3.</span> <span class="nav-text">改进思路</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#统一流批-Source-接口"><span class="nav-number">3.1.</span> <span class="nav-text">统一流批 Source 接口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#独立出数据源的工作发现和分配"><span class="nav-number">3.2.</span> <span class="nav-text">独立出数据源的工作发现和分配</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#新增-Source-Subtask-间的通信机制"><span class="nav-number">3.3.</span> <span class="nav-text">新增 Source Subtask 间的通信机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SplitReader-线程模型"><span class="nav-number">3.4.</span> <span class="nav-text">SplitReader 线程模型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2020/02/11/漫谈-Flink-Source-接口重构/';
+          this.page.identifier = '2020/02/11/漫谈-Flink-Source-接口重构/';
+          this.page.title = '漫谈 Flink Source 接口重构';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

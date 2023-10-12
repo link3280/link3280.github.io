@@ -1,0 +1,832 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kylin," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="普遍情况下，Kylin以HBase作为存储引擎，因此HBase的查询效率对于Kylin的查询响应时间尤为关键，而rowkey作为HBase最重要的设计自然是优化的重中之重。合适的rowkey设计不仅可以节省cube存储空间和降低膨胀率，而且能减小查询扫描的范围并提高聚合计算速度从而加速查询。为此，Kylin在”Advanced Setting”页面提供了rowkey的配置供用户调整，具体可以分为维">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kylin实战（四）：rowkey调优">
+<meta property="og:url" content="https://link3280.github.io/2017/09/24/Kylin实战（四）：rowkey调优/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="普遍情况下，Kylin以HBase作为存储引擎，因此HBase的查询效率对于Kylin的查询响应时间尤为关键，而rowkey作为HBase最重要的设计自然是优化的重中之重。合适的rowkey设计不仅可以节省cube存储空间和降低膨胀率，而且能减小查询扫描的范围并提高聚合计算速度从而加速查询。为此，Kylin在”Advanced Setting”页面提供了rowkey的配置供用户调整，具体可以分为维">
+<meta property="og:updated_time" content="2017-12-23T15:12:05.190Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kylin实战（四）：rowkey调优">
+<meta name="twitter:description" content="普遍情况下，Kylin以HBase作为存储引擎，因此HBase的查询效率对于Kylin的查询响应时间尤为关键，而rowkey作为HBase最重要的设计自然是优化的重中之重。合适的rowkey设计不仅可以节省cube存储空间和降低膨胀率，而且能减小查询扫描的范围并提高聚合计算速度从而加速查询。为此，Kylin在”Advanced Setting”页面提供了rowkey的配置供用户调整，具体可以分为维">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/09/24/Kylin实战（四）：rowkey调优/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Kylin实战（四）：rowkey调优 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/09/24/Kylin实战（四）：rowkey调优/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Kylin实战（四）：rowkey调优</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-09-24T10:43:04+08:00">
+                2017-09-24
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kylin/" itemprop="url" rel="index">
+                    <span itemprop="name">Kylin</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/09/24/Kylin实战（四）：rowkey调优/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/09/24/Kylin实战（四）：rowkey调优/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>普遍情况下，Kylin以HBase作为存储引擎，因此HBase的查询效率对于Kylin的查询响应时间尤为关键，而rowkey作为HBase最重要的设计自然是优化的重中之重。合适的rowkey设计不仅可以节省cube存储空间和降低膨胀率，而且能减小查询扫描的范围并提高聚合计算速度从而加速查询。为此，Kylin在”Advanced Setting”页面提供了rowkey的配置供用户调整，具体可以分为维度的编码方式、维度的顺序和分片维度设置三类。</p>
+<a id="more"></a>
+<h1 id="维度的编码方式"><a href="#维度的编码方式" class="headerlink" title="维度的编码方式"></a>维度的编码方式</h1><p>众所周知，HBase以字节数组的形式存储数据，编码方式需要应用负责。Kylin可以在维度级别设置编码方式，包括dict、fixed_length、fixed_length_hex、integer等（编码方式在不同版本有所差，本文基于1.6.0版本），供用户针对不同维度的数据类型、基数、长度等特性进行调优。下面按照编码方式的通常使用频率逐一分析。</p>
+<ol>
+<li><p>dict编码<br>Dict编码是最为常见的编码方式，它将维度的唯一值提取出来在内存中构成字典，并将在rowkey中对应维度的替换为字段的key。这种方式的优点是存储较为紧凑，减少了维度值的冗余，代价是每次查询相关维度都需要查一遍字典以获取维度的值，是时间换空间的做法，但由于字典常驻内所以存检索很快，对查询时间并没有太大的影响。另外，字典保存在内存里带来的另外一个限制是字典不能超出缓存大小，否则会在cube build期间发生缓存溢出异常。官方默认的dict编码字段基数在5,000,000以内，虽然具体上限可以通过<code>kylin.dictionary.max.cardinality</code>来修改，但比起调整基数上限，更好的做法是换成其他类型的编码。综上不难看出dict编码适用于维度基数较小、重复出现较多的列，比如地区信息（国家、省份、城市）。</p>
+</li>
+<li><p>fixed_length编码<br>对于并不适用于dict编码的高基数维度列，比如USER_ID、IP之类的维度，fixed_length编码会是个不错的选择。顾名思义，fixed_length编码以固定长度来存储维度值，需要预设一个长度表示字段的最大字节数，超过该长度的部分会被截断。但要注意对于像COMMENT、TWEET这种特别长的字段，设置一个比较大的N会造成rowkey过长，导致性能下降。如果不能截断这些字段，推荐做法是将其存为raw形式的指标。</p>
+</li>
+<li><p>integer编码<br>不少维度列实际上是整数的形式，比如之前的提到的USER_ID就很有可能是整型或者长整型，如果使用fix_length编码则非数字的编码空间会被白白浪费，为此Kylin还提供了integer编码来存储数字类型的数据。Integer编码支持长度为1-8个字节，也就是[-2^(8<em>N-1), 2^(8</em>N-1)]，一般来说存储整型数值将长度设为4字节就可以。</p>
+</li>
+<li><p>fixed_length_hex编码<br>这种编码特别为十六进制的字段设计，用于存储byte数组很自然，适合Base64转化后的字段。</p>
+</li>
+<li><p>boolean编码<br>用一个byte表示布尔值，适用于字段值为: (true/false, TRUE/FALSE, True/False, t/f, T/F, yes/no, YES/NO, Yes/No, y/n, Y/N, 1/0)。</p>
+</li>
+</ol>
+<h1 id="维度的顺序"><a href="#维度的顺序" class="headerlink" title="维度的顺序"></a>维度的顺序</h1><p>HBase是以rowkey顺序存储行的，这意味着在rowkey中越靠前的维度，相近的值越为集中（需要查询更少的Region），从而越容易检索。因此，在查询条件中出现频率越高的维度应该越靠前。  </p>
+<p>另一方面，rowkey是HBase的聚集索引，对于索引来说区分度是个重要的指标，我们不希望走完索引后发现还有大量的行需要遍历，这反应到索引列上就是基数越大越好。因此，基数大的列放在rowkey靠前的位置也是个推荐的做法。这样做还有一个不可忽视的好处是减小计算成本：cube构建阶段或查询没有命中物化的cuboid时，Kylin需要选择一个父cuboid来进行聚合得出子cuboid。而父cuboid的选择算法是选出cuboid id最小的一个，这意味着排在rowkey较后的维度列会优先被选中做上卷操作。如果基数小的维度在后，那么上卷的计算量会相应地减小。</p>
+<p>当这两个优化方向出现冲突时，比如A维度基数大但查询几率小，B维度基数小但查询几率大，这时就要结合HBase的物理存储来分析了。我的经验是看region会在第几个维度上出现区分度（可以在HBase的管理里面看到Region的startkey和endkey），在该维度以后的维度顺序并不太重要，因为根据它们去检索数据时都需要扫描全部的region，所以只需要考虑基于维度基数的规则二。否则应该更倾向于用基于查询频率的规则一，因为查询的效率比离线cube build的效率更为重要，而查询没有命中cuboid的情况也属于少数。</p>
+<h1 id="分片维度"><a href="#分片维度" class="headerlink" title="分片维度"></a>分片维度</h1><p>Cube支持在构建阶段进行分片以提高效率，可以并只可以将一个维度设为分片(shard by)维度（注意分片维度和cube的partition维度不同，前者作用于构建阶段，后者是用于分割时间段以支持增量构建）。Cube build第二步需要将中间表的数据重新分布到HDFS各个节点上，默认的partition方式是随机，如果指定了分片维度，则改为使用分片维度进行partition。重新分布数据的意义在于防止中间表文件大小相差太大造成数据倾斜，因此分片维度应该是高基数列以保证分片的粒度足够小，可以较为均匀地分布到各个节点上，这能大大加速之后的MapReduce任务。</p>
+<h1 id="写在最后的话"><a href="#写在最后的话" class="headerlink" title="写在最后的话"></a>写在最后的话</h1><p>Rowkey设计向来是HBase应用最为重要的一点。Kylin作为对于HBase依赖较大的系统，在框架内提供了从rowkey编码、字段顺序和输入数据分布三大方向的配置项，基本满足了常见的HBase调优需求。  然后因为在rowkey中出现的字段是由cube设计决定，rowkey的字段必须和cube设计的维度一致，导致指标其实是没有办法作为rowkey的一部分的（除非将指标列同时设为维度，但在2.0以上版本不支持这样做）。一般来说指标出现在rowkey的确不符合OLAP的理念，但是如果有需求是根据指标做过滤，Kylin目前的rowkey设计是满足不了的。这个问题在涉及原始指标的过滤时会被放大，比如计算月销售量大于100的员工的销售额总和，对应的SQL为<code>SELECT SUM(sales_amount) FROM tbl_sales WHERE sales_amount &gt; 100</code>，其实是需要扫描所有base cuboid来满足的。所以如果可以让用户选择某些指标放入rowkey，并在聚合组设置中禁止加入指标列（相当于只用于过滤不用于聚合），或许是个不错的方法。</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>[1]Apache Kylin核心团队.Kylin权威指南[M].机械工业出版社, 2017.<br>[2]<a href="http://kylin.apache.org/docs21/howto/howto_optimize_cubes.html" target="_blank" rel="external">Kylin Documentation: howto_optimize_cubes</a>, Apache.<br>[3]<a href="https://zhuanlan.zhihu.com/p/28461266" target="_blank" rel="external">Kyligence知乎专栏: Apache Kylin 优化利器KyBot: Rowkey一键优化</a>, Zhihu.</p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/09/24/Kylin实战（四）：rowkey调优/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（四）：rowkey调优</a></em></font>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2017/09/24/Kylin实战（四）：rowkey调优/" title="Kylin实战（四）：rowkey调优">2017/09/24/Kylin实战（四）：rowkey调优/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kylin/" rel="tag"># Kylin</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/09/18/Kylin实战（三）：cube聚合组优化/" rel="next" title="Kylin实战（三）：cube聚合组优化">
+                <i class="fa fa-chevron-left"></i> Kylin实战（三）：cube聚合组优化
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/10/28/Kylin实战（五）：优化cube构建/" rel="prev" title="Kylin实战（五）：优化cube构建">
+                Kylin实战（五）：优化cube构建 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#维度的编码方式"><span class="nav-number">1.</span> <span class="nav-text">维度的编码方式</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#维度的顺序"><span class="nav-number">2.</span> <span class="nav-text">维度的顺序</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#分片维度"><span class="nav-number">3.</span> <span class="nav-text">分片维度</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#写在最后的话"><span class="nav-number">4.</span> <span class="nav-text">写在最后的话</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2017/09/24/Kylin实战（四）：rowkey调优/';
+          this.page.identifier = '2017/09/24/Kylin实战（四）：rowkey调优/';
+          this.page.title = 'Kylin实战（四）：rowkey调优';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

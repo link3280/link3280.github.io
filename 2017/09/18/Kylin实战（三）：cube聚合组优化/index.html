@@ -1,0 +1,833 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Kylin," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="Kylin核心思想是通过预计算空间换时间，是典型的Multidimensional OLAP应用。MLOAP有着结构紧凑，查询响应快的优点，但同时也有着臭名昭著的维度爆炸问题。如果将所有维度组合都预计算并存储下来，组合的数量将是2^N。通常一个宽表有上百的维度是很正常的，但查询组合往往不超过20维，其中巨大的浪费是显而易见的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kylin实战（三）：cube聚合组优化">
+<meta property="og:url" content="https://link3280.github.io/2017/09/18/Kylin实战（三）：cube聚合组优化/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="Kylin核心思想是通过预计算空间换时间，是典型的Multidimensional OLAP应用。MLOAP有着结构紧凑，查询响应快的优点，但同时也有着臭名昭著的维度爆炸问题。如果将所有维度组合都预计算并存储下来，组合的数量将是2^N。通常一个宽表有上百的维度是很正常的，但查询组合往往不超过20维，其中巨大的浪费是显而易见的。">
+<meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/使用聚合组前.png">
+<meta property="og:image" content="https://link3280.github.io/img/kylin-in-action/使用聚合组后.png">
+<meta property="og:updated_time" content="2017-12-17T05:10:38.220Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kylin实战（三）：cube聚合组优化">
+<meta name="twitter:description" content="Kylin核心思想是通过预计算空间换时间，是典型的Multidimensional OLAP应用。MLOAP有着结构紧凑，查询响应快的优点，但同时也有着臭名昭著的维度爆炸问题。如果将所有维度组合都预计算并存储下来，组合的数量将是2^N。通常一个宽表有上百的维度是很正常的，但查询组合往往不超过20维，其中巨大的浪费是显而易见的。">
+<meta name="twitter:image" content="https://link3280.github.io/img/kylin-in-action/使用聚合组前.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2017/09/18/Kylin实战（三）：cube聚合组优化/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Kylin实战（三）：cube聚合组优化 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2017/09/18/Kylin实战（三）：cube聚合组优化/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Kylin实战（三）：cube聚合组优化</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-09-18T21:46:08+08:00">
+                2017-09-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kylin/" itemprop="url" rel="index">
+                    <span itemprop="name">Kylin</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2017/09/18/Kylin实战（三）：cube聚合组优化/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2017/09/18/Kylin实战（三）：cube聚合组优化/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Kylin核心思想是通过预计算空间换时间，是典型的Multidimensional OLAP应用。MLOAP有着结构紧凑，查询响应快的优点，但同时也有着臭名昭著的维度爆炸问题。如果将所有维度组合都预计算并存储下来，组合的数量将是2^N。通常一个宽表有上百的维度是很正常的，但查询组合往往不超过20维，其中巨大的浪费是显而易见的。</p>
+<a id="more"></a>
+<h1 id="聚合组-Aggregation-Groups"><a href="#聚合组-Aggregation-Groups" class="headerlink" title="聚合组(Aggregation Groups)"></a>聚合组(Aggregation Groups)</h1><p>为了处理维度爆炸的问题，从1.5版本开始(目前最高版本为2.1)Kylin引入了聚合组(Aggregation Groups)特性来对2^N的全量维度组合进行剪枝。聚合组是基于不同查询模式通常是相互独立的假设上设计的，比如对于销售数据，市场总监更关心各产品在各地区的销售量分布，而HR或许只关心每个销售团队和每个人的销售额。</p>
+<p>假设一份数据有20个维度，可以分为两个独立的查询模式(聚合组)，查询的维度数分别为10维和15维，则原本 2^20个 的维度组合(在Kylin中称为cuboid)可以大大减少至 2^10 + 2^15 约等于 2^15 个cuboid。中间如果不同查询组合产生了相同的cuboid，Kylin会意识到并跳过。</p>
+<p><img src="/img/kylin-in-action/使用聚合组前.png" alt="完全未剪枝的维度组合树" title="完全未剪枝的维度组合树"></p>
+<p><img src="/img/kylin-in-action/使用聚合组后.png" alt="使用聚合组剪枝后的维度组合树" title="使用聚合组剪枝后的维度组合树"></p>
+<p>在剪枝中被去掉的维度组合没有被物化，并不意味着不能查询了。当所有cuboid都不能满足查询时，Kylin会选出离查询组合最为接近并包含该查询组合的cuboid来计算出结果。比如查询组合是[A,B]而该组合没有被物化，同时3维的cuboid有[A,B,C]、[A,B,D]，此时Kylin会选出两个组合里id较小(通常也意味着基数较小)的一个来进行上卷(roll up)得到[A,B]。在最坏的情况下，Kylin需要从base cuboid，也就是包含所有原始数据的基础cuboid计算出最终结果。</p>
+<h1 id="聚合组内剪枝"><a href="#聚合组内剪枝" class="headerlink" title="聚合组内剪枝"></a>聚合组内剪枝</h1><p>使用聚合组显著地减轻了维度爆炸问题，然而在聚合组内部还有剪枝优化的空间。Kylin提供三个特定的剪枝方式供用户在相应的场景下对组内的维度组合进行再一次剪枝。</p>
+<ol>
+<li><p>强制维度(Mandatory Dimensions)<br>强制维度指维度组合必须包含的维度，比如对日活跃用户的查询必须包含日期dt，则可以将dt设为强制维度，不包含dt的cuboid将不会被物化。每指定一个强制维度相当与将维度数减一，维度组合数变为原来的一半。</p>
+</li>
+<li><p>层级维度(Hierarchy Dimensions)<br>层级维度指只会以层级形式出现的维度，比如国家-省份-城市是典型的维度组合，我们一般会查询国家，国家-省份和国家-省份-城市，而很少单独查询城市。被指定为层级维度的几个维度只会以前缀匹配的形式出现，对总体维度组合数目的增加倍数由2^N减少为N。</p>
+</li>
+<li><p>合并维度(Joint Dimensions)<br>合并维度指在查询中或都出现或都不出现的维度组合，比如邮箱用户名和邮箱服务提供商，也就是@前后两部分分成两列(某些情况下真有可能这么做)。由于合并维度的出现是一致的，那么计算时只需要考虑出现或不出现两种情况，所有对总体维度组合数目的增加倍数由2^N减少为2。</p>
+</li>
+</ol>
+<p>通过聚合组剪枝和组内剪枝，剩余的cuboid基本符合预设的查询模式，也就是必需的。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>聚合组是Kylin处理维度爆炸问题的最重要也是最有效的方法，同时不在聚合组内的查询模式可以通过HBase原始数据的上卷满足，在查询速度和可用性间做了很好的平衡，大大方便了cube的建模。从Kylin查询用户的角度来说，在最早的版本，遇到未命中cuboid的查询时Kylin会同步调用Hive进行计算或直接报错，用户体验比较差，所以通常倾向于浪费一定的计算和存储资源来满足用户查询的conner case，用户查询也要尽可能小心不要超出cube的范围。而现在的版本，cuboid对用户来说是不可见的，少见的查询条件返回时间长一点是可以接受的。</p>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>1.<a href="http://kylin.apache.org/blog/2016/02/18/new-aggregation-group/" target="_blank" rel="external">Kylin官方博客 new-aggregation-group</a><br>2.Apache Kylin权威指南<br>3.<a href="https://mp.weixin.qq.com/s?src=3&amp;timestamp=1505726642&amp;ver=1&amp;signature=7mUfBzoD2ula0Bb69Sr*DbfukoITZOgfvKJad*STU78Uatfb0IdNDqafBDDF2pKIo5bIhXONGAT53Md8A9mT08OgD8cBZwg-6Ep3w54uJAyYwZ-6*I9AtzMyo8OaU3fvO1GOUX0tEFNbAqQHj080o0gxtn1n4uWfQjjVupFhqEE=" target="_blank" rel="external">Apache Kylin 高级设置：聚合组（Aggregation Group）原理解析</a><br>4.<a href="https://en.wikipedia.org/wiki/Online_analytical_processing" target="_blank" rel="external">Wikipedia OLAP</a></p>
+<font face="#D2691E" size="3"><em>本文是原创文章，转载请注明：<a href="http://www.whitewood.me/2017/09/18/Kylin实战（三）：cube聚合组优化/" target="_blank" rel="external">时间与精神的小屋 - Kylin实战（三）：cube聚合组优化</a></em></font>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2017/09/18/Kylin实战（三）：cube聚合组优化/" title="Kylin实战（三）：cube聚合组优化">2017/09/18/Kylin实战（三）：cube聚合组优化/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kylin/" rel="tag"># Kylin</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/09/10/Kylin实战（二）：引入Hive视图层/" rel="next" title="Kylin实战（二）：引入Hive视图层">
+                <i class="fa fa-chevron-left"></i> Kylin实战（二）：引入Hive视图层
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/09/24/Kylin实战（四）：rowkey调优/" rel="prev" title="Kylin实战（四）：rowkey调优">
+                Kylin实战（四）：rowkey调优 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#聚合组-Aggregation-Groups"><span class="nav-number">1.</span> <span class="nav-text">聚合组(Aggregation Groups)</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#聚合组内剪枝"><span class="nav-number">2.</span> <span class="nav-text">聚合组内剪枝</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">4.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2017/09/18/Kylin实战（三）：cube聚合组优化/';
+          this.page.identifier = '2017/09/18/Kylin实战（三）：cube聚合组优化/';
+          this.page.title = 'Kylin实战（三）：cube聚合组优化';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

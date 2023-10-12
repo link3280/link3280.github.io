@@ -1,0 +1,878 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Flink," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何分析及处理 Flink 反压">
+<meta property="og:url" content="https://link3280.github.io/2019/11/03/Flink-反压分析及处理/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。">
+<meta property="og:image" content="https://link3280.github.io/img/flink-backpressure-handling/back-pressure-sampling-high.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink-backpressure-handling/credit-based-network.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink-backpressure-handling/1.8-backpressure-table.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink-backpressure-handling/1.9-backpressure-table.png">
+<meta property="og:updated_time" content="2019-11-03T12:06:04.979Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="如何分析及处理 Flink 反压">
+<meta name="twitter:description" content="反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。">
+<meta name="twitter:image" content="https://link3280.github.io/img/flink-backpressure-handling/back-pressure-sampling-high.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2019/11/03/Flink-反压分析及处理/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>如何分析及处理 Flink 反压 | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2019/11/03/Flink-反压分析及处理/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">如何分析及处理 Flink 反压</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-11-03T19:49:21+08:00">
+                2019-11-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/11/03/Flink-反压分析及处理/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2019/11/03/Flink-反压分析及处理/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>反压（backpressure）是实时计算应用开发中，特别是流式计算中，十分常见的问题。反压意味着数据管道中某个节点成为瓶颈，处理速率跟不上上游发送数据的速率，而需要对上游进行限速。由于实时计算应用通常使用消息队列来进行生产端和消费端的解耦，消费端数据源是 pull-based 的，所以反压通常是从某个节点传导至数据源并降低数据源（比如 Kafka consumer）的摄入速率。</p>
+<a id="more"></a>
+<p>关于 Flink 的反压机制，网上已经有不少博客介绍，中文博客推荐这两篇[1][2]。简单来说，Flink 拓扑中每个节点（Task）间的数据都以阻塞队列的方式传输，下游来不及消费导致队列被占满后，上游的生产也会被阻塞，最终导致数据源的摄入被阻塞。而本文将着重结合官方的博客[4]分享笔者在实践中分析和处理 Flink 反压的经验。</p>
+<h2 id="反压的影响"><a href="#反压的影响" class="headerlink" title="反压的影响"></a>反压的影响</h2><p>反压并不会直接影响作业的可用性，它表明作业处于亚健康的状态，有潜在的性能瓶颈并可能导致更大的数据处理延迟。通常来说，对于一些对延迟要求不太高或者数据量比较小的应用来说，反压的影响可能并不明显，然而对于规模比较大的 Flink 作业来说反压可能会导致严重的问题。</p>
+<p>这是因为 Flink 的 checkpoint 机制，反压还会影响到两项指标: checkpoint 时长和 state 大小。前者是因为 checkpoint barrier 是不会越过普通数据的，数据处理被阻塞也会导致 checkpoint barrier 流经整个数据管道的时长变长，因而 checkpoint 总体时间（End to End Duration）变长。后者是因为为保证 EOS（Exactly-Once-Semantics，准确一次），对于有两个以上输入管道的 Operator，checkpoint barrier 需要对齐（Alignment），接受到较快的输入管道的 barrier 后，它后面数据会被缓存起来但不处理，直到较慢的输入管道的 barrier 也到达，这些被缓存的数据会被放到state 里面，导致 checkpoint 变大。这两个影响对于生产环境的作业来说是十分危险的，因为 checkpoint 是保证数据一致性的关键，checkpoint 时间变长有可能导致 checkpoint 超时失败，而 state 大小同样可能拖慢 checkpoint 甚至导致 OOM （使用 Heap-based StateBackend）或者物理内存使用超出容器资源（使用 RocksDBStateBackend）的稳定性问题。因此，我们在生产中要尽量避免出现反压的情况（顺带一提，为了缓解反压给 checkpoint 造成的压力，社区提出了 FLIP-76: Unaligned Checkpoints[4] 来解耦反压和 checkpoint）。</p>
+<h2 id="定位反压节点"><a href="#定位反压节点" class="headerlink" title="定位反压节点"></a>定位反压节点</h2><p>要解决反压首先要做的是定位到造成反压的节点，这主要有两种办法: 1.通过 Flink Web UI 自带的反压监控面板；2.通过 Flink Task Metrics。前者比较容易上手，适合简单分析，后者则提供了更加丰富的信息，适合用于监控系统。因为反压会向上游传导，这两种方式都要求我们从 Source 节点到 Sink 的逐一排查，直到找到造成反压的根源原因[4]。下面分别介绍这两种办法。</p>
+<h3 id="反压监控面板"><a href="#反压监控面板" class="headerlink" title="反压监控面板"></a>反压监控面板</h3><p>Flink Web UI 的反压监控提供了 SubTask 级别的反压监控，原理是通过周期性对 Task 线程的栈信息采样，得到线程被阻塞在请求 Buffer（意味着被下游队列阻塞）的频率来判断该节点是否处于反压状态。默认配置下，这个频率在 0.1 以下则为 <code>OK</code>，0.1 至 0.5 为 <code>LOW</code>，而超过 0.5 则为 <code>HIGH</code>。</p>
+<center><p><img src="/img/flink-backpressure-handling/back-pressure-sampling-high.png" alt="图1. Flink 1.8 的 Web UI 反压面板" title="图1. Flink 1.8 的 Web UI 反压面板(来自官方博客)"></p></center>
+
+<p>如果处于反压状态，那么有两种可能性：</p>
+<ol>
+<li>该节点的发送速率跟不上它的产生数据速率。这一般会发生在一条输入多条输出的 Operator（比如 flatmap）。</li>
+<li>下游的节点接受速率较慢，通过反压机制限制了该节点的发送速率。</li>
+</ol>
+<p>如果是第一种状况，那么该节点则为反压的根源节点，它是从 Source Task 到 Sink Task 的第一个出现反压的节点。如果是第二种情况，则需要继续排查下游节点。值得注意的是，反压的根源节点并不一定会在反压面板体现出高反压，因为反压面板监控的是发送端，如果某个节点是性能瓶颈并不会导致它本身出现高反压，而是导致它的上游出现高反压。总体来看，如果我们找到第一个出现反压的节点，那么反压根源要么是就这个节点，要么是它紧接着的下游节点。</p>
+<p>那么如果区分这两种状态呢？很遗憾只通过反压面板是无法直接判断的，我们还需要结合 Metrics 或者其他监控手段来定位。此外如果作业的节点数很多或者并行度很大，由于要采集所有 Task 的栈信息，反压面板的压力也会很大甚至不可用。</p>
+<h3 id="Task-Metrics"><a href="#Task-Metrics" class="headerlink" title="Task Metrics"></a>Task Metrics</h3><p>Flink 提供的 Task Metrics 是更好的反压监控手段，但也要求更加丰富的背景知识。首先我们简单回顾下 Flink 1.5 以后的网路栈，熟悉的读者可以直接跳过。</p>
+<p>TaskManager 传输数据时，不同的 TaskManager 上的两个 Subtask 间通常根据 key 的数量有多个 Channel，这些 Channel 会复用同一个 TaskManager 级别的 TCP 链接，并且共享接收端 Subtask 级别的 Buffer Pool。在接收端，每个 Channl 在初始阶段会被分配固定数量的 Exclusive Buffer，这些 Buffer 会被用于存储接受到的数据，交给 Operator 使用后再次被释放。Channel 接收端空闲的 Buffer 数量称为 Credit，Credit 会被定时同步给发送端被后者用于决定发送多少个 Buffer 的数据。在流量较大时，Channel 的 Exclusive Buffer 可能会被写满，此时 Flink 会向 Buffer Pool 申请剩余的 Floating Buffer。这些 Floating Buffer 属于备用 Buffer，哪个 Channel 需要就去哪里。而在 Channel 发送端，一个 Subtask 所有的 Channel 会共享同一个 Buffer Pool，这边就没有区分 Exclusive Buffer 和 Floating Buffer。</p>
+<center><p><img src="/img/flink-backpressure-handling/credit-based-network.png" alt="图2. Flink Credit-Based 网络" title="图2. Flink Credit-Based 网络"></p></center>
+
+<p>我们在监控反压时会用到的 Metrics 主要和 Channel 接受端的 Buffer 使用率有关，最为有用的是以下几个 Metrics:</p>
+<table>
+<thead>
+<tr>
+<th>Metris</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>outPoolUsage</td>
+<td>发送端 Buffer 的使用率</td>
+</tr>
+<tr>
+<td>inPoolUsage</td>
+<td>接收端 Buffer 的使用率</td>
+</tr>
+<tr>
+<td>floatingBuffersUsage（1.9 以上）</td>
+<td>接收端 Floating Buffer 的使用率</td>
+</tr>
+<tr>
+<td>exclusiveBuffersUsage （1.9 以上）</td>
+<td>接收端 Exclusive Buffer 的使用率</td>
+</tr>
+</tbody>
+</table>
+<p>其中 inPoolUsage 等于 floatingBuffersUsage 与 exclusiveBuffersUsage 的总和。</p>
+<p>分析反压的大致思路是：如果一个 Subtask 的发送端 Buffer 占用率很高，则表明它被下游反压限速了；如果一个 Subtask 的接受端 Buffer 占用很高，则表明它将反压传导至上游。反压情况可以根据以下表格进行对号入座(图片来自官网):</p>
+<center><p><img src="/img/flink-backpressure-handling/1.8-backpressure-table.png" alt="图3. 反压分析表" title="图3. 反压分析表"></p></center>
+
+<p>outPoolUsage 和 inPoolUsage 同为低或同为高分别表明当前 Subtask 正常或处于被下游反压，这应该没有太多疑问。而比较有趣的是当 outPoolUsage 和 inPoolUsage 表现不同时，这可能是出于反压传导的中间状态或者表明该 Subtask 就是反压的根源。如果一个 Subtask 的 outPoolUsage 是高，通常是被下游 Task 所影响，所以可以排查它本身是反压根源的可能性。如果一个 Subtask 的 outPoolUsage 是低，但其 inPoolUsage 是高，则表明它有可能是反压的根源。因为通常反压会传导至其上游，导致上游某些 Subtask 的 outPoolUsage 为高，我们可以根据这点来进一步判断。值得注意的是，反压有时是短暂的且影响不大，比如来自某个 Channel 的短暂网络延迟或者 TaskManager 的正常 GC，这种情况下我们可以不用处理。</p>
+<p>对于 Flink 1.9 及以上版本，除了上述的表格，我们还可以根据 floatingBuffersUsage/exclusiveBuffersUsage 以及其上游 Task 的 outPoolUsage 来进行进一步的分析一个 Subtask 和其上游 Subtask 的数据传输。</p>
+<center><p><img src="/img/flink-backpressure-handling/1.9-backpressure-table.png" alt="图4. Flink 1.9 反压分析表" title="图4. Flink 1.9 反压分析表"></p></center>
+
+<p>通常来说，floatingBuffersUsage 为高则表明反压正在传导至上游，而 exclusiveBuffersUsage 则表明了反压是否存在倾斜（floatingBuffersUsage 高、exclusiveBuffersUsage 低为有倾斜，因为少数 channel 占用了大部分的 Floating Buffer）。</p>
+<p>至此，我们已经有比较丰富的手段定位反压的根源是出现在哪个节点，但是具体的原因还没有办法找到。另外基于网络的反压 metrics 并不能定位到具体的 Operator，只能定位到 Task。特别是那种 embarrassingly parallel（易并行）的作业（所有的 Operator 会被放入一个 Task，因此只有一个节点），反压 metrics 则排不上用场。</p>
+<h2 id="分析具体原因及处理"><a href="#分析具体原因及处理" class="headerlink" title="分析具体原因及处理"></a>分析具体原因及处理</h2><p>定位到反压节点后，分析造成原因的办法和我们分析一个普通程序的性能瓶颈的办法是十分类似的，可能还要更简单一点，因为我们要观察的主要是 Task Thread。</p>
+<p>在实践中，很多情况下的反压是由于数据倾斜造成的，这点我们可以通过 Web UI 各个 SubTask 的 Records Sent 和 Record Received 来确认，另外 Checkpoint detail 里不同 SubTask 的 State size 也是一个分析数据倾斜的有用指标。</p>
+<p>此外，最常见的问题可能是用户代码的执行效率问题（频繁被阻塞或者性能问题）。最有用的办法就是对 TaskManager 进行 CPU profile，从中我们可以分析到 Task Thread 是否跑满一个 CPU 核：如果是的话要分析 CPU 主要花费在哪些函数里面，比如我们生产环境中就偶尔遇到卡在 Regex 的用户函数（ReDoS）；如果不是的话要看 Task Thread 阻塞在哪里，可能是用户函数本身有些同步的调用，可能是 checkpoint 或者 GC 等系统活动导致的暂时系统暂停。当然，性能分析的结果也可能是正常的，只是作业申请的资源不足而导致了反压，这就通常要求拓展并行度。值得一提的，在未来的版本 Flink 将会直接在 WebUI 提供 JVM 的 CPU 火焰图[5]，这将大大简化性能瓶颈的分析。</p>
+<p>另外 TaskManager 的内存以及 GC 问题也可能会导致反压，包括 TaskManager JVM 各区内存不合理导致的频繁 Full GC 甚至失联。推荐可以通过给 TaskManager 启用 G1 垃圾回收器来优化 GC，并加上 <code>-XX:+PrintGCDetails</code> 来打印 GC 日志的方式来观察 GC 的问题。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>反压是 Flink 应用运维中常见的问题，它不仅意味着性能瓶颈还可能导致作业的不稳定性。定位反压可以从 Web UI 的反压监控面板和 Task Metric 两者入手，前者方便简单分析，后者适合深入挖掘。定位到反压节点后我们可以通过数据分布、CPU Profile 和 GC 指标日志等手段来进一步分析反压背后的具体原因并进行针对性的优化。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>1.<a href="http://wuchong.me/blog/2016/04/26/flink-internals-how-to-handle-backpressure/" target="_blank" rel="external">Flink 原理与实现：如何处理反压问题</a><br>2.<a href="https://mp.weixin.qq.com/s?src=11&amp;timestamp=1571628927&amp;ver=1925&amp;signature=cHpaczGLH6QninlmHmM0mDKbb2-fuTMw83YjIFQFa7iN3omCrdlL51zCKo7N0n1uwM7*9JL-DmsQXhR*1Uh0YiUpVLHEzklFN9KUK33PVeF2fnoXcr0cDPPZ2s8HmK-D&amp;new=1" target="_blank" rel="external">一文彻底搞懂 Flink 网络流控与反压机制</a><br>3.<a href="http://www.whitewood.me/2018/05/13/Flink-%E8%BD%BB%E9%87%8F%E7%BA%A7%E5%BC%82%E6%AD%A5%E5%BF%AB%E7%85%A7-ABS-%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/" target="_blank" rel="external">Flink 轻量级异步快照 ABS 实现原理</a><br>4.<a href="https://flink.apache.org/2019/07/23/flink-network-stack-2.html" target="_blank" rel="external">Flink Network Stack Vol. 2: Monitoring, Metrics, and that Backpressure Thing</a><br>5.<a href="https://issues.apache.org/jira/browse/FLINK-13550" target="_blank" rel="external">Support for CPU FlameGraphs in new web UI</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2019/11/03/Flink-反压分析及处理/" title="如何分析及处理 Flink 反压">2019/11/03/Flink-反压分析及处理/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/10/17/Flink-1-10-细粒度资源管理解析/" rel="next" title="Flink 1.10 细粒度资源管理解析">
+                <i class="fa fa-chevron-left"></i> Flink 1.10 细粒度资源管理解析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/12/15/Flink-SQL-如何实现数据流的-Join/" rel="prev" title="Flink SQL 如何实现数据流的 Join">
+                Flink SQL 如何实现数据流的 Join <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#反压的影响"><span class="nav-number">1.</span> <span class="nav-text">反压的影响</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#定位反压节点"><span class="nav-number">2.</span> <span class="nav-text">定位反压节点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#反压监控面板"><span class="nav-number">2.1.</span> <span class="nav-text">反压监控面板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Task-Metrics"><span class="nav-number">2.2.</span> <span class="nav-text">Task Metrics</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分析具体原因及处理"><span class="nav-number">3.</span> <span class="nav-text">分析具体原因及处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2019/11/03/Flink-反压分析及处理/';
+          this.page.identifier = '2019/11/03/Flink-反压分析及处理/';
+          this.page.title = '如何分析及处理 Flink 反压';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

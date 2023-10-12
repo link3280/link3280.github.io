@@ -1,0 +1,855 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Flink," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="在上篇关于 YARN 系统 Security 的博客，我们解析了通过 YARN 提供的 Security API，Application 已经在 RM 注册并且可以顺利地申请到 container，但 YARN 对 container 后续的凭证刷新（reacquire）并不能作用到已经在运行的 Application 进程，因此对于长期运行的 Application 而言要开发者自己实现认证和后">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink on YARN Security 浅析(Flink Part)">
+<meta property="og:url" content="https://link3280.github.io/2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="在上篇关于 YARN 系统 Security 的博客，我们解析了通过 YARN 提供的 Security API，Application 已经在 RM 注册并且可以顺利地申请到 container，但 YARN 对 container 后续的凭证刷新（reacquire）并不能作用到已经在运行的 Application 进程，因此对于长期运行的 Application 而言要开发者自己实现认证和后">
+<meta property="og:image" content="https://link3280.github.io/img/flink-on-yarn-security/Approach1-pre-installed-keytab.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink-on-yarn-security/Approach2-distribute-via-YARN.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink-on-yarn-security/Approach3-am-generates-token.png">
+<meta property="og:image" content="https://link3280.github.io/img/flink-on-yarn-security/Approach4-client-generates-token.png">
+<meta property="og:updated_time" content="2019-04-14T13:03:26.497Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink on YARN Security 浅析(Flink Part)">
+<meta name="twitter:description" content="在上篇关于 YARN 系统 Security 的博客，我们解析了通过 YARN 提供的 Security API，Application 已经在 RM 注册并且可以顺利地申请到 container，但 YARN 对 container 后续的凭证刷新（reacquire）并不能作用到已经在运行的 Application 进程，因此对于长期运行的 Application 而言要开发者自己实现认证和后">
+<meta name="twitter:image" content="https://link3280.github.io/img/flink-on-yarn-security/Approach1-pre-installed-keytab.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Flink on YARN Security 浅析(Flink Part) | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink on YARN Security 浅析(Flink Part)</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-01-06T21:05:28+08:00">
+                2019-01-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在上篇关于 YARN 系统 Security 的博客，我们解析了通过 YARN 提供的 Security API，Application 已经在 RM 注册并且可以顺利地申请到 container，但 YARN 对 container 后续的凭证刷新（reacquire）并不能作用到已经在运行的 Application 进程，因此对于长期运行的 Application 而言要开发者自己实现认证和后续凭证刷新的逻辑。本文将接着分析 Flink 如何在申请到的 container 启动 jobmanger 和 taskmanager 并完成认证，也就是 Flink Application 自身的认证，以及后续的凭证刷新方法，最后再讲述最近社区对于 Flink on YARN Security 改进提案。</p>
+<a id="more"></a>
+<h2 id="长时间运行的-YARN-Application-的四种认证方法"><a href="#长时间运行的-YARN-Application-的四种认证方法" class="headerlink" title="长时间运行的 YARN Application 的四种认证方法"></a>长时间运行的 YARN Application 的四种认证方法</h2><h3 id="在-YARN-集群机器上预安装-keytab"><a href="#在-YARN-集群机器上预安装-keytab" class="headerlink" title="在 YARN 集群机器上预安装 keytab"></a>在 YARN 集群机器上预安装 keytab</h3><p>将 Application 可能会用到的 keytab 预先安装到 YARN 集群的所有机器的本地文件系统并设置好目录权限，然后将相关路径作为作为 Application 的配置提供给 AM 和其他普通 container。用户进程启动时通过 <code>UserGroupInformation.loginUserFromKeytab()</code> 来加载凭证和认证，并且后续通过 keytab 来刷新 kerberos 凭证。具体的安全凭证分布如图一所示，其中实线表示永久凭证 keytab 的传递，虚线表示临时凭证 token 的传递。</p>
+<center><p><img src="/img/flink-on-yarn-security/Approach1-pre-installed-keytab.png" alt="图一. pre-installed-keytab" title="图一. pre-installed-keytab"></p></center>
+
+<p>这种方式直接使用 Kerberos keytab ，绕开了 Hadoop delegation token，相当于 后者只用于 container 的申请。因此这样的优点是避开了 token 最大生命周期的问题，而缺点在于没有了 delegation token 的优点，即每次 TGT 刷新需要请求 KDC，而且 keytab 也需要比较高的运维成本。</p>
+<h3 id="通过-YARN-分发-keytab-给-AM-和其他-container"><a href="#通过-YARN-分发-keytab-给-AM-和其他-container" class="headerlink" title="通过 YARN 分发 keytab 给 AM 和其他 container"></a>通过 YARN 分发 keytab 给 AM 和其他 container</h3><p>首先将 Application 客户端将 keytab 上传至 HDFS，并在提交 Application 时将其作为AM 需要本地化的资源。AM container 初始化时 NodeManager 会负责将 keytab 拷贝至 container 的资源目录，AM 启动时通过 <code>UserGroupInformation.loginUserFromKeytab()</code> 来重新认证。当 AM 需要申请 container 时，也将 HDFS 上的 keytab 列为需要本地化的资源，因此 container 也可以仿照 AM 进行认证。此外 AM 和 container 都必须额外实现一个线程来定时刷新 Kerberos TGT。</p>
+<center><p><img src="/img/flink-on-yarn-security/Approach2-distribute-via-YARN.png" alt="图二. distribute-via-yarn" title="图二. distribute-via-yarn"></p></center>
+
+<p>Apache Flink 目前使用的正是这种方法。比起第一种方式，优点在于 keytab 只需要被安装在 client 端，YARN 集群上的机器只在有一个用户的作业在运行时才会有该用户的 keytab，作业完成后 keytab 也会随 container 被清理掉。</p>
+<h3 id="通过-YARN-分发-keytab-给-AM；AM-为-container-生成-delegation-token"><a href="#通过-YARN-分发-keytab-给-AM；AM-为-container-生成-delegation-token" class="headerlink" title="通过 YARN 分发 keytab 给 AM；AM 为 container 生成 delegation token"></a>通过 YARN 分发 keytab 给 AM；AM 为 container 生成 delegation token</h3><p>从 client 上传 keytab 到 AM 获得 keytab 的流程都与第二种方法相同，区别在于后续 AM 申请 container 时并不是将 keytab 列本地化资源，而是请求 container 需要的 delegation token（比如最基础的 HDFS_DELEGATION_TOKEN）并将这些 token 作为 ContainerLaunchContext 的安全凭证。由于 token 的最大生命周期问题，container 后续需要继续从 AM 获取新的 token，实现方式通常是 AM 和 container 通过 IPC 来定时更新 token。</p>
+<center><p><img src="/img/flink-on-yarn-security/Approach3-am-generates-token.png" alt="图三. am-generates-token" title="图三. am-generates-token"></p></center>
+
+<p>这种方式比起前两种方式的好处在于 keytab 只存在于 AM 机器上似乎更加安全，不过由于 container 和 AM 相同的 HDFS 访问权限，实际上它们还是可以访问到 keytab，除非 AM 启动后将 keytab 从 HDFS 删除，不过这样在 AM 崩溃的情况下 YARN 就没有办法进行重试了。目前 Apache Spark 是使用这种方式认证。</p>
+<h3 id="Client-端推送-token-给-AM；AM-推送-token-给-container"><a href="#Client-端推送-token-给-AM；AM-推送-token-给-container" class="headerlink" title="Client 端推送 token 给 AM；AM 推送 token 给 container"></a>Client 端推送 token 给 AM；AM 推送 token 给 container</h3><p>如果将 YARN 集群视为不受信任的环境，严格限制将 keytab 分发到集群上，在 client 端推送 token 会是唯一的方式，即通过 Hadoop delegation token 启动 AM 和 container，随后 client 定时用 keytab 认证并重新获取 AM 的 token 并通过 IPC 的方式传递给它，AM 再通过 IPC 将 token 传递给 container。</p>
+<center><p><img src="/img/flink-on-yarn-security/Approach4-client-generates-token.png" alt="图四. client-generates-token" title="图四. client-generates-token"></p></center>
+
+<p>这种方式把 keytab 限制在 client 机器上最为安全，但是 client 端的实现比较重，对于作业数成千上万的部署规模来说并不合适，而且 client 会成为一个故障单点。如果要一条路走到黑，部署多个 client 和高可用，那就相当于又一个安全的小分布式集群。</p>
+<h2 id="Flink-Application-认证源码解析"><a href="#Flink-Application-认证源码解析" class="headerlink" title="Flink Application 认证源码解析"></a>Flink Application 认证源码解析</h2><p>如上文所说，Flink 使用通过 YARN 分发 keytab 给 AM 和其他 container 的方式来认证，下面从源码角度来解析具体的实现，这会分为 Flink client 、AM（YarnClusterEntrypoint） 和 container（YarnTaskExecutorRunner）三个部分，源码以 1.6.2 版本为例。</p>
+<h3 id="Flink-Client"><a href="#Flink-Client" class="headerlink" title="Flink Client"></a>Flink Client</h3><p>篇幅起见这里只给出核心代码和以注释形式说明，完整代码见 AbstractYarnClusterDescriptor#startAppMaster。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line">// 从配置读取 keytab 路径，若不为空则注册为 container 的 LocalResource</div><div class="line">	Path remotePathKeytab = null;</div><div class="line">	String keytab = configuration.getString(SecurityOptions.KERBEROS_LOGIN_KEYTAB);</div><div class="line">	if (keytab != null) &#123;</div><div class="line">		LOG.info(&quot;Adding keytab &#123;&#125; to the AM container local resource bucket&quot;, keytab);</div><div class="line">		remotePathKeytab = setupSingleLocalResource(</div><div class="line">			Utils.KEYTAB_FILE_NAME,</div><div class="line">			fs,</div><div class="line">			appId,</div><div class="line">			new Path(keytab),</div><div class="line">			localResources,</div><div class="line">			homeDir,</div><div class="line">			&quot;&quot;);</div><div class="line">	&#125;</div><div class="line">// 根据配置和环境变量生成 AM 的启动命令，并设置到 AM ContainerLaunchContext 里</div><div class="line">	final ContainerLaunchContext amContainer = setupApplicationMasterContainer(</div><div class="line">		yarnClusterEntrypoint,</div><div class="line">		hasLogback,</div><div class="line">		hasLog4j,</div><div class="line">		hasKrb5,</div><div class="line">		clusterSpecification.getMasterMemoryMB());</div><div class="line"></div><div class="line">// 如果是 Kerberized 集群，向 NameNode 申请 HDFS_DELEGATION_TOKEN，并设置到 AM ContainerLaunchContext 里</div><div class="line">	if (UserGroupInformation.isSecurityEnabled()) &#123;</div><div class="line">		// set HDFS delegation tokens when security is enabled</div><div class="line">		LOG.info(&quot;Adding delegation token to the AM container..&quot;);</div><div class="line">		Utils.setTokensFor(amContainer, paths, yarnConfiguration);</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	amContainer.setLocalResources(localResources);</div></pre></td></tr></table></figure>
+<p>其中 Utils 类包含了许多 helper method，获取 token 的方法 #setTokensFor 源码如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">public static void setTokensFor(ContainerLaunchContext amContainer, List&lt;Path&gt; paths, Configuration conf) throws IOException &#123;</div><div class="line">	Credentials credentials = new Credentials();</div><div class="line">	// for HDFS</div><div class="line">	TokenCache.obtainTokensForNamenodes(credentials, paths.toArray(new Path[0]), conf);</div><div class="line">	// for HBase</div><div class="line">	obtainTokenForHBase(credentials, conf);</div><div class="line">	// for user</div><div class="line">	UserGroupInformation currUsr = UserGroupInformation.getCurrentUser();</div><div class="line"></div><div class="line">	Collection&lt;Token&lt;? extends TokenIdentifier&gt;&gt; usrTok = currUsr.getTokens();</div><div class="line">	for (Token&lt;? extends TokenIdentifier&gt; token : usrTok) &#123;</div><div class="line">		final Text id = new Text(token.getIdentifier());</div><div class="line">		LOG.info(&quot;Adding user token &quot; + id + &quot; with &quot; + token);</div><div class="line">		credentials.addToken(id, token);</div><div class="line">	&#125;</div><div class="line">	try (DataOutputBuffer dob = new DataOutputBuffer()) &#123;</div><div class="line">		credentials.writeTokenStorageToStream(dob);</div><div class="line"></div><div class="line">		if (LOG.isDebugEnabled()) &#123;</div><div class="line">			LOG.debug(&quot;Wrote tokens. Credentials buffer length: &quot; + dob.getLength());</div><div class="line">		&#125;</div><div class="line"></div><div class="line">		ByteBuffer securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());</div><div class="line">		amContainer.setTokens(securityTokens);</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="YarnClusterEntrypoint"><a href="#YarnClusterEntrypoint" class="headerlink" title="YarnClusterEntrypoint"></a>YarnClusterEntrypoint</h3><p>YarnClusterEntrypoint 是 Flink 的 AM 主类，它在启动时会先初始化 SecurityContext。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">protected void startCluster() &#123;</div><div class="line">	LOG.info(&quot;Starting &#123;&#125;.&quot;, getClass().getSimpleName());</div><div class="line"></div><div class="line">	try &#123;</div><div class="line">		configureFileSystems(configuration);</div><div class="line"></div><div class="line">		SecurityContext securityContext = installSecurityContext(configuration);</div><div class="line"></div><div class="line">		securityContext.runSecured((Callable&lt;Void&gt;) () -&gt; &#123;</div><div class="line">			runCluster(configuration);</div><div class="line"></div><div class="line">			return null;</div><div class="line">		&#125;);</div><div class="line">	&#125; catch (Throwable t) &#123;</div><div class="line">		LOG.error(&quot;Cluster initialization failed.&quot;, t);</div><div class="line"></div><div class="line">		shutDownAndTerminate(</div><div class="line">			STARTUP_FAILURE_RETURN_CODE,</div><div class="line">			ApplicationStatus.FAILED,</div><div class="line">			t.getMessage(),</div><div class="line">			false);</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>而 #installSecurityContext 方法通过 SecurityUtils 逐个调用了安全模块的认证，其中最重要的一个就是 HadoopModule 。HadoopModule 的核心代码如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div></pre></td><td class="code"><pre><div class="line">String keytabPath = (new File(securityConfig.getKeytab())).getAbsolutePath();</div><div class="line"></div><div class="line">// 用 keytab 认证	</div><div class="line">UserGroupInformation.loginUserFromKeytab(securityConfig.getPrincipal(), keytabPath);</div><div class="line"></div><div class="line">				loginUser = UserGroupInformation.getLoginUser();</div><div class="line"></div><div class="line">				// supplement with any available tokens</div><div class="line">				String fileLocation = System.getenv(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);</div><div class="line">				if (fileLocation != null) &#123;</div><div class="line">				</div><div class="line">					try &#123;</div><div class="line">						Method readTokenStorageFileMethod = Credentials.class.getMethod(&quot;readTokenStorageFile&quot;,</div><div class="line">							File.class, org.apache.hadoop.conf.Configuration.class);</div><div class="line">						Credentials cred =</div><div class="line">							(Credentials) readTokenStorageFileMethod.invoke(</div><div class="line">								null,</div><div class="line">								new File(fileLocation),</div><div class="line">								hadoopConfiguration);</div><div class="line"></div><div class="line">						// 由于 Hadoop 认证机制更偏好 delegation token，使用 kerberos keytab 认证时需要过滤掉 delegation token</div><div class="line">						// 以下代码从 container 的本地 token 文件读取 token ，过滤掉 HDFS_DELEGATION_TOKEN 后覆盖掉原本的 container credentail</div><div class="line">						Method getAllTokensMethod = Credentials.class.getMethod(&quot;getAllTokens&quot;);</div><div class="line">						Credentials credentials = new Credentials();</div><div class="line">						final Text hdfsDelegationTokenKind = new Text(&quot;HDFS_DELEGATION_TOKEN&quot;);</div><div class="line">						Collection&lt;Token&lt;? extends TokenIdentifier&gt;&gt; usrTok = (Collection&lt;Token&lt;? extends TokenIdentifier&gt;&gt;) getAllTokensMethod.invoke(cred);</div><div class="line">						//If UGI use keytab for login, do not load HDFS delegation token.</div><div class="line">						for (Token&lt;? extends TokenIdentifier&gt; token : usrTok) &#123;</div><div class="line">							if (!token.getKind().equals(hdfsDelegationTokenKind)) &#123;</div><div class="line">								final Text id = new Text(token.getIdentifier());</div><div class="line">								credentials.addToken(id, token);</div><div class="line">							&#125;</div><div class="line">						&#125;</div><div class="line"></div><div class="line">						Method addCredentialsMethod = UserGroupInformation.class.getMethod(&quot;addCredentials&quot;,</div><div class="line">							Credentials.class);</div><div class="line">						addCredentialsMethod.invoke(loginUser, credentials);</div><div class="line">					&#125; catch (NoSuchMethodException e) &#123;</div><div class="line">						LOG.warn(&quot;Could not find method implementations in the shaded jar. Exception: &#123;&#125;&quot;, e);</div><div class="line">					&#125; catch (InvocationTargetException e) &#123;</div><div class="line">						throw e.getTargetException();</div><div class="line">					&#125;</div></pre></td></tr></table></figure>
+<p>此外 AM 还要负责申请 container 时设置好 container 的安全凭证，具体可见 Utils#createTaskExecutorContext，以下是核心代码:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">// 从 AM container 的本地 token 文件读取 token 并设置给 taskmanager container </div><div class="line">// 其中这里有个问题是连同 AMRMToken 一齐传递给了 taskmanager，而 AMRMToken 顾名思义应该只有 AM 有权限使用，详见 [FLINK-11126](https://issues.apache.org/jira/browse/FLINK-11126)</div><div class="line">final String fileLocation = System.getenv(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);</div><div class="line"></div><div class="line">if (fileLocation != null) &#123;</div><div class="line">	log.debug(&quot;Adding security tokens to TaskExecutor&apos;s container launch context.&quot;);</div><div class="line"></div><div class="line">	try (DataOutputBuffer dob = new DataOutputBuffer()) &#123;</div><div class="line">		Method readTokenStorageFileMethod = Credentials.class.getMethod(</div><div class="line">			&quot;readTokenStorageFile&quot;, File.class, org.apache.hadoop.conf.Configuration.class);</div><div class="line"></div><div class="line">		Credentials cred =</div><div class="line">			(Credentials) readTokenStorageFileMethod.invoke(</div><div class="line">				null,</div><div class="line">				new File(fileLocation),</div><div class="line">				HadoopUtils.getHadoopConfiguration(flinkConfig));</div><div class="line"></div><div class="line">		cred.writeTokenStorageToStream(dob);</div><div class="line">		ByteBuffer securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());</div><div class="line">		ctx.setTokens(securityTokens);</div><div class="line">	&#125; catch (Throwable t) &#123;</div><div class="line">		log.error(&quot;Failed to add Hadoop&apos;s security tokens.&quot;, t);</div><div class="line">	&#125;</div><div class="line">&#125; else &#123;</div><div class="line">	log.info(&quot;Could not set security tokens because Hadoop&apos;s token file location is unknown.&quot;);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="YarnTaskExecutorRunner"><a href="#YarnTaskExecutorRunner" class="headerlink" title="YarnTaskExecutorRunner"></a>YarnTaskExecutorRunner</h3><p>YarnTaskExecutorRunner 是 Flink TaskManager 的主类，它初始化时的认证过程和 YarnClusterEntrypoint 相似，都是调用各个 SecurityModule 来认证。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line">String keytabPath = null;</div><div class="line">if (remoteKeytabPath != null) &#123;</div><div class="line">	File f = new File(currDir, Utils.KEYTAB_FILE_NAME);</div><div class="line">	keytabPath = f.getAbsolutePath();</div><div class="line">	LOG.info(&quot;keytab path: &#123;&#125;&quot;, keytabPath);</div><div class="line">&#125;</div><div class="line"></div><div class="line">UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();</div><div class="line"></div><div class="line">LOG.info(&quot;YARN daemon is running as: &#123;&#125; Yarn client user obtainer: &#123;&#125;&quot;,</div><div class="line">		currentUser.getShortUserName(), yarnClientUsername);</div><div class="line"></div><div class="line">if (keytabPath != null &amp;&amp; remoteKeytabPrincipal != null) &#123;</div><div class="line">	configuration.setString(SecurityOptions.KERBEROS_LOGIN_KEYTAB, keytabPath);</div><div class="line">	configuration.setString(SecurityOptions.KERBEROS_LOGIN_PRINCIPAL, remoteKeytabPrincipal);</div><div class="line">&#125;</div><div class="line"></div><div class="line">SecurityConfiguration sc = new SecurityConfiguration(configuration);</div><div class="line"></div><div class="line">final String containerId = ENV.get(YarnFlinkResourceManager.ENV_FLINK_CONTAINER_ID);</div><div class="line">Preconditions.checkArgument(containerId != null,</div><div class="line">	&quot;ContainerId variable %s not set&quot;, YarnFlinkResourceManager.ENV_FLINK_CONTAINER_ID);</div><div class="line"></div><div class="line">// use the hostname passed by job manager</div><div class="line">final String taskExecutorHostname = ENV.get(YarnResourceManager.ENV_FLINK_NODE_ID);</div><div class="line">if (taskExecutorHostname != null) &#123;</div><div class="line">	configuration.setString(ConfigConstants.TASK_MANAGER_HOSTNAME_KEY, taskExecutorHostname);</div><div class="line">&#125;</div><div class="line"></div><div class="line">SecurityUtils.install(sc);</div><div class="line"></div><div class="line">SecurityUtils.getInstalledContext().runSecured(new Callable&lt;Void&gt;() &#123;</div><div class="line">	@Override</div><div class="line">	public Void call() throws Exception &#123;</div><div class="line">		TaskManagerRunner.runTaskManager(configuration, new ResourceID(containerId));</div><div class="line">		return null;</div><div class="line">	&#125;</div><div class="line">&#125;);</div></pre></td></tr></table></figure>
+<h2 id="社区的-Flink-on-YARN-Security-改进提案"><a href="#社区的-Flink-on-YARN-Security-改进提案" class="headerlink" title="社区的 Flink on YARN Security 改进提案"></a>社区的 Flink on YARN Security 改进提案</h2><p>Uber 是 Apache Flink 的重度用户，而且由于技术栈和架构的关系 Uber 对于 Security 这块的积累比较多，最近（2108 年年底） Uber 的工程师向社区提出了 Security 的新改进方案<a href="https://docs.google.com/document/d/1rBLCpyQKg6Ld2P0DEgv4VIOMTwv4sitd7h7P5r202IE/edit#heading=h.vcblrwijpe4n" target="_blank" rel="external">[3]</a>。虽然这个改进方案目前还没有得到广泛的关注（毕竟没有很多人熟悉安全模块）并且部分列举的场景比较小众，但其中的一些设计还是很有参考意义。</p>
+<p>这个提案包含两个部分: 1.支持多种 YARN Application 认证方式；2.支持超级用户伪装为普通用户（impersonation）。下面将分点讲述。</p>
+<h3 id="支持多种-YARN-Application-认证方式"><a href="#支持多种-YARN-Application-认证方式" class="headerlink" title="支持多种 YARN Application 认证方式"></a>支持多种 YARN Application 认证方式</h3><p>该提案建议将 client 端、AM 端和普通 container 端的认证方法通过 CredentialFactory 来解耦，因此用户可以灵活定制三者的认证方法。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div></pre></td><td class="code"><pre><div class="line">/** </div><div class="line"> * Kerberos Credential Factory</div><div class="line"> */</div><div class="line">public interface CredentialFactory &#123;</div><div class="line"></div><div class="line">  /** </div><div class="line">   * Run on client side. Setup environment properties which will be shipped</div><div class="line">   * to the cluster side.</div><div class="line">   */</div><div class="line">  Map&lt;String, String&gt; createEnvCredentialProperties(Configuration conf);</div><div class="line"></div><div class="line">  /** </div><div class="line">   * Run on client side. Setup environment credential by creating file cache or</div><div class="line">   * validate provided credentials are accessible on cluster side.</div><div class="line">   */</div><div class="line">  void prepareEnvCrediential(Configuration conf, FileSystem fs);</div><div class="line"></div><div class="line">  /** </div><div class="line">   * Run on application master. Derive &#123;@link SecurityConfiguration&#125;, used by</div><div class="line">   * &#123;@link SecureUtils&#125; and &#123;@link SecureModule&#125; to install credentials.</div><div class="line">   */</div><div class="line">  SecurityConfiguration prepareApplicationMasterCredentials(Map&lt;String, String&gt; envProperties);</div><div class="line"></div><div class="line">  /** </div><div class="line">   * Run on task executor. Derive &#123;@link SecurityConfiguration&#125;, used by</div><div class="line">   * &#123;@link SecureUtils&#125; and &#123;@link SecureModule&#125; to install credentials.</div><div class="line">   */</div><div class="line">  SecurityConfiguration prepareTaskExecutorCredentials(Map&lt;String, String&gt; envProperties);</div><div class="line"></div><div class="line">  /** </div><div class="line">   * Checker function to ensure proper credentials are configured within the </div><div class="line">   * current cluster environment.</div><div class="line">   */</div><div class="line">  boolean isCredentialEnvConfigured(Map&lt;String, String&gt; envProperties);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>默认情况下提供除了 client 生成 token 外的三种常见认证策略。</p>
+<h3 id="支持超级用户-Impersonation"><a href="#支持超级用户-Impersonation" class="headerlink" title="支持超级用户 Impersonation"></a>支持超级用户 Impersonation</h3><p>目前来说其实 Flink 的 Impersonation 需要通过 client 操作系统来实现（主要是因为 keytab 的权限是 600），比如 root 用户 su 为 joe 用户再使用 joe 用户的名义提交作业，这种方法会造成潜在的权限滥用。该提案提出我们可以使用 Hadoop 的 proxy user API<a href="https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Superusers.html" target="_blank" rel="external">[4]</a>来实现 Flink 层面的 Impersonation 以避免这个问题。</p>
+<p>要实现超级用户 Impersonation 首先要设置一个用户，比如 flink，为 Hadoop 的超级用户，这样他就可以申请到其他用户的 delagtion token，因此 flink 用户不需要访问一般用户joe 的 keytab 就可以通过 delegation token 来提交作业。后续 Flink 需要使用上述 Application 认证方式的第三或者第四种来持续刷新 delegation tokem，所以提案第一点支持多种 YARN Application 认证方式也是第二点 Impersonation 的前置条件。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>YARN 原本不是为长时间运行的实时应用设计的，尤其是在安全认证这块尤为明显，因此各种实时计算框架的 on YARN 认证都是神仙过海各显神通，没有统一的方式。Flink on YARN Security 目前已经比较稳定但是仍然不够灵活，导致在其上构建平台的企业级用户多少有些束手束脚的感觉。Uber 的提案是目前看上去是比较合理的，期待 Uber 这个提案可以顺利实现并被社区接受。</p>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>1.<a href="https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html" target="_blank" rel="external">Hadoop 官方文档: YARN Security</a><br>2.<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.7/ops/security-kerberos.html" target="_blank" rel="external">Flink 官方文档: Kerberos Authentication Setup and Configuration</a><br>3.<a href="https://docs.google.com/document/d/1rBLCpyQKg6Ld2P0DEgv4VIOMTwv4sitd7h7P5r202IE/edit#heading=h.vcblrwijpe4n" target="_blank" rel="external">Flink Kerberos Improvement Design</a><br>4.<a href="https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Superusers.html" target="_blank" rel="external">Hadoop 官方文档: Proxy User</a><br>5.<a href="https://docs.google.com/document/d/10V7LiNlUJKeKZ58mkR7oVv1t6BrC6TZi3FGf2Dm6-i8/edit#heading=h.jxspj25an0dn" target="_blank" rel="external">Flink Security Improvements</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/" title="Flink on YARN Security 浅析(Flink Part)">2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/23/Flink-on-YARN-Security-浅析-YARN-Part/" rel="next" title="Flink on YARN Security 浅析 (YARN Part)">
+                <i class="fa fa-chevron-left"></i> Flink on YARN Security 浅析 (YARN Part)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/02/24/深入理解流计算中的-Watermark/" rel="prev" title="深入理解流计算中的 Watermark">
+                深入理解流计算中的 Watermark <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#长时间运行的-YARN-Application-的四种认证方法"><span class="nav-number">1.</span> <span class="nav-text">长时间运行的 YARN Application 的四种认证方法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#在-YARN-集群机器上预安装-keytab"><span class="nav-number">1.1.</span> <span class="nav-text">在 YARN 集群机器上预安装 keytab</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#通过-YARN-分发-keytab-给-AM-和其他-container"><span class="nav-number">1.2.</span> <span class="nav-text">通过 YARN 分发 keytab 给 AM 和其他 container</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#通过-YARN-分发-keytab-给-AM；AM-为-container-生成-delegation-token"><span class="nav-number">1.3.</span> <span class="nav-text">通过 YARN 分发 keytab 给 AM；AM 为 container 生成 delegation token</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Client-端推送-token-给-AM；AM-推送-token-给-container"><span class="nav-number">1.4.</span> <span class="nav-text">Client 端推送 token 给 AM；AM 推送 token 给 container</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Flink-Application-认证源码解析"><span class="nav-number">2.</span> <span class="nav-text">Flink Application 认证源码解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Flink-Client"><span class="nav-number">2.1.</span> <span class="nav-text">Flink Client</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#YarnClusterEntrypoint"><span class="nav-number">2.2.</span> <span class="nav-text">YarnClusterEntrypoint</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#YarnTaskExecutorRunner"><span class="nav-number">2.3.</span> <span class="nav-text">YarnTaskExecutorRunner</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#社区的-Flink-on-YARN-Security-改进提案"><span class="nav-number">3.</span> <span class="nav-text">社区的 Flink on YARN Security 改进提案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#支持多种-YARN-Application-认证方式"><span class="nav-number">3.1.</span> <span class="nav-text">支持多种 YARN Application 认证方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#支持超级用户-Impersonation"><span class="nav-number">3.2.</span> <span class="nav-text">支持超级用户 Impersonation</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文献"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/';
+          this.page.identifier = '2019/01/06/Flink-on-YARN-Security-浅析-Flink-Part/';
+          this.page.title = 'Flink on YARN Security 浅析(Flink Part)';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

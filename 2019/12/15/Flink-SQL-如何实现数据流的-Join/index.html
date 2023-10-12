@@ -1,0 +1,871 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Flink,SQL," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="时间与精神的小屋" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/img/pokemon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="无论在 OLAP 还是 OLTP 领域，Join 都是业务常会涉及到且优化规则比较复杂的 SQL 语句。对于离线计算而言，经过数据库领域多年的积累 Join 的语义以及实现已经十分成熟，然而对于近年来刚兴起的 Streaming SQL 来说 Join 却处于刚起步的状态。其中最为关键的问题在于 Join 的实现依赖于缓存整个数据集，而 Streaming SQL Join 的对象却是无限的数据流">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink SQL 如何实现数据流的 Join">
+<meta property="og:url" content="https://link3280.github.io/2019/12/15/Flink-SQL-如何实现数据流的-Join/index.html">
+<meta property="og:site_name" content="时间与精神的小屋">
+<meta property="og:description" content="无论在 OLAP 还是 OLTP 领域，Join 都是业务常会涉及到且优化规则比较复杂的 SQL 语句。对于离线计算而言，经过数据库领域多年的积累 Join 的语义以及实现已经十分成熟，然而对于近年来刚兴起的 Streaming SQL 来说 Join 却处于刚起步的状态。其中最为关键的问题在于 Join 的实现依赖于缓存整个数据集，而 Streaming SQL Join 的对象却是无限的数据流">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img1.join-in-continuous-query-1.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img2.join-in-continuous-query-2.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img3.join-in-continuous-query-3.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img4.time-window-orders-lower-bound.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img5.time-window-shipment-lower-bound.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img6.temporal-table-join-example.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img7.temporal-table-registration.png">
+<meta property="og:image" content="https://link3280.github.io/img/streaming-join/img8.temporal-table-content.png">
+<meta property="og:updated_time" content="2019-12-17T13:34:58.666Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink SQL 如何实现数据流的 Join">
+<meta name="twitter:description" content="无论在 OLAP 还是 OLTP 领域，Join 都是业务常会涉及到且优化规则比较复杂的 SQL 语句。对于离线计算而言，经过数据库领域多年的积累 Join 的语义以及实现已经十分成熟，然而对于近年来刚兴起的 Streaming SQL 来说 Join 却处于刚起步的状态。其中最为关键的问题在于 Join 的实现依赖于缓存整个数据集，而 Streaming SQL Join 的对象却是无限的数据流">
+<meta name="twitter:image" content="https://link3280.github.io/img/streaming-join/img1.join-in-continuous-query-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"hide","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://link3280.github.io/2019/12/15/Flink-SQL-如何实现数据流的-Join/"/>
+
+
+
+
+
+<script data-ad-client="ca-pub-3817024787435248" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+  <title>Flink SQL 如何实现数据流的 Join | 时间与精神的小屋</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">时间与精神的小屋</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">专注思考的时候，时间仿佛也静下来了</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="https://link3280.github.io/2019/12/15/Flink-SQL-如何实现数据流的-Join/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Paul Lin">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/img/me.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时间与精神的小屋">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Flink SQL 如何实现数据流的 Join</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-12-15T17:04:57+08:00">
+                2019-12-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flink/" itemprop="url" rel="index">
+                    <span itemprop="name">Flink</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/12/15/Flink-SQL-如何实现数据流的-Join/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count"
+                        data-disqus-identifier="2019/12/15/Flink-SQL-如何实现数据流的-Join/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>无论在 OLAP 还是 OLTP 领域，Join 都是业务常会涉及到且优化规则比较复杂的 SQL 语句。对于离线计算而言，经过数据库领域多年的积累 Join 的语义以及实现已经十分成熟，然而对于近年来刚兴起的 Streaming SQL 来说 Join 却处于刚起步的状态。其中最为关键的问题在于 Join 的实现依赖于缓存整个数据集，而 Streaming SQL Join 的对象却是无限的数据流，内存压力和计算效率在长期运行来说都是不可避免的问题。下文将结合 SQL 的发展解析 Flink SQL 是如何解决这些问题并实现两个数据流的 Join。</p>
+<a id="more"></a>
+<h1 id="离线-Batch-SQL-Join-的实现"><a href="#离线-Batch-SQL-Join-的实现" class="headerlink" title="离线 Batch SQL Join 的实现"></a>离线 Batch SQL Join 的实现</h1><p>传统的离线 Batch SQL （面向有界数据集的 SQL）有三种基础的实现方式，分别是 Nested-loop Join、Sort-Merge Join 和 Hash Join。</p>
+<p>Nested-loop Join 最为简单直接，将两个数据集加载到内存，并用内嵌遍历的方式来逐个比较两个数据集内的元素是否符合 Join 条件。Nested-loop Join 虽然时间效率以及空间效率都是最低的，但胜在比较灵活适用范围广，因此其变体 BNL 常被传统数据库用作为 Join 的默认基础选项。</p>
+<p>Sort-Merge Join 顾名思义，分为两个 Sort 和 Merge 阶段。首先将两个数据集进行分别排序，然后对两个有序数据集分别进行遍历和匹配，类似于归并排序的合并。值得注意的是，Sort-Merge 只适用于 Equi-Join（Join 条件均使用等于作为比较算子）。Sort-Merge Join 要求对两个数据集进行排序，成本很高，通常作为输入本就是有序数据集的情况下的优化方案。</p>
+<p>Hash Join 同样分为两个阶段，首先将一个数据集转换为 Hash Table，然后遍历另外一个数据集元素并与 Hash Table 内的元素进行匹配。第一阶段和第一个数据集分别称为 build 阶段和 build table，第二个阶段和第二个数据集分别称为 probe 阶段和 probe table。Hash Join 效率较高但对空间要求较大，通常是作为 Join 其中一个表为适合放入内存的小表的情况下的优化方案。和 Sort-Merge Join 类似，Hash Join 也只适用于 Equi-Join。</p>
+<h1 id="实时-Streaming-SQL-Join"><a href="#实时-Streaming-SQL-Join" class="headerlink" title="实时 Streaming SQL Join"></a>实时 Streaming SQL Join</h1><p>相对于离线的 Join，实时 Streaming SQL（面向无界数据集的 SQL）无法缓存所有数据，因此 Sort-Merge Join 要求的对数据集进行排序基本是无法做到的，而 Nested-loop Join 和 Hash Join 经过一定的改良则可以满足实时 SQL 的要求。</p>
+<p>我们通过例子来看基本的 Nested Join 在实时 Streaming SQL 的基础实现（案例及图来自 Piotr Nowojski 在 Flink Forward San Francisco 的分享[2]）。</p>
+<p><center><p><img src="/img/streaming-join/img1.join-in-continuous-query-1.png" alt="图1. Join-in-continuous-query-1" title="图1. Join-in-continuous-query-1"></p></center></p><p></p>
+<p>Table A 有 <code>1</code>、<code>42</code> 两个元素，Table B 有 <code>42</code> 一个元素，所以此时的 Join 结果会输出 42。</p>
+<p><center><p><img src="/img/streaming-join/img2.join-in-continuous-query-2.png" alt="图2. Join-in-continuous-query-2" title="图2. Join-in-continuous-query-2"></p></center></p><p></p>
+<p>接着 Table B 依次接受到三个新的元素，分别是 <code>7</code>、<code>3</code>、<code>1</code>。因为 <code>1</code> 匹配到 Table A 的元素，因此结果表再输出一个元素 <code>1</code>。</p>
+<p><center><p><img src="/img/streaming-join/img3.join-in-continuous-query-3.png" alt="图3. Join-in-continuous-query-3" title="图3. Join-in-continuous-query-3"></p></center></p><p></p>
+<p>随后 Table A 出现新的输入 <code>2</code>、<code>3</code>、<code>6</code>，<code>3</code> 匹配到 Table B 的元素，因此再输出 <code>3</code> 到结果表。</p>
+<p>可以看到在 Nested-Loop Join 中我们需要保存两个输入表的内容，而随着时间的增长 Table A 和 Table B 需要保存的历史数据无止境地增长，导致很不合理的内存磁盘资源占用，而且单个元素的匹配效率也会越来越低。类似的问题也存在于 Hash Join 中。</p>
+<p>那么有没有可能设置一个缓存剔除策略，将不必要的历史数据及时清理呢？答案是肯定的，关键在于缓存剔除策略如何实现，这也是 Flink SQL 提供的三种 Join 的主要区别。</p>
+<h1 id="Flink-SQL-的-Join"><a href="#Flink-SQL-的-Join" class="headerlink" title="Flink SQL 的 Join"></a>Flink SQL 的 Join</h1><h2 id="Regular-Join"><a href="#Regular-Join" class="headerlink" title="Regular Join"></a>Regular Join</h2><p>Regular Join 是最为基础的没有缓存剔除策略的 Join。Regular Join 中两个表的输入和更新都会对全局可见，影响之后所有的 Join 结果。举例，在一个如下的 Join 查询里，Orders 表的新纪录会和 Product 表所有历史纪录以及未来的纪录进行匹配。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">SELECT * FROM Orders</div><div class="line">INNER JOIN Product</div><div class="line">ON Orders.productId = Product.id</div></pre></td></tr></table></figure>
+<p>因为历史数据不会被清理，所以 Regular Join 允许对输入表进行任意种类的更新操作（insert、update、delete）。然而因为资源问题 Regular Join 通常是不可持续的，一般只用做有界数据流的 Join。</p>
+<h2 id="Time-Windowed-Join"><a href="#Time-Windowed-Join" class="headerlink" title="Time-Windowed Join"></a>Time-Windowed Join</h2><p>Time-Windowed Join 利用窗口的给两个输入表设定一个 Join 的时间界限，超出时间范围的数据则对 JOIN 不可见并可以被清理掉。值得注意的是，这里涉及到的一个问题是时间的语义，时间可以是指计算发生的系统时间（即 Processing Time），也可以是指从数据本身的时间字段提取的 Event Time。如果是 Processing Time，Flink 根据系统时间自动划分 Join 的时间窗口并定时清理数据；如果是 Event Time，Flink 分配 Event Time 窗口并依据 Watermark 来清理数据。</p>
+<p>以更常用的 Event Time Windowed Join 为例，一个将 Orders 订单表和 Shipments 运输单表依据订单时间和运输时间 Join 的查询如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">SELECT *</div><div class="line">FROM </div><div class="line">	Orders o, </div><div class="line">	Shipments s</div><div class="line">WHERE </div><div class="line">	o.id = s.orderId AND</div><div class="line">	s.shiptime BETWEEN o.ordertime AND o.ordertime + INTERVAL &apos;4&apos; HOUR</div></pre></td></tr></table></figure>
+<p>这个查询会为 Orders 表设置了 <code>o.ordertime &gt; s.shiptime- INTERVAL &#39;4&#39;HOUR</code> 的时间下界（图4），</p>
+<p><center><p><img src="/img/streaming-join/img4.time-window-orders-lower-bound.png" alt="图4. Time-Windowed Join 的时间下界 - Orders 表" title="图4. Time-Windowed Join 的时间下界 - Orders 表"></p></center></p><p></p>
+<p>并为 Shipmenets 表设置了 <code>s.shiptime &gt;= o.ordertime</code> 的时间下界（图5）。</p>
+<p><center><p><img src="/img/streaming-join/img5.time-window-shipment-lower-bound.png" alt="图5. Time-Windowed Join 的时间下界 - Shipment 表" title="图5. Time-Windowed Join 的时间下界 - Shipment 表"></p></center></p><p></p>
+<p>因此两个输入表都只需要缓存在时间下界以上的数据，将空间占用维持在合理的范围。</p>
+<p>不过虽然底层实现上没有问题，但如何通过 SQL 语法定义时间仍是难点。尽管在实时计算领域 Event Time、Processing Time、Watermark 这些概念已经成为业界共识，但在 SQL 领域对时间数据类型的支持仍比较弱[4]。因此，定义 Watermark 和时间语义都需要通过编程 API 的方式完成，比如从 DataStream 转换至 Table 时定义，而不能单纯靠 SQL 完成。这方面的支持 Flink 社区计划通过拓展 SQL 方言来完成，感兴趣的读者可以通过 FLIP-66[7] 来追踪进度。</p>
+<h2 id="Temporal-Table-Join"><a href="#Temporal-Table-Join" class="headerlink" title="Temporal Table Join"></a>Temporal Table Join</h2><p>虽然 Timed-Windowed Join 解决了资源问题，但也限制了使用场景: Join 两个输入流都必须有时间下界，超过之后则不可访问。这对于很多 Join 维表的业务来说是不适用的，因为很多情况下维表并没有时间界限。针对这个问题，Flink 提供了 Temporal Table Join 来满足用户需求。</p>
+<p>Temporal Table Join 类似于 Hash Join，将输入分为 Build Table 和 Probe Table。前者一般是纬度表的 changelog，后者一般是业务数据流，典型情况下后者的数据量应该远大于前者。在 Temporal Table Join 中，Build Table 是一个基于 append-only 数据流的带时间版本的视图，所以又称为 Temporal Table。Temporal Table 要求定义一个主键和用于版本化的字段（通常就是 Event Time 时间字段），以反映记录内容在不同时间的内容。</p>
+<p>比如典型的一个例子是对商业订单金额进行汇率转换。假设有一个 Oders 流记录订单金额，需要和 RatesHistory 汇率流进行 Join。RatesHistory 代表不同货币转为日元的汇率，每当汇率有变化时就会有一条更新记录。两个表在某一时间节点内容如下:</p>
+<p><center><p><img src="/img/streaming-join/img6.temporal-table-join-example.png" alt="图6. Temporal Table Join Example" title="图6. Temporal Table Join Example]"></p></center></p><p></p>
+<p>我们将 RatesHistory 注册为一个名为 Rates 的 Temporal Table，设定主键为 currency，版本字段为 time。</p>
+<p><center><p><img src="/img/streaming-join/img7.temporal-table-registration.png" alt="图7. Temporal Table Registration" title="图7. Temporal Table Registration]"></p></center></p><p></p>
+<p>此后给 Rates 指定时间版本，Rates 则会基于 RatesHistory 来计算符合时间版本的汇率转换内容。</p>
+<p><center><p><img src="/img/streaming-join/img8.temporal-table-content.png" alt="图8. Temporal Table Content" title="图8. Temporal Table Content]"></p></center></p><p></p>
+<p>在 Rates 的帮助下，我们可以将业务逻辑用以下的查询来表达:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">SELECT </div><div class="line">	o.amount * r.rate</div><div class="line">FROM</div><div class="line">	Orders o,</div><div class="line">	LATERAL Table(Rates(o.time)) r</div><div class="line">WHERE</div><div class="line">	o.currency = r.currency</div></pre></td></tr></table></figure>
+<p>值得注意的是，不同于在 Regular Join 和 Time-Windowed Join 中两个表是平等的，任意一个表的新记录都可以与另一表的历史记录进行匹配，在 Temporal Table Join 中，Temoparal Table 的更新对另一表在该时间节点以前的记录是不可见的。这意味着我们只需要保存 Build Side 的记录直到 Watermark 超过记录的版本字段。因为 Probe Side 的输入理论上不会再有早于 Watermark 的记录，这些版本的数据可以安全地被清理掉。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>实时领域 Streaming SQL 中的 Join 与离线 Batch SQL 中的 Join 最大不同点在于无法缓存完整数据集，而是要给缓存设定基于时间的清理条件以限制 Join 涉及的数据范围。根据清理策略的不同，Flink SQL 分别提供了 Regular Join、Time-Windowed Join 和 Temporal Table Join 来应对不同业务场景。</p>
+<p>另外，尽管在实时计算领域 Join 可以灵活地用底层编程 API 来实现，但在 Streaming SQL 中 Join 的发展仍处于比较初级的阶段，其中关键点在于如何将时间属性合适地融入 SQL 中，这点 ISO SQL 委员会制定的 SQL 标准并没有给出完整的答案。或者从另外一个角度来讲，作为 Streaming SQL 最早的开拓者之一，Flink 社区很适合探索出一套合理的 SQL 语法反过来贡献给 ISO。</p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ol>
+<li><a href="https://flink.apache.org/2019/05/14/temporal-tables.html" target="_blank" rel="external">Flux capacitor, huh? Temporal Tables and Joins in Streaming SQL</a></li>
+<li><a href="https://www.slideshare.net/FlinkForward/flink-forward-san-francisco-2019-how-to-join-two-data-streams-piotr-nowojski" target="_blank" rel="external">How to Join Two Data Streams? - Piotr Nowojski</a></li>
+<li><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.9/dev/table/streaming/joins.html#joins-in-continuous-queries" target="_blank" rel="external">Joins in Continuous Queries</a></li>
+<li><a href="https://cs.ulb.ac.be/public/_media/teaching/infoh415/tempfeaturessql2011.pdf" target="_blank" rel="external">Temporal features in SQL:2011</a></li>
+<li><a href="https://mysqlserverteam.com/hash-join-in-mysql-8/" target="_blank" rel="external">Hash join in MySQL 8</a></li>
+<li><a href="https://en.wikipedia.org/wiki/SQL:2011" target="_blank" rel="external">SQL:2011</a></li>
+<li><a href="https://cwiki.apache.org/confluence/display/FLINK/FLIP-66%3A+Support+Time+Attribute+in+SQL+DDL" target="_blank" rel="external">FLIP-66: Support Time Attribute in SQL DDL</a></li>
+</ol>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+    <div>
+    
+      <ul class="post-copyright">
+        <li class="post-copyright-author">
+          <strong>本文作者：林小铂 (Paul Lin)</strong>
+        </li>
+        <li class="post-copyright-link">
+          <strong>本文链接：</strong>
+          <a href="/2019/12/15/Flink-SQL-如何实现数据流的-Join/" title="Flink SQL 如何实现数据流的 Join">2019/12/15/Flink-SQL-如何实现数据流的-Join/</a>
+        </li>
+        <li class="post-copyright-license">
+          <strong>版权声明： </strong>
+          本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/cn/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0 CN</a> 许可协议。转载请注明出处！
+        </li>
+      </ul>
+    
+    </div>
+
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Flink/" rel="tag"># Flink</a>
+          
+            <a href="/tags/SQL/" rel="tag"># SQL</a>
+          
+        </div>
+      
+
+    
+        <center>
+            <img src="/img/qrcode.jpg"/>
+            <p>欢迎关注笔者微信公众号</p>
+        </center>
+    
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/11/03/Flink-反压分析及处理/" rel="next" title="如何分析及处理 Flink 反压">
+                <i class="fa fa-chevron-left"></i> 如何分析及处理 Flink 反压
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/01/16/Flink-DataStream-关联维表实战/" rel="prev" title="Flink DataStream 关联维表实战">
+                Flink DataStream 关联维表实战 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/img/me.png"
+               alt="Paul Lin" />
+          <p class="site-author-name" itemprop="name">Paul Lin</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">76</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">45</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/link3280" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#离线-Batch-SQL-Join-的实现"><span class="nav-number">1.</span> <span class="nav-text">离线 Batch SQL Join 的实现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#实时-Streaming-SQL-Join"><span class="nav-number">2.</span> <span class="nav-text">实时 Streaming SQL Join</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Flink-SQL-的-Join"><span class="nav-number">3.</span> <span class="nav-text">Flink SQL 的 Join</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Regular-Join"><span class="nav-number">3.1.</span> <span class="nav-text">Regular Join</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Time-Windowed-Join"><span class="nav-number">3.2.</span> <span class="nav-text">Time-Windowed Join</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Temporal-Table-Join"><span class="nav-number">3.3.</span> <span class="nav-text">Temporal Table Join</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Paul Lin</span>
+</div>
+
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://whitewood.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://link3280.github.io/2019/12/15/Flink-SQL-如何实现数据流的-Join/';
+          this.page.identifier = '2019/12/15/Flink-SQL-如何实现数据流的-Join/';
+          this.page.title = 'Flink SQL 如何实现数据流的 Join';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://whitewood.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
