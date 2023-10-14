@@ -103,7 +103,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img3.fsg-app-mode.png">
 <meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img4.kyuubi-app-mode.png">
 <meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img5.kyuubi-web-ui.png">
-<meta property="og:updated_time" content="2023-10-14T02:48:52.175Z">
+<meta property="og:updated_time" content="2023-10-14T02:52:40.294Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="基于 Kyuubi 实现分布式 Flink SQL 网关">
 <meta name="twitter:description" content="Apache Kyuubi [1] 是一个分布式多租户的 SQL 网关，主要功能为接受用户的通过 JDBC/REST 等协议提交的 SQL 并根据多租户隔离策略路由给其管理的 SQL 引擎执行。在最新的 Kyuubi 1.8 版本，Kyuubi Flink Engine 迁移到 Flink SQL Gateway（下简称 FSG） API 之上并支持 Flink Application 模式，这让">
@@ -383,9 +383,9 @@
 <a id="more"></a>
 <h2 id="为什么需要-Kyuubi"><a href="#为什么需要-Kyuubi" class="headerlink" title="为什么需要 Kyuubi"></a>为什么需要 Kyuubi</h2><p>相信不少读者首先会想到的问题是，Flink 已经提供 SQL Gateway，为什么还需要引入 Kyuubi 呢？其实关键答案就在 Kyuubi 描述中: 一是分布式，二是多租户，两者相辅相成。网关负载能力需要水平拓展，那么自然会演进到分布式；在分布式环境下需要保证会话的亲和性，那么自然产生多租户路由的需求；而多租户对隔离性有较高要求，因此反过来也会促进分布式架构的发展。</p>
 <p>SQL Gateway 和 SQL Client 的组合能开箱即用并帮助我们快速跑通 demo，然而在企业生产环境，单个实例往往难以满足用户请求，此外不同业务用户对于 Flink 版本、内置依赖、资源配置常有不同需求，这导致我们不得不维护多个 SQL Gateway 实例。更令人头疼的是，一个实例可能在多个小用户间共享，也可能被一个大用户独占，用户与 SQL Gateway 实例间成多对多的映射关系。除此以外，高可用和负载均衡也是不得不面对的难题。种种问题造成 SQL Gateway 的运维管理成本居高不下，而 Kyuubi 的出现则很大程度地解决了这个问题。</p>
-<h2 id="Kyuubi-基本原理"><a href="#Kyuubi-基本原理" class="headerlink" title="Kyuubi 基本原理"></a>Kyuubi 基本原理</h2><p>Kyuubi 主要有 Client、Server 和 Engine 三个模块。</p>
-<p><center><img src="/img/kyuubi-flink-engine/img1.kyuubi-architecture.png" alt="图1. Kyuubi 架构" title="图1. Kyuubi 架构"></center></p>
+<h2 id="Kyuubi-基本原理"><a href="#Kyuubi-基本原理" class="headerlink" title="Kyuubi 基本原理"></a>Kyuubi 基本原理</h2><p><center><img src="/img/kyuubi-flink-engine/img1.kyuubi-architecture.png" alt="图1. Kyuubi 架构" title="图1. Kyuubi 架构"></center></p>
 
+<p>Kyuubi 主要有 Client、Server 和 Engine 三个模块:</p>
 <ul>
 <li>Kyuubi Client 比较简单，既有 <code>kyuubi-beeline</code> 这样开箱即用的客户端，也可选择 DBeaver 或 JDBC/REST 之类的开放工具或协议。</li>
 <li>Kyuubi Server 是最为核心的模块，主要职责为:<ul>
