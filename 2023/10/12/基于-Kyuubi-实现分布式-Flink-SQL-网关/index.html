@@ -103,7 +103,7 @@
 <meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img3.fsg-app-mode.png">
 <meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img4.kyuubi-app-mode.png">
 <meta property="og:image" content="https://link3280.github.io/img/kyuubi-flink-engine/img5.kyuubi-web-ui.png">
-<meta property="og:updated_time" content="2023-10-12T14:42:34.188Z">
+<meta property="og:updated_time" content="2023-10-14T02:48:52.175Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="基于 Kyuubi 实现分布式 Flink SQL 网关">
 <meta name="twitter:description" content="Apache Kyuubi [1] 是一个分布式多租户的 SQL 网关，主要功能为接受用户的通过 JDBC/REST 等协议提交的 SQL 并根据多租户隔离策略路由给其管理的 SQL 引擎执行。在最新的 Kyuubi 1.8 版本，Kyuubi Flink Engine 迁移到 Flink SQL Gateway（下简称 FSG） API 之上并支持 Flink Application 模式，这让">
@@ -397,7 +397,7 @@
 <li>Kyuubi Engine 是承载实际计算负载的模块，负责将 Kyuubi Server 的请求翻译为引擎原生操作，支持 Spark / Flink / Trino 等多种计算引擎。</li>
 </ul>
 <p>不少读者可能已经发现，FSG 的定位类似于 Kyuubi 的 Flink Engine （实际上 Kyuubi Flink Engine 的确内嵌一个 FSG），而 Kyuubi Server 这层抽象正是解决分布式和多租户问题的关键。</p>
-<p>Kyuubi 架构中 Client 与 Server、Server 与 Engine 之间的通信均有服务发现和负载均衡，这意味着不同模块之间是非常松耦合的。Client 可以连到任意一个相同 Namespace 的 Kyuubi Server 上，Kyuubi Server 也能访问同个 Namespace 下的任意 Engine。这使得 Kyuubi 能提供优秀的水平拓展能力。</p>
+<p>Kyuubi 架构中 Client 与 Server、Server 与 Engine 之间的通信均有服务发现和负载均衡，这意味着不同模块之间是非常松耦合的。Client 可以连到任意一个相同 Namespace 的 Kyuubi Server 上，Kyuubi Server 也能访问同个 Namespace 下的任意 Engine。对于 Batch 场景的有状态短连接，Kyuubi 会持久化相关状态到数据库并通过 Server 间转发确保连接总是能落到同个 Server。这样的设计使得 Kyuubi 具有优秀的水平拓展能力。</p>
 <p><center><img src="/img/kyuubi-flink-engine/img2.kyuubi-router.png" alt="图2. Kyuubi 会话路由" title="图2. Kyuubi 会话路由"></center></p>
 
 <p>如上文所说，多租户请求的路由是 Kyuubi Server 的核心功能。Kyuubi Server 提供不同程度的 Engine Share Level 以满足多租户的隔离需求，同时根据 Engine Share Level 来选取请求对应的 Engine。</p>
@@ -442,7 +442,7 @@
 </tr>
 </tbody>
 </table>
-<p>此外，Engine 的生命周期由 Server 自动管控。如果当前没有合适的 Engine，那么 Server 就会启动一个 Engine；而如果有 Engine 空闲超过一定时间，Server 也可以自动停止 Engine 来节省资源。</p>
+<p>此外，Engine 的生命周期由 Server 自动管控。如果当前没有合适的 Engine，那么 Server 就会启动一个 Engine；而如果有 Engine 空闲超过一定时间， Engine 会自动关闭来节省资源。</p>
 <h2 id="额外好处"><a href="#额外好处" class="headerlink" title="额外好处"></a>额外好处</h2><p>Kyuubi 除了上述最基础的优势以外，对比直接使用 FSG 还会有额外的好处。其中有因为开发进度不同而导致的短期差异，也有因为项目定位不同而可能存在的长期差异。</p>
 <h3 id="Application-部署模式"><a href="#Application-部署模式" class="headerlink" title="Application 部署模式"></a>Application 部署模式</h3><p>Kyuubi 在最新的 1.8 版本支持了 Flink on YARN Application 模式，而目前 FSG 的 Application 模式尚在讨论阶段（见 FLIP-316 [2]）。值得关注的是，长期来说两者对于 Application 模式的实现方式并不相同。</p>
 <p>要理解背后的差异，首先简单回顾 Flink SQL 的基础。我们执行一条 Flink SQL 会经历如下几个阶段:</p>
