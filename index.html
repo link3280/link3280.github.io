@@ -377,42 +377,15 @@
 
       
         
-          
-            <p>在过去的一年多，笔者工作中心逐渐从 Flink 转移到 Iceberg 上。Iceberg 近年发展迅猛，在与 Hudi、Delta 并称的数据湖御三家竞争中脱颖而出，目前基本已是事实标准。这点在不久前的 Databricks 和 Snowflake 这对老对手在 Iceberg 话语权的针锋相对上就足以体现[1]。</p>
+          <p>在过去的一年多，笔者工作中心逐渐从 Flink 转移到 Iceberg 上。Iceberg 近年发展迅猛，在与 Hudi、Delta 并称的数据湖御三家竞争中脱颖而出，目前基本已是事实标准。这点在不久前的 Databricks 和 Snowflake 这对老对手在 Iceberg 话语权的针锋相对上就足以体现[1]。</p>
 <p>虽然自数据湖（准确来说应该是数据湖表格式）兴起已经过去四五个年头，但直至今日数据湖仍未称得上成熟，加上 Hive 迁移数据湖涉及到的业务改造工作量巨大，不少核心业务和老业务仍未有动力推进，可以说数据湖仍有很多未竟之事。文本谈下笔者在 Iceberg 实践中的随想，笔之所至即思之所至。</p>
-<p>&lt;!—-more—&gt;</p>
-<h2 id="数据湖与云原生"><a href="#数据湖与云原生" class="headerlink" title="数据湖与云原生"></a>数据湖与云原生</h2><p>得益于 S3 等对象存储的成功，或者说碍于云上块存储的高昂价格，上云的大数据存储系统纷纷将底座迁移到 S3 上，而其中最为核心是数据仓库的云原生改造。然而，作为数据仓库的事实标准，Hive 是基于文件系统来构建的，若直接移植到对象存储会严重水土不服，具体包括：</p>
-<ul>
-<li>Hive 的元数据仅管理到 partition 粒度，而非文件粒度，这导致每次查询 planning 的时候都需要获取 partition 下的文件，然而该操作只适合层次结构的文件系统，在扁平对象存储上相当于一个基于前缀的范围查询，性能糟糕不合适频繁调用。</li>
-<li>基于上一点延伸，因为 Hive planning 会列出（<code>ls</code>） partition 目录来决定输入文件，所以 Hive 同时也利用了文件系统常用的以 <code>.</code> 未前缀的隐藏文件机制来隔离未 commit 的临时文件，待写入完成再 rename 为正式文件。不难猜到，这套机制在对象存储上也无法应用，因为对象的 rename 相当于重写一个新对象，是非常昂贵的操作。</li>
-</ul>
-<p>为此，早在 2018 年左右 Databricks 和 Netflix 分别研发并开源了 DeltaLake 和 Iceberg。有意思的是，Hudi 起源更早，其目标是解决 Hive 不支持 update/detele 的问题，但随着 Databricks 在 2020 年提出的 Lakehouse 热词，三者都被划归同一领域，发展也逐渐趋同，可谓异途同归。</p>
-<h2 id="Iceberg-核心创新"><a href="#Iceberg-核心创新" class="headerlink" title="Iceberg 核心创新"></a>Iceberg 核心创新</h2><p>在笔者看来，以 Iceberg 为代表的 Lakehouse 存储格式的核心创新在于以下三点元数据的设计，其余特性均是它们的延伸：</p>
-<p><center><img src="/img/iceberg-thoughts/img1.iceberg-features.png" alt="img1.iceberg-features" title="img1.iceberg 特性"></center></p>
-
-<ul>
-<li>元数据追踪数据文件列表，即 manifest</li>
-<li>元数据以 append-only 方式记录</li>
-<li>元数据在与数据文件存储在相同的存储系统，而不是独立存储在 db</li>
-</ul>
-<h3 id="元数据追踪数据文件列表"><a href="#元数据追踪数据文件列表" class="headerlink" title="元数据追踪数据文件列表"></a>元数据追踪数据文件列表</h3><p>首先，数据文件列表被纳入元数据，这使得文件可以精细化管理。文件的路径可以灵活设置，不需要在同个目录下，是否读取由引擎在读时决定。引擎根据文件的统计信息提前判断是否要打开该文件读取，即左右 Iceberg 性能的关键 Min/Max 过滤和布隆过滤器。</p>
-<p>其次，由于文件路径不再重要，分区与文件路径解耦，所以Iceberg 的分区可以且必须支持动态设置，即 Hidden Partition 和 Partition Evolution 两项功能。</p>
-<p>最后，文件的种类也可以拓展，不仅限于 data file，还能新增 detele file 以支持行级的更新和删除。</p>
-<h3 id="元数据以-append-only-方式记录"><a href="#元数据以-append-only-方式记录" class="headerlink" title="元数据以 append-only 方式记录"></a>元数据以 append-only 方式记录</h3><p>元数据以 append-only 的方式写入而不是原地更新，这使得元数据具备数据库操作日志一样的历史追踪能力，在此基础上 Iceberg 也提供 MVCC 能力。不同于数据库，Iceberg 的快照并不是读时产生的，而是写时产生的，通常只会保存最近若干次数的写入产生的快照，每个快照都是完整可读的。用户读取指定的历史快照，即 Iceberg 的 Time Travel 特性；用户命名某个快照或者对某个快照进行分叉的更新，即 Git-like 的 branch/tag 特性。</p>
-<h3 id="元数据在与数据文件存储在相同的存储系统"><a href="#元数据在与数据文件存储在相同的存储系统" class="headerlink" title="元数据在与数据文件存储在相同的存储系统"></a>元数据在与数据文件存储在相同的存储系统</h3><p>元数据被直接存储在与数据文件相同的存储系统上，这使得元数据非常开放。一开始接触到该设计时笔者略有惊讶，因为元数据的 SLA 和访问权限显著高于普通数据，按传统应存储在专用的存储系统。例如最常见的关系型数据库，有完善的访问控制、成熟的容灾恢复和优秀的读写性能。</p>
-<p>然而，舍弃掉数据库的种种优点，换来的是元数据的拓展能力和开放性。元数据不再受限于数据库的性能，能承载的表数量仅受普通数据存储的容量限制，没有类型 Hive Metastore 及其数据库的单点问题。同时，元数据的文件可被任意引擎通过多种 Catalog 读写，尤其 Catalog 有 Nessie、Hive Metore、Polaris 等等，各有所长满足不同需求。</p>
-<h2 id="Iceberg-痛点"><a href="#Iceberg-痛点" class="headerlink" title="Iceberg 痛点"></a>Iceberg 痛点</h2><h3 id="运维管理"><a href="#运维管理" class="headerlink" title="运维管理"></a>运维管理</h3><p>Iceberg 的性能很大程度上依赖于元数据和数据文件的高效组织，就像关系型数据库会通过拆分和合并节点来维护 btree 索引的性能。然而 Iceberg 没有守护进程，日常运维需要依赖用户手动执行 Spark 存储过程，例如小文件的合并、manifest 的重写。虽有 Amoro[2] 这样的湖仓管理系统可以接手运维管理，但毕竟从外部管理会额外引入定时扫描元数据的成本，而且 Amoro 的运维操作在 Iceberg 看来并没有更高优先级，所以可能与普通用户的写操作冲突，不能算非常优雅。</p>
-<h3 id="写并发有限"><a href="#写并发有限" class="headerlink" title="写并发有限"></a>写并发有限</h3><p>Iceberg 通过 Catalog 提供锁，然而大数据场景决定锁的粒度不可能非常精细，例如最常用的 Hive Catalog 利用了 Hive Metastore 的表锁。默认情况下，Iceberg 任意 commit 都需要获取表锁，虽然整体 commit 的时间可能只需要几毫秒，但对于频繁更新的场景显然是很大的影响。若有锁冲突，Iceberg 会 backoff 重试最多 4 次，但 Iceberg 的锁并没有优先级区分，有可能会让某个 commit 饿死。</p>
-<h3 id="缺乏主键，实时更新困难"><a href="#缺乏主键，实时更新困难" class="headerlink" title="缺乏主键，实时更新困难"></a>缺乏主键，实时更新困难</h3><p>Iceberg 最初是为批计算设计，对于流计算并不友好。例如对于更新操作，Iceberg 提供每次重写数据的 COW 和基于 delete 文件的 MOR。虽说 MOR 适合写多读少的流计算，但 delete 文件有 position delete 和 equality delete 两种均不太好用：前者需要引擎知晓更新目标行所在的数据文件位置，这对于流计算几乎是不可能的；而后者性能奇差，几乎处于不可用的状态，Iceberg 社区也在着手废弃这个功能[3]。</p>
-<p>这也是为什么 Flink 社区会孵化出 Paimon 这样一个为流计算而生的数据湖表格式的缘故。Paimon 与 Hudi 一样有行主键，对更新操作非常友好。目前 Paimon 发展迅速，同时已经支持兼容 Iceberg 的元数据，但还需要时间证明自己。</p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>回顾历史不难发现随着数据总量增长，数据仓库技术逐渐趋于开放。最早的数据仓库是 MPP 思路，例如 Teradata，无论数据还是元数据都是封闭的；后续 Hive 出现基于 HDFS 构建数据仓库，将数据文件权限开放出来；现在数据湖表格式的出现面向云原生的对象存储构建数据仓库，将元数据的权限也开放出来。当然，这个趋势并不一定会一直持续，随着降本增效抑制数据增长和软硬件技术的发展，易用的 MMP 数据仓库或许会重新成为主流。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
-<li><a href="https://juicefs.com/zh-cn/blog/user-stories/hdfs-to-object-storage-juicefs" target="_blank" rel="external">https://juicefs.com/zh-cn/blog/user-stories/hdfs-to-object-storage-juicefs</a></li>
-<li><a href="https://github.com/apache/amoro" target="_blank" rel="external">https://github.com/apache/amoro</a></li>
-<li><a href="https://lists.apache.org/thread/z0gvco6hn2bpgngvk4h6xqrnw8b32sw6" target="_blank" rel="external">https://lists.apache.org/thread/z0gvco6hn2bpgngvk4h6xqrnw8b32sw6</a></li>
-</ol>
-
-          
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2024/12/12/Iceberg-实践随想/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>

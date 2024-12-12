@@ -101,7 +101,7 @@
 <meta property="og:description" content="在过去的一年多，笔者工作中心逐渐从 Flink 转移到 Iceberg 上。Iceberg 近年发展迅猛，在与 Hudi、Delta 并称的数据湖御三家竞争中脱颖而出，目前基本已是事实标准。这点在不久前的 Databricks 和 Snowflake 这对老对手在 Iceberg 话语权的针锋相对上就足以体现[1]。
 虽然自数据湖（准确来说应该是数据湖表格式）兴起已经过去四五个年头，但直至今日数据">
 <meta property="og:image" content="https://link3280.github.io/img/iceberg-thoughts/img1.iceberg-features.png">
-<meta property="og:updated_time" content="2024-12-12T05:33:48.128Z">
+<meta property="og:updated_time" content="2024-12-12T05:35:42.742Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Iceberg 实践随想">
 <meta name="twitter:description" content="在过去的一年多，笔者工作中心逐渐从 Flink 转移到 Iceberg 上。Iceberg 近年发展迅猛，在与 Hudi、Delta 并称的数据湖御三家竞争中脱颖而出，目前基本已是事实标准。这点在不久前的 Databricks 和 Snowflake 这对老对手在 Iceberg 话语权的针锋相对上就足以体现[1]。
@@ -380,7 +380,7 @@
       
         <p>在过去的一年多，笔者工作中心逐渐从 Flink 转移到 Iceberg 上。Iceberg 近年发展迅猛，在与 Hudi、Delta 并称的数据湖御三家竞争中脱颖而出，目前基本已是事实标准。这点在不久前的 Databricks 和 Snowflake 这对老对手在 Iceberg 话语权的针锋相对上就足以体现[1]。</p>
 <p>虽然自数据湖（准确来说应该是数据湖表格式）兴起已经过去四五个年头，但直至今日数据湖仍未称得上成熟，加上 Hive 迁移数据湖涉及到的业务改造工作量巨大，不少核心业务和老业务仍未有动力推进，可以说数据湖仍有很多未竟之事。文本谈下笔者在 Iceberg 实践中的随想，笔之所至即思之所至。</p>
-<p>&lt;!—-more—&gt;</p>
+<a id="more"></a>
 <h2 id="数据湖与云原生"><a href="#数据湖与云原生" class="headerlink" title="数据湖与云原生"></a>数据湖与云原生</h2><p>得益于 S3 等对象存储的成功，或者说碍于云上块存储的高昂价格，上云的大数据存储系统纷纷将底座迁移到 S3 上，而其中最为核心是数据仓库的云原生改造。然而，作为数据仓库的事实标准，Hive 是基于文件系统来构建的，若直接移植到对象存储会严重水土不服，具体包括：</p>
 <ul>
 <li>Hive 的元数据仅管理到 partition 粒度，而非文件粒度，这导致每次查询 planning 的时候都需要获取 partition 下的文件，然而该操作只适合层次结构的文件系统，在扁平对象存储上相当于一个基于前缀的范围查询，性能糟糕不合适频繁调用。</li>
